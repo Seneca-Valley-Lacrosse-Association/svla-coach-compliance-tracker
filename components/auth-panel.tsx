@@ -8,12 +8,26 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 
+type Mode = 'signin' | 'signup' | 'forgot'
+
+function authErrorFromUrl() {
+  if (typeof window === 'undefined') return ''
+  return new URLSearchParams(window.location.search).get('authError')
+    ? 'That link has expired or was opened in a different browser than the one you requested it from. Request a new link and open it in the same browser.'
+    : ''
+}
+
 export function AuthPanel({ onSignedIn }: { onSignedIn: () => Promise<unknown> }) {
-  const [signUp, setSignUp] = useState(false)
+  const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
-  const [message, setMessage] = useState('')
+  const [message, setMessage] = useState(authErrorFromUrl)
+  const signUp = mode === 'signup'
+  const forgot = mode === 'forgot'
+
+  function switchMode(next: Mode) { setMode(next); setMessage(''); setPassword('') }
+
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (busy) return
@@ -21,6 +35,15 @@ export function AuthPanel({ onSignedIn }: { onSignedIn: () => Promise<unknown> }
     setMessage('')
     try {
       const db = createClient()
+      if (forgot) {
+        const { error } = await db.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: `${process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ?? window.location.origin}/auth/callback?next=/auth/reset`,
+        })
+        if (error && (error.code?.includes('rate_limit') || error.status === 429)) setMessage('Too many attempts. Please wait a few minutes before trying again.')
+        else if (error?.code === 'email_address_not_authorized') setMessage('Email delivery is restricted. Contact the board to finish email setup.')
+        else setMessage('If an account exists for that email, a password reset link is on its way. Open it in this same browser. The link expires after one hour.')
+        return
+      }
       const result = signUp
         ? await db.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ?? `${window.location.origin}/auth/callback` } })
         : await db.auth.signInWithPassword({ email: email.trim(), password })
@@ -41,16 +64,19 @@ export function AuthPanel({ onSignedIn }: { onSignedIn: () => Promise<unknown> }
         <header className="flex flex-col gap-2">
           <ShieldCheck className="size-9 text-primary" aria-hidden="true" />
           <h1 className="text-balance text-2xl font-semibold">SVLA Coach Compliance</h1>
-          <p className="leading-relaxed text-muted-foreground">{signUp ? 'Create an account with the email address on your coach or board roster.' : 'Sign in to securely manage your clearances and certifications.'}</p>
+          <p className="leading-relaxed text-muted-foreground">{forgot ? 'Enter your account email and we will send you a link to choose a new password.' : signUp ? 'Create an account with the email address on your coach or board roster.' : 'Sign in to securely manage your clearances and certifications.'}</p>
         </header>
         <form onSubmit={submit} className="flex flex-col gap-5" onKeyDown={e => { if (e.key === 'Enter' && (e.nativeEvent.isComposing || e.keyCode === 229)) e.preventDefault() }}>
           <FieldGroup>
             <Field><FieldLabel htmlFor="auth-email">Email</FieldLabel><Input id="auth-email" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} required maxLength={254} /></Field>
-            <Field><FieldLabel htmlFor="auth-password">Password</FieldLabel><Input id="auth-password" type="password" autoComplete={signUp ? 'new-password' : 'current-password'} value={password} onChange={e => setPassword(e.target.value)} minLength={signUp ? 12 : 1} required maxLength={128} />{signUp && <p className="text-sm text-muted-foreground">Use at least 12 characters.</p>}</Field>
+            {!forgot && <Field><FieldLabel htmlFor="auth-password">Password</FieldLabel><Input id="auth-password" type="password" autoComplete={signUp ? 'new-password' : 'current-password'} value={password} onChange={e => setPassword(e.target.value)} minLength={signUp ? 12 : 1} required maxLength={128} />{signUp && <p className="text-sm text-muted-foreground">Use at least 12 characters.</p>}</Field>}
           </FieldGroup>
           {message && <p role="status" className="text-sm leading-relaxed">{message}</p>}
-          <Button type="submit" disabled={busy}>{busy ? 'Please wait…' : signUp ? 'Create account' : 'Sign in'}</Button>
-          <Button type="button" variant="ghost" disabled={busy} onClick={() => { setSignUp(!signUp); setMessage('') }}>{signUp ? 'Already have an account? Sign in' : 'Need an account? Create one'}</Button>
+          <Button type="submit" disabled={busy}>{busy ? 'Please wait…' : forgot ? 'Send reset link' : signUp ? 'Create account' : 'Sign in'}</Button>
+          {mode === 'signin' && <Button type="button" variant="link" disabled={busy} onClick={() => switchMode('forgot')}>Forgot your password?</Button>}
+          {forgot
+            ? <Button type="button" variant="ghost" disabled={busy} onClick={() => switchMode('signin')}>Back to sign in</Button>
+            : <Button type="button" variant="ghost" disabled={busy} onClick={() => switchMode(signUp ? 'signin' : 'signup')}>{signUp ? 'Already have an account? Sign in' : 'Need an account? Create one'}</Button>}
         </form>
         <div className="flex flex-col gap-2 border-t pt-5">
           <Link href="/demo" className="font-medium text-primary underline underline-offset-4">Open board demo — 5 sample coaches</Link>

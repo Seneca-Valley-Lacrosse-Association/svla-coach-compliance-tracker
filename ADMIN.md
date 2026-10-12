@@ -38,6 +38,8 @@ folders (one folder per coach). If the app is ever shut down, the files remain i
 - **Remove a board member:** Board Access, then Remove next to their email. You cannot remove yourself, so the board is never left empty.
 - **If nobody has board access (emergency):** in Supabase, SQL Editor, run (lowercase email):
   `insert into public.board_members (email) values ('name@example.org');`
+- **A user forgot their password:** on the sign-in page they click **Forgot your password?**, enter their email, and open the link
+  that arrives (in the same browser). It takes them to a page to choose a new password. Links expire after one hour.
 - **Change a requirement or its link:** Requirements page (board only).
 - **Set the Handbook link:** Requirements, Coach Handbook Acknowledgment, add the https link. Coaches cannot sign until it is set.
 

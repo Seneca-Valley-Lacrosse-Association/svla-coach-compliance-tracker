@@ -7,6 +7,7 @@ import { summarizeCoach, type CoachSummary } from './compliance'
 import * as demo from './demo-data'
 import { createClient } from './supabase/client'
 import { AuthPanel } from '@/components/auth-panel'
+import { ResetPasswordPanel } from '@/components/reset-password-panel'
 import type { Coach, Requirement, Submission } from './types'
 
 export type ViewMode = 'board' | 'coach'
@@ -98,6 +99,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     },
   }
+  if (pathname === '/auth/reset') return isLoading ? <main className="flex min-h-dvh items-center justify-center"><p role="status">Loading…</p></main> : <ResetPasswordPanel signedIn={!!user} />
   if (!isDemo && isLoading) return <main className="flex min-h-dvh items-center justify-center"><p role="status">Loading your secure workspace…</p></main>
   if (!isDemo && error) return <main className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6"><p role="alert">Unable to load the workspace. Your records have not been changed.</p><button onClick={() => void mutate()} className="text-primary underline">Try again</button><a href="/demo" className="text-primary underline">Open board demo</a></main>
   if (!isDemo && !user) return <AuthPanel onSignedIn={() => mutate()} />
