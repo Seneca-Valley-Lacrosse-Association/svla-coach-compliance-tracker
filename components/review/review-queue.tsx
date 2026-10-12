@@ -101,7 +101,7 @@ export function ReviewQueue() {
                     <FileText className="size-5 text-brand" aria-hidden="true" />
                     <span className="truncate">{s.fileName}</span>
                     <span className="ml-auto hidden text-muted-foreground sm:inline">
-                      {s.filePath ? <a href={`/api/documents/${s.id}`} target="_blank" rel="noreferrer" className="text-primary underline">Download document</a> : 'Demo record only'}
+                      {s.filePath ? <span className="flex gap-3"><a href={`/api/documents/${s.id}?preview=1`} target="_blank" rel="noreferrer" className="text-primary underline">Preview</a><a href={`/api/documents/${s.id}`} target="_blank" rel="noreferrer" className="text-primary underline">Download document</a></span> : 'Demo record only'}
                     </span>
                   </div>
                 )}

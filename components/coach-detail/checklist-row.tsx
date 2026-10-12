@@ -102,7 +102,7 @@ export function ChecklistRow({
         <div className="flex items-center gap-3 rounded-lg border border-dashed bg-muted/50 p-3 text-sm">
           <FileText className="size-5 shrink-0 text-brand" aria-hidden="true" />
           <span className="truncate">{shown.fileName}</span>
-          <span className="ml-auto shrink-0 text-muted-foreground">{shown.filePath ? <a href={`/api/documents/${shown.id}`} target="_blank" rel="noreferrer" className="text-primary underline">Download document</a> : 'Demo only'}</span>
+          <span className="ml-auto shrink-0 text-muted-foreground">{shown.filePath ? <span className="flex gap-3"><a href={`/api/documents/${shown.id}?preview=1`} target="_blank" rel="noreferrer" className="text-primary underline">Preview</a><a href={`/api/documents/${shown.id}`} target="_blank" rel="noreferrer" className="text-primary underline">Download document</a></span> : 'Demo only'}</span>
         </div>
       )}
 
