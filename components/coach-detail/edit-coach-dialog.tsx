@@ -75,18 +75,20 @@ export function EditCoachDialog({ coach }: { coach: Coach }) {
             </FieldGroup>
             <Field>
               <FieldLabel htmlFor={`${id}-pay`}>Pay status</FieldLabel>
-              <select id={`${id}-pay`} className={selectClass} value={draft.pay} onChange={(e) => setDraft({ ...draft, pay: e.target.value as Coach['pay'] })}>
+              <select id={`${id}-pay`} className={selectClass} value={draft.pay} onChange={(e) => { const pay = e.target.value as Coach['pay']; setDraft({ ...draft, pay, paResident10Years: pay === 'Paid' ? false : draft.paResident10Years }) }}>
                 {PAY_STATUSES.map((p) => <option key={p}>{p}</option>)}
               </select>
             </Field>
+            {draft.pay !== 'Paid' && (
             <Field>
               <FieldLabel htmlFor={`${id}-resident`}>PA resident for 10 consecutive years?</FieldLabel>
               <select id={`${id}-resident`} className={selectClass} value={draft.paResident10Years ? 'yes' : 'no'} onChange={(e) => setDraft({ ...draft, paResident10Years: e.target.value === 'yes' })}>
                 <option value="no">No / not confirmed</option>
                 <option value="yes">Yes</option>
               </select>
-              <FieldDescription>Only eligible volunteers can use the disclosure affidavit instead of fingerprints.</FieldDescription>
+              <FieldDescription>Applies to volunteers only. An eligible volunteer may use the disclosure affidavit instead of fingerprints.</FieldDescription>
             </Field>
+            )}
           </FieldGroup>
           {saveError && <p role="alert" className="text-sm text-destructive">{saveError}</p>}
           <DialogFooter>

@@ -99,18 +99,20 @@ export function AddCoachDialog({ onAdded, initialEmail = '', label = 'Add Coach'
             </FieldGroup>
             <Field>
               <FieldLabel htmlFor={`${id}-pay`}>Pay status</FieldLabel>
-              <select id={`${id}-pay`} className={selectClass} value={draft.pay} onChange={(event) => setDraft({ ...draft, pay: event.target.value as Coach['pay'] })}>
+              <select id={`${id}-pay`} className={selectClass} value={draft.pay} onChange={(event) => { const pay = event.target.value as Coach['pay']; setDraft({ ...draft, pay, paResident10Years: pay === 'Paid' ? false : draft.paResident10Years }) }}>
                 {PAY_STATUSES.map((pay) => <option key={pay}>{pay}</option>)}
               </select>
             </Field>
+            {draft.pay !== 'Paid' && (
             <Field>
               <FieldLabel htmlFor={`${id}-resident`}>PA resident for 10 consecutive years?</FieldLabel>
               <select id={`${id}-resident`} className={selectClass} value={draft.paResident10Years ? 'yes' : 'no'} onChange={(event) => setDraft({ ...draft, paResident10Years: event.target.value === 'yes' })} aria-describedby={`${id}-resident-help`}>
                 <option value="no">No / not confirmed</option>
                 <option value="yes">Yes</option>
               </select>
-              <FieldDescription id={`${id}-resident-help`}>Only eligible volunteers can use the disclosure affidavit instead of fingerprints. Paid coaches must use fingerprints.</FieldDescription>
+              <FieldDescription id={`${id}-resident-help`}>Applies to volunteers only. An eligible volunteer may use the disclosure affidavit instead of fingerprints. Paid coaches always need fingerprints.</FieldDescription>
             </Field>
+            )}
           </FieldGroup>
           {saveError && <p role="alert" className="text-sm text-destructive">{saveError}</p>}
           <p className="text-sm leading-relaxed text-muted-foreground">Records are saved securely and remain after reloading.</p>
