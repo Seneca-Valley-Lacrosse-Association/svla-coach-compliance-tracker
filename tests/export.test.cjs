@@ -1,0 +1,27 @@
+const { test } = require('node:test')
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const ts = require('typescript')
+require.extensions['.ts'] = (module, filename) => {
+  const { outputText } = ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } })
+  module._compile(outputText, filename)
+}
+const ExcelJS = require('exceljs')
+const { coaches, requirements, submissions } = require('../lib/demo-data.ts')
+const { buildWorkbook } = require('../lib/export-workbook.ts')
+
+test('full export contains every sheet with all coaches and submissions', async () => {
+  const wb = await buildWorkbook({ coaches, requirements, submissions, origin: 'https://example.org', generatedBy: 'test@example.org' })
+  const buffer = await wb.xlsx.writeBuffer()
+  const back = new ExcelJS.Workbook()
+  await back.xlsx.load(buffer)
+  assert.deepEqual(back.worksheets.map(w => w.name), ['Read Me', 'Coaches', 'Compliance Matrix', 'Submissions', 'Requirements'])
+  assert.equal(back.getWorksheet('Coaches').rowCount, coaches.length + 1)
+  assert.equal(back.getWorksheet('Submissions').rowCount, submissions.length + 1)
+  assert.equal(back.getWorksheet('Requirements').rowCount, requirements.length + 1)
+  const matrix = back.getWorksheet('Compliance Matrix')
+  assert.equal(matrix.rowCount, coaches.length + 1)
+  const text = JSON.stringify(matrix.getSheetValues())
+  assert.ok(text.includes('Not required'), 'paid-only requirement shows Not required for volunteers')
+  assert.ok(/Approved \(expires \d{4}-\d{2}-\d{2}\)/.test(text))
+})

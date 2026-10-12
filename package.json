@@ -1,12 +1,13 @@
 {
-  "name": "my-project",
+  "name": "svla-coach-compliance-tracker",
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@12.3.4",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test": "node --test tests/compliance.test.cjs tests/export.test.cjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
@@ -16,6 +17,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cn": "^0.4.0",
+    "exceljs": "^4.4.0",
     "lucide-react": "^1.16.0",
     "next": "16.4.0",
     "react": "^19",

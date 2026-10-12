@@ -65,10 +65,18 @@ export function ReportsView() {
         title="Reports"
         description="Season-wide compliance at a glance."
         actions={
-          <Button variant="outline" className="h-10 bg-card px-4" onClick={exportCsv}>
-            <Download aria-hidden="true" />
-            Export CSV
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {!isDemo && (
+              <Button variant="default" className="h-10 px-4" render={<a href="/api/export" download />}>
+                <Download aria-hidden="true" />
+                Download full export (Excel)
+              </Button>
+            )}
+            <Button variant="outline" className="h-10 bg-card px-4" onClick={exportCsv}>
+              <Download aria-hidden="true" />
+              Summary CSV
+            </Button>
+          </div>
         }
       />
 
