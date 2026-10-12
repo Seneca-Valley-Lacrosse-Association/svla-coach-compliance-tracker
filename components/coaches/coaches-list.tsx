@@ -10,6 +10,7 @@ import { PageHeader } from '@/components/page-header'
 import { CoachesTable } from '@/components/dashboard/coaches-table'
 import { AddCoachDialog } from './add-coach-dialog'
 import { PendingAccounts } from './pending-accounts'
+import { AwaitingApproval } from './awaiting-approval'
 
 const selectClass =
   'h-10 rounded-lg border border-input bg-card px-3 text-base focus-visible:outline-2 focus-visible:outline-brand'
@@ -44,6 +45,7 @@ export function CoachesList() {
       <p role="status" className={addedName ? 'mb-4 text-sm text-muted-foreground' : 'sr-only'}>
         {addedName && `${addedName} added to the roster. Their requirements checklist is ready.`}
       </p>
+      <AwaitingApproval />
       <PendingAccounts onAdded={(name) => { setQuery(''); setTeam('all'); setPay('all'); setAddedName(name) }} />
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="flex flex-1 flex-col gap-1.5">

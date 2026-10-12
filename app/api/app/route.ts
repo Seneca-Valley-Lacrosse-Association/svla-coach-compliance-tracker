@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { sendApprovalEmail } from '@/lib/email'
 import { mutationSchema } from '@/lib/validation'
 import type { Coach, Requirement, Submission } from '@/lib/types'
 
@@ -23,11 +24,11 @@ export async function GET() {
       }
     }
     const [coachRows, requirementRows, submissionRows] = await Promise.all([
-      allRows('coaches', 'id,name,email,phone,team,role,pay,pa_resident_10_years', 'id'),
+      allRows('coaches', 'id,name,email,phone,team,role,pay,pa_resident_10_years,status', 'id'),
       allRows('requirements', 'id,sort_order,definition', 'sort_order'),
       allRows('submissions', 'id,coach_id,requirement_id,status,uploaded_at,completed_on,expires_on,file_path,file_name,details,review_comment,reviewed_on', 'id'),
     ])
-    const coaches = coachRows.map(r => ({ id: r.id, name: r.name, email: r.email, phone: r.phone, team: r.team, role: r.role, pay: r.pay, paResident10Years: r.pa_resident_10_years })) as Coach[]
+    const coaches = coachRows.map(r => ({ id: r.id, name: r.name, email: r.email, phone: r.phone, team: r.team, role: r.role, pay: r.pay, paResident10Years: r.pa_resident_10_years, status: r.status })) as Coach[]
     const requirements = requirementRows.map(r => ({ ...r.definition, id: r.id, order: r.sort_order })) as Requirement[]
     const submissions = submissionRows.map(r => ({ ...r.details, id: r.id, coachId: r.coach_id, requirementId: r.requirement_id, status: r.status, uploadedOn: r.uploaded_at, completedOn: r.completed_on, expiresOn: r.expires_on, filePath: r.file_path ?? undefined, fileName: r.file_name ?? undefined, reviewComment: r.review_comment ?? undefined, reviewedOn: r.reviewed_on ?? undefined })) as Submission[]
     let boardMembers: { email: string }[] = []
@@ -62,6 +63,7 @@ export async function POST(request: Request) {
       if (board.error || !board.data) return respond({ error: 'Board access is required.' }, 403)
     }
     let result
+    let extra: Record<string, unknown> = {}
     switch (command.action) {
       case 'addCoach': {
         const { paResident10Years, ...coach } = command.input
@@ -76,6 +78,11 @@ export async function POST(request: Request) {
         result = await db.from('coaches').delete().eq('id', command.id).select('id').single()
         if (!result.error && files.data?.length) await db.storage.from('certificates').remove(files.data.map(f => f.file_path as string))
         if (!result.error) await db.rpc('delete_account', { p_email: owner.data.email })
+        break
+      }
+      case 'reviewCoach': {
+        result = await db.from('coaches').update({ status: command.decision, pay: command.pay }).eq('id', command.id).neq('status', command.decision).select('id,email,name').single()
+        if (!result.error && command.decision === 'approved') extra = { emailSent: await sendApprovalEmail(result.data.email, result.data.name) }
         break
       }
       case 'removeAccount': {
@@ -129,7 +136,7 @@ export async function POST(request: Request) {
       const message = result.error.code === '23505' ? (command.action === 'addBoardMember' ? 'That email already has board access.' : 'This email is already on the roster.') : result.error.code === 'P0001' ? result.error.message : 'Could not save. Check your permissions and refresh before trying again.'
       return respond({ error: message }, 400)
     }
-    return respond({ ok: true })
+    return respond({ ok: true, ...extra })
   } catch {
     return respond({ error: 'Unable to process the request. Please try again.' }, 500)
   }

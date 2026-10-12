@@ -41,6 +41,8 @@ export interface Requirement {
   dateOnlyAllowed?: boolean
 }
 
+export type CoachStatus = 'pending' | 'approved' | 'declined'
+
 export interface Coach {
   id: string
   name: string
@@ -51,6 +53,8 @@ export interface Coach {
   email: string
   /** Has lived in Pennsylvania for the last 10 consecutive years. */
   paResident10Years: boolean
+  /** Board approval state. Missing means approved (demo data). */
+  status?: CoachStatus
 }
 
 export type SubmissionStatus = 'pending' | 'approved' | 'rejected'

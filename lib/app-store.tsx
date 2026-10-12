@@ -10,6 +10,7 @@ import { AuthPanel } from '@/components/auth-panel'
 import { ResetPasswordPanel } from '@/components/reset-password-panel'
 import { ConfirmLinkPanel } from '@/components/confirm-link-panel'
 import { CompleteProfilePanel } from '@/components/complete-profile-panel'
+import { WaitingApprovalPanel } from '@/components/waiting-approval-panel'
 import type { Coach, Requirement, Submission } from './types'
 
 export type ViewMode = 'board' | 'coach'
@@ -24,6 +25,11 @@ interface AppState {
   signOut: () => Promise<void>
   currentCoachId: string
   coaches: Coach[]
+  /** Coaches waiting for (or refused) board approval. */
+  awaitingCoaches: Coach[]
+  /** Approval state of the signed-in coach's own record. */
+  myStatus: 'none' | 'pending' | 'approved' | 'declined'
+  reviewCoach: (id: string, decision: 'approved' | 'declined', pay: Coach['pay']) => Promise<{ emailSent?: boolean }>
   addCoach: (input: Omit<Coach, 'id'>) => Promise<void>
   registerSelf: (input: { name: string; phone: string; team: Coach['team']; role: Coach['role']; paResident10Years: boolean }) => Promise<void>
   deleteCoach: (id: string) => Promise<void>
@@ -59,7 +65,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [demoView, setDemoView] = useState<ViewMode>('board')
   const { data, error, isLoading, mutate } = useSWR<Snapshot>(isDemo ? null : '/api/app', loadSnapshot, { refreshInterval: 60000, shouldRetryOnError: false })
   const snapshot = isDemo ? demoSnapshot : data ?? empty
-  const { coaches, requirements, submissions, user } = snapshot
+  const { requirements, submissions, user } = snapshot
+  const allCoaches = snapshot.coaches
+  const coaches = useMemo(() => allCoaches.filter(c => (c.status ?? 'approved') === 'approved'), [allCoaches])
+  const awaitingCoaches = useMemo(() => allCoaches.filter(c => c.status === 'pending' || c.status === 'declined'), [allCoaches])
+  const mine = isDemo ? undefined : allCoaches.find(c => c.email.toLowerCase() === user?.email?.toLowerCase())
   const summaries = useMemo(() => coaches.map(c => summarizeCoach(c, requirements, submissions)), [coaches, requirements, submissions])
   async function save(command: Record<string, unknown>) {
     if (isDemo) throw new Error('The board demo is read-only. Sign in to manage live records.')
@@ -67,6 +77,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const result = await response.json()
     if (!response.ok) throw new Error(result.error || 'Could not save your changes.')
     await mutate()
+    return result
   }
   const value: AppState = {
     viewMode: isDemo ? demoView : user?.role ?? 'coach',
@@ -78,7 +89,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       await mutate(empty, { revalidate: false })
     },
     currentCoachId: isDemo ? 'c3' : coaches.find(c => c.email.toLowerCase() === user?.email?.toLowerCase())?.id ?? '',
-    coaches, requirements, submissions, summaries,
+    coaches, awaitingCoaches, myStatus: isDemo ? 'approved' : mine ? (mine.status ?? 'approved') : 'none', requirements, submissions, summaries,
+    reviewCoach: (id, decision, pay) => save({ action: 'reviewCoach', id, decision, pay }),
     getSummary: id => summaries.find(s => s.coach.id === id),
     addCoach: input => save({ action: 'addCoach', input }),
     registerSelf: input => save({ action: 'registerSelf', input }),
@@ -116,8 +128,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   if (!isDemo && isLoading) return <main className="flex min-h-dvh items-center justify-center"><p role="status">Loading your secure workspace…</p></main>
   if (!isDemo && error) return <main className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6"><p role="alert">Unable to load the workspace. Your records have not been changed.</p><button onClick={() => void mutate()} className="text-primary underline">Try again</button><a href="/demo" className="text-primary underline">Open board demo</a></main>
   if (!isDemo && !user) return <AuthPanel onSignedIn={() => mutate()} />
-  const needsProfile = !isDemo && user?.role === 'coach' && !value.currentCoachId
-  return <AppContext.Provider value={value}>{needsProfile ? <CompleteProfilePanel /> : children}</AppContext.Provider>
+  const isCoachUser = !isDemo && user?.role === 'coach'
+  const gate = isCoachUser && value.myStatus === 'none' ? <CompleteProfilePanel /> : isCoachUser && (value.myStatus === 'pending' || value.myStatus === 'declined') ? <WaitingApprovalPanel /> : null
+  return <AppContext.Provider value={value}>{gate ?? children}</AppContext.Provider>
 }
 
 export function useApp() {

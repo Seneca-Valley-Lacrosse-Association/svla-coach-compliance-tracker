@@ -72,9 +72,13 @@ Keep the sender as no-reply@mail.svlacrosse.org (Resend SMTP). If the domain eve
 - **Change a coach's team, role, pay status, name, phone or PA-resident flag:** open the coach from the Coaches page and use **Edit coach**. The email can't be changed (it is how the account is matched). Changing role or pay status re-evaluates which requirements apply.
 - **Someone signed up but isn't on the roster:** the Coaches page shows a "Signed up, not on the roster" list (confirmed accounts only). Click **Add to roster** to set their team and role. Until then they see nothing in the app.
 
-## Coach self-registration
+## Coach sign-up and board approval
 
-After a coach confirms their email, they fill in their own profile (name, phone, team, role, and whether they have lived in PA for 10 years). This creates their roster record automatically, always as **Volunteer**. The board then opens the coach and uses **Edit coach** to set **Paid** where it applies; fingerprint requirements then apply to them. Anyone with a confirmed account can create a roster record this way, so review new names on the Coaches page. Board accounts skip this step.
+After a coach confirms their email, they fill in their own profile (name, phone, team, role, and whether they have lived in PA for 10 years) and then see a "Waiting for board approval" screen. They have no access to a checklist until approved.
+
+The board sees them under **Awaiting approval** on the Coaches page (and a banner on the Dashboard). For each person, choose **Paid** or **Volunteer** and click **Approve**; the coach is emailed that they can log in. Paid coaches must provide fingerprints. **Decline** moves them to a Declined list, where you can **Approve** later or **Delete** them manually (this also removes their sign-in account).
+
+The approval email is sent through Resend and needs the `RESEND_API_KEY` environment variable on the Vercel project (optional `EMAIL_FROM`, default `SVLA Coach Compliance <no-reply@mail.svlacrosse.org>`). Without the key, approval still works but no email is sent and the board is told to let the coach know.
 
 ## Deleting a coach
 
