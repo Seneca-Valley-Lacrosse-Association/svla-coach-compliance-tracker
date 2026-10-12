@@ -68,6 +68,13 @@ export async function POST(request: Request) {
         result = await db.from('coaches').insert({ ...coach, pa_resident_10_years: paResident10Years }).select('id').single()
         break
       }
+      case 'deleteCoach': {
+        const files = await db.from('submissions').select('file_path').eq('coach_id', command.id).not('file_path', 'is', null)
+        if (files.error) throw files.error
+        result = await db.from('coaches').delete().eq('id', command.id).select('id').single()
+        if (!result.error && files.data?.length) await db.storage.from('certificates').remove(files.data.map(f => f.file_path as string))
+        break
+      }
       case 'registerSelf': {
         const i = command.input
         const rpc = await db.rpc('register_self', { p_name: i.name, p_phone: i.phone, p_team: i.team, p_role: i.role, p_pa_resident: i.paResident10Years })

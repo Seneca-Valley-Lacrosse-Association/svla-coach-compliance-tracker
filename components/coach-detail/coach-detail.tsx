@@ -8,9 +8,10 @@ import { RequirementProgress } from '@/components/requirement-progress'
 import { ChecklistRow } from './checklist-row'
 import { ClearedBadge } from './cleared-badge'
 import { EditCoachDialog } from './edit-coach-dialog'
+import { DeleteCoachDialog } from './delete-coach-dialog'
 
 export function CoachDetail({ id }: { id: string }) {
-  const { getSummary } = useApp()
+  const { getSummary, viewMode } = useApp()
   const summary = getSummary(id)
 
   if (!summary) {
@@ -60,7 +61,12 @@ export function CoachDetail({ id }: { id: string }) {
         </div>
         <div className="flex flex-col items-start gap-3 lg:items-end">
           <ClearedBadge summary={summary} />
-          <EditCoachDialog key={`${coach.id}-${coach.team}-${coach.role}-${coach.pay}-${coach.name}`} coach={coach} />
+          {viewMode === 'board' && (
+            <>
+              <EditCoachDialog key={`${coach.id}-${coach.team}-${coach.role}-${coach.pay}-${coach.name}`} coach={coach} />
+              <DeleteCoachDialog coach={coach} />
+            </>
+          )}
         </div>
       </section>
 

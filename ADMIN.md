@@ -75,3 +75,7 @@ Keep the sender as no-reply@mail.svlacrosse.org (Resend SMTP). If the domain eve
 ## Coach self-registration
 
 After a coach confirms their email, they fill in their own profile (name, phone, team, role, and whether they have lived in PA for 10 years). This creates their roster record automatically, always as **Volunteer**. The board then opens the coach and uses **Edit coach** to set **Paid** where it applies; fingerprint requirements then apply to them. Anyone with a confirmed account can create a roster record this way, so review new names on the Coaches page. Board accounts skip this step.
+
+## Deleting a coach
+
+Open the coach's page and click **Delete coach** (board only). This permanently removes the roster record, all submissions, and the uploaded files. Export from Reports first if a copy is needed. The person's sign-in account stays; if they sign in again they are asked to complete a new profile.
