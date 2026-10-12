@@ -66,3 +66,8 @@ Keep the sender as no-reply@mail.svlacrosse.org (Resend SMTP). If the domain eve
 - Anyone can create an account, but an account sees nothing unless its confirmed email is a board member or is on the coach roster.
 - Never share the Supabase service-role key or database password. They are stored as Sensitive variables in Vercel.
 - Remove board members who leave (see above) and rotate access on the shared mailbox when people change.
+
+## Editing coaches and finding new sign-ups
+
+- **Change a coach's team, role, pay status, name, phone or PA-resident flag:** open the coach from the Coaches page and use **Edit coach**. The email can't be changed (it is how the account is matched). Changing role or pay status re-evaluates which requirements apply.
+- **Someone signed up but isn't on the roster:** the Coaches page shows a "Signed up, not on the roster" list (confirmed accounts only). Click **Add to roster** to set their team and role. Until then they see nothing in the app.

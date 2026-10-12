@@ -14,7 +14,7 @@ import type { Coach, Requirement, Submission } from './types'
 export type ViewMode = 'board' | 'coach'
 export type UploadInput = Pick<Submission, 'coachId' | 'requirementId' | 'completedOn' | 'fileName' | 'obtainedAs' | 'fbiMethod' | 'membershipNumber' | 'signedName'> & { membershipExpiry?: string; agreed?: boolean; file?: File }
 type ResourceInput = Pick<Requirement, 'help' | 'helpUrl' | 'helpLinkLabel'>
-interface Snapshot { user: { id: string; email: string; role: ViewMode } | null; coaches: Coach[]; requirements: Requirement[]; submissions: Submission[]; boardMembers?: { email: string }[] }
+interface Snapshot { user: { id: string; email: string; role: ViewMode } | null; coaches: Coach[]; requirements: Requirement[]; submissions: Submission[]; boardMembers?: { email: string }[]; pendingAccounts?: { email: string; created_at: string }[] }
 interface AppState {
   viewMode: ViewMode
   setViewMode: (mode: ViewMode) => void
@@ -24,6 +24,8 @@ interface AppState {
   currentCoachId: string
   coaches: Coach[]
   addCoach: (input: Omit<Coach, 'id'>) => Promise<void>
+  editCoach: (id: string, input: Omit<Coach, 'id' | 'email'>) => Promise<void>
+  pendingAccounts: { email: string; created_at: string }[]
   requirements: Requirement[]
   submissions: Submission[]
   summaries: CoachSummary[]
@@ -38,7 +40,7 @@ interface AppState {
   removeBoardMember: (email: string) => Promise<void>
 }
 const AppContext = createContext<AppState | null>(null)
-const empty: Snapshot = { user: null, coaches: [], requirements: [], submissions: [], boardMembers: [] }
+const empty: Snapshot = { user: null, coaches: [], requirements: [], submissions: [], boardMembers: [], pendingAccounts: [] }
 const demoSnapshot: Snapshot = { user: { id: 'demo', email: 'board-demo@example.org', role: 'board' }, ...demo }
 async function loadSnapshot(url: string): Promise<Snapshot> {
   const response = await fetch(url, { cache: 'no-store' })
@@ -75,6 +77,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     coaches, requirements, submissions, summaries,
     getSummary: id => summaries.find(s => s.coach.id === id),
     addCoach: input => save({ action: 'addCoach', input }),
+    editCoach: (id, input) => save({ action: 'editCoach', id, input }),
+    pendingAccounts: snapshot.pendingAccounts ?? [],
     addRequirement: input => save({ action: 'addRequirement', input }),
     setRequirementActive: (id, active) => save({ action: 'setRequirementActive', id, active }),
     updateResource: (id, input) => save({ action: 'updateResource', id, input }),

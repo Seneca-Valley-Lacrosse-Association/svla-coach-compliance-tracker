@@ -15,18 +15,18 @@ const emptyCoach: Omit<Coach, 'id'> = {
   pay: 'Volunteer', paResident10Years: false,
 }
 
-export function AddCoachDialog({ onAdded }: { onAdded: (name: string) => void }) {
+export function AddCoachDialog({ onAdded, initialEmail = '', label = 'Add Coach', variant = 'default' }: { onAdded: (name: string) => void; initialEmail?: string; label?: string; variant?: 'default' | 'outline' }) {
   const { coaches, addCoach, isDemo } = useApp()
   const [busy, setBusy] = useState(false)
   const [saveError, setSaveError] = useState('')
   const id = useId()
   const [open, setOpen] = useState(false)
-  const [draft, setDraft] = useState(emptyCoach)
+  const [draft, setDraft] = useState({ ...emptyCoach, email: initialEmail })
   const [errors, setErrors] = useState<{ name?: string; email?: string }>({})
 
   function changeOpen(next: boolean) {
     setOpen(next)
-    setDraft(emptyCoach)
+    setDraft({ ...emptyCoach, email: initialEmail })
     setErrors({})
   }
 
@@ -56,9 +56,9 @@ export function AddCoachDialog({ onAdded }: { onAdded: (name: string) => void })
 
   return (
     <Dialog open={open} onOpenChange={changeOpen}>
-      <DialogTrigger disabled={isDemo} render={<Button className="h-10 px-4" disabled={isDemo} />}>
+      <DialogTrigger disabled={isDemo} render={<Button variant={variant} className="h-10 px-4" disabled={isDemo} />}>
         <Plus data-icon="inline-start" aria-hidden="true" />
-        Add Coach
+        {label}
       </DialogTrigger>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5" onKeyDown={(event) => {

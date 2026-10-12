@@ -7,6 +7,7 @@ import { PayBadge } from '@/components/status-pill'
 import { RequirementProgress } from '@/components/requirement-progress'
 import { ChecklistRow } from './checklist-row'
 import { ClearedBadge } from './cleared-badge'
+import { EditCoachDialog } from './edit-coach-dialog'
 
 export function CoachDetail({ id }: { id: string }) {
   const { getSummary } = useApp()
@@ -57,7 +58,10 @@ export function CoachDetail({ id }: { id: string }) {
           </div>
           <RequirementProgress done={summary.satisfiedCount} total={summary.total} className="max-w-sm" />
         </div>
-        <ClearedBadge summary={summary} />
+        <div className="flex flex-col items-start gap-3 lg:items-end">
+          <ClearedBadge summary={summary} />
+          <EditCoachDialog key={`${coach.id}-${coach.team}-${coach.role}-${coach.pay}-${coach.name}`} coach={coach} />
+        </div>
       </section>
 
       <section aria-labelledby="checklist-heading" className="flex flex-col gap-3">

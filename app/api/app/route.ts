@@ -10,7 +10,7 @@ export async function GET() {
   try {
     const db = await createClient()
     const { data: { user } } = await db.auth.getUser()
-    if (!user) return respond({ user: null, coaches: [], requirements: [], submissions: [], boardMembers: [] })
+    if (!user) return respond({ user: null, coaches: [], requirements: [], submissions: [], boardMembers: [], pendingAccounts: [] })
     const board = await db.from('board_members').select('email').eq('email', user.email?.toLowerCase() ?? '').maybeSingle()
     if (board.error) throw board.error
     async function allRows<const Columns extends string>(table: string, columns: Columns, order: string) {
@@ -36,7 +36,13 @@ export async function GET() {
       if (members.error) throw members.error
       boardMembers = members.data ?? []
     }
-    return respond({ user: { id: user.id, email: user.email, role: board.data ? 'board' : 'coach' }, coaches, requirements, submissions, boardMembers })
+    let pendingAccounts: { email: string; created_at: string }[] = []
+    if (board.data) {
+      const pending = await db.rpc('pending_accounts')
+      if (pending.error) throw pending.error
+      pendingAccounts = (pending.data ?? []) as { email: string; created_at: string }[]
+    }
+    return respond({ user: { id: user.id, email: user.email, role: board.data ? 'board' : 'coach' }, coaches, requirements, submissions, boardMembers, pendingAccounts })
   } catch {
     return respond({ error: 'Unable to load your records. Please try again.' }, 500)
   }
@@ -60,6 +66,11 @@ export async function POST(request: Request) {
       case 'addCoach': {
         const { paResident10Years, ...coach } = command.input
         result = await db.from('coaches').insert({ ...coach, pa_resident_10_years: paResident10Years }).select('id').single()
+        break
+      }
+      case 'editCoach': {
+        const { paResident10Years, ...coach } = command.input
+        result = await db.from('coaches').update({ ...coach, pa_resident_10_years: paResident10Years }).eq('id', command.id).select('id').single()
         break
       }
       case 'addRequirement':
