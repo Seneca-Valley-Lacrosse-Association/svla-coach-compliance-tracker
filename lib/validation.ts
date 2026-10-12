@@ -1,0 +1,35 @@
+import { z } from 'zod'
+import { PAY_STATUSES, ROLES, TEAMS } from './types'
+
+export const coachSchema = z.object({
+  name: z.string().trim().min(1).max(120), email: z.string().trim().toLowerCase().email().max(254),
+  phone: z.string().trim().max(40), team: z.enum(TEAMS), role: z.enum(ROLES), pay: z.enum(PAY_STATUSES),
+  paResident10Years: z.boolean(),
+})
+export const resourceSchema = z.object({
+  help: z.string().trim().min(1).max(3000),
+  helpUrl: z.string().trim().max(2000).refine(v => !v || /^https:\/\//.test(v) && URL.canParse(v), 'Use a valid HTTPS link.'),
+  helpLinkLabel: z.string().trim().max(150),
+})
+export const requirementSchema = resourceSchema.extend({
+  name: z.string().trim().min(1).max(200), type: z.enum(['File', 'Training', 'Membership', 'Signature']),
+  appliesToRoles: z.array(z.enum(ROLES)).min(1).max(4), appliesToPay: z.array(z.enum(PAY_STATUSES)).min(1).max(2),
+  validity: z.discriminatedUnion('kind', [z.object({ kind: z.literal('years'), years: z.number().int().min(1).max(10) }), z.object({ kind: z.literal('school-year') }), z.object({ kind: z.literal('one-time') }), z.object({ kind: z.literal('membership') })]),
+  required: z.boolean(), active: z.boolean(), tracksObtainedAs: z.boolean().optional(),
+  allowsVolunteerAffidavit: z.boolean().optional(), dateOnlyAllowed: z.boolean().optional(),
+}).refine(r => (r.type === 'Membership') === (r.validity.kind === 'membership'), 'Membership requirements must use membership-term validity.')
+export const uploadSchema = z.object({
+  coachId: z.uuid(), requirementId: z.string().min(1).max(100), completedOn: z.iso.date(),
+  filePath: z.string().max(400).optional(), fileName: z.string().max(255).optional(),
+  obtainedAs: z.enum(['Volunteer', 'Employment']).optional(), fbiMethod: z.enum(['fingerprint', 'affidavit']).optional(),
+  membershipNumber: z.string().trim().max(150).optional(), membershipExpiry: z.iso.date().optional(),
+  signedName: z.string().trim().max(120).optional(), agreed: z.boolean().optional(),
+})
+export const mutationSchema = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('addCoach'), input: coachSchema }),
+  z.object({ action: z.literal('addRequirement'), input: requirementSchema }),
+  z.object({ action: z.literal('setRequirementActive'), id: z.string().max(100), active: z.boolean() }),
+  z.object({ action: z.literal('updateResource'), id: z.string().max(100), input: resourceSchema }),
+  z.object({ action: z.literal('submitUpload'), input: uploadSchema }),
+  z.object({ action: z.literal('reviewSubmission'), id: z.uuid(), decision: z.enum(['approved', 'rejected']), comment: z.string().trim().max(2000).optional() }),
+])
