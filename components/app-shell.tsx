@@ -11,6 +11,7 @@ import {
   ListChecks,
   Menu,
   ShieldCheck,
+  UserCog,
   Users,
 } from 'lucide-react'
 import { useApp, type ViewMode } from '@/lib/app-store'
@@ -24,6 +25,7 @@ const boardNav = [
   { href: '/requirements', label: 'Requirements', icon: ListChecks },
   { href: '/coaches', label: 'Coaches', icon: Users },
   { href: '/reports', label: 'Reports', icon: BarChart3 },
+  { href: '/board', label: 'Board Access', icon: UserCog },
 ]
 
 function isActive(pathname: string, href: string) {
@@ -46,7 +48,7 @@ function Brand() {
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
-  const { viewMode, summaries } = useApp()
+  const { viewMode, summaries, isDemo } = useApp()
   const pendingCount = summaries.reduce(
     (n, s) => n + s.items.filter((i) => i.latest?.status === 'pending').length,
     0,
@@ -65,7 +67,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <nav aria-label="Main" className="flex flex-col gap-1 px-3">
-      {boardNav.map(({ href, label, icon: Icon }) => {
+      {boardNav.filter(({ href }) => !(isDemo && href === '/board')).map(({ href, label, icon: Icon }) => {
         const active = isActive(pathname.replace(/^\/demo(?=\/|$)/, '') || '/', href)
         return (
           <Link

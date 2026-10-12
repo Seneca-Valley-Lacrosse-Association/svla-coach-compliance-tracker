@@ -33,9 +33,11 @@ folders (one folder per coach). If the app is ever shut down, the files remain i
 
 ## Everyday tasks
 - **Add a coach:** Coaches, then Add coach. The coach then creates an account with that same email address.
-- **Add a board member:** in Supabase, SQL Editor, run (lowercase email):
+- **Add a board member (admin):** sign in as a board member, open **Board Access**, enter their email, and click Add.
+  They then create an account on the sign-in page with that exact email and confirm it. They get board access automatically.
+- **Remove a board member:** Board Access, then Remove next to their email. You cannot remove yourself, so the board is never left empty.
+- **If nobody has board access (emergency):** in Supabase, SQL Editor, run (lowercase email):
   `insert into public.board_members (email) values ('name@example.org');`
-- **Remove a board member:** `delete from public.board_members where email = 'name@example.org';`
 - **Change a requirement or its link:** Requirements page (board only).
 - **Set the Handbook link:** Requirements, Coach Handbook Acknowledgment, add the https link. Coaches cannot sign until it is set.
 

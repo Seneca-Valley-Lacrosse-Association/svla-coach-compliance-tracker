@@ -10,7 +10,7 @@ export async function GET() {
   try {
     const db = await createClient()
     const { data: { user } } = await db.auth.getUser()
-    if (!user) return respond({ user: null, coaches: [], requirements: [], submissions: [] })
+    if (!user) return respond({ user: null, coaches: [], requirements: [], submissions: [], boardMembers: [] })
     const board = await db.from('board_members').select('email').eq('email', user.email?.toLowerCase() ?? '').maybeSingle()
     if (board.error) throw board.error
     async function allRows<const Columns extends string>(table: string, columns: Columns, order: string) {
@@ -30,7 +30,13 @@ export async function GET() {
     const coaches = coachRows.map(r => ({ id: r.id, name: r.name, email: r.email, phone: r.phone, team: r.team, role: r.role, pay: r.pay, paResident10Years: r.pa_resident_10_years })) as Coach[]
     const requirements = requirementRows.map(r => ({ ...r.definition, id: r.id, order: r.sort_order })) as Requirement[]
     const submissions = submissionRows.map(r => ({ ...r.details, id: r.id, coachId: r.coach_id, requirementId: r.requirement_id, status: r.status, uploadedOn: r.uploaded_at, completedOn: r.completed_on, expiresOn: r.expires_on, filePath: r.file_path ?? undefined, fileName: r.file_name ?? undefined, reviewComment: r.review_comment ?? undefined, reviewedOn: r.reviewed_on ?? undefined })) as Submission[]
-    return respond({ user: { id: user.id, email: user.email, role: board.data ? 'board' : 'coach' }, coaches, requirements, submissions })
+    let boardMembers: { email: string }[] = []
+    if (board.data) {
+      const members = await db.from('board_members').select('email').order('email')
+      if (members.error) throw members.error
+      boardMembers = members.data ?? []
+    }
+    return respond({ user: { id: user.id, email: user.email, role: board.data ? 'board' : 'coach' }, coaches, requirements, submissions, boardMembers })
   } catch {
     return respond({ error: 'Unable to load your records. Please try again.' }, 500)
   }
@@ -75,13 +81,20 @@ export async function POST(request: Request) {
         result = await db.from('submissions').insert({ coach_id: coachId, requirement_id: requirementId, completed_on: completedOn, file_path: filePath ?? null, file_name: fileName ?? null, details: { ...details, ...(req.data.definition.type === 'Signature' ? { documentUrl: req.data.definition.helpUrl } : {}) }, submitted_by: user.id }).select('id').single()
         break
       }
+      case 'addBoardMember':
+        result = await db.from('board_members').insert({ email: command.email }).select('email').single()
+        break
+      case 'removeBoardMember':
+        if (command.email === (user.email?.toLowerCase() ?? '')) return respond({ error: 'You cannot remove your own board access. Ask another board member to do it.' }, 400)
+        result = await db.from('board_members').delete().eq('email', command.email).select('email').single()
+        break
       case 'reviewSubmission':
         if (command.decision === 'rejected' && !command.comment?.trim()) return respond({ error: 'A rejection reason is required.' }, 400)
         result = await db.from('submissions').update({ status: command.decision, review_comment: command.comment ?? null, reviewed_by: user.id }).eq('id', command.id).eq('status', 'pending').select('id').single()
         break
     }
     if (result.error) {
-      const message = result.error.code === '23505' ? 'This email is already on the roster.' : result.error.code === 'P0001' ? result.error.message : 'Could not save. Check your permissions and refresh before trying again.'
+      const message = result.error.code === '23505' ? (command.action === 'addBoardMember' ? 'That email already has board access.' : 'This email is already on the roster.') : result.error.code === 'P0001' ? result.error.message : 'Could not save. Check your permissions and refresh before trying again.'
       return respond({ error: message }, 400)
     }
     return respond({ ok: true })

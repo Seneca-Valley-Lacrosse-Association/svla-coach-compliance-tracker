@@ -12,7 +12,7 @@ import type { Coach, Requirement, Submission } from './types'
 export type ViewMode = 'board' | 'coach'
 export type UploadInput = Pick<Submission, 'coachId' | 'requirementId' | 'completedOn' | 'fileName' | 'obtainedAs' | 'fbiMethod' | 'membershipNumber' | 'signedName'> & { membershipExpiry?: string; agreed?: boolean; file?: File }
 type ResourceInput = Pick<Requirement, 'help' | 'helpUrl' | 'helpLinkLabel'>
-interface Snapshot { user: { id: string; email: string; role: ViewMode } | null; coaches: Coach[]; requirements: Requirement[]; submissions: Submission[] }
+interface Snapshot { user: { id: string; email: string; role: ViewMode } | null; coaches: Coach[]; requirements: Requirement[]; submissions: Submission[]; boardMembers?: { email: string }[] }
 interface AppState {
   viewMode: ViewMode
   setViewMode: (mode: ViewMode) => void
@@ -31,9 +31,12 @@ interface AppState {
   addRequirement: (req: Omit<Requirement, 'id' | 'order'>) => Promise<void>
   setRequirementActive: (id: string, active: boolean) => Promise<void>
   updateResource: (id: string, input: ResourceInput) => Promise<void>
+  boardMembers: { email: string }[]
+  addBoardMember: (email: string) => Promise<void>
+  removeBoardMember: (email: string) => Promise<void>
 }
 const AppContext = createContext<AppState | null>(null)
-const empty: Snapshot = { user: null, coaches: [], requirements: [], submissions: [] }
+const empty: Snapshot = { user: null, coaches: [], requirements: [], submissions: [], boardMembers: [] }
 const demoSnapshot: Snapshot = { user: { id: 'demo', email: 'board-demo@example.org', role: 'board' }, ...demo }
 async function loadSnapshot(url: string): Promise<Snapshot> {
   const response = await fetch(url, { cache: 'no-store' })
@@ -73,6 +76,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     addRequirement: input => save({ action: 'addRequirement', input }),
     setRequirementActive: (id, active) => save({ action: 'setRequirementActive', id, active }),
     updateResource: (id, input) => save({ action: 'updateResource', id, input }),
+    boardMembers: snapshot.boardMembers ?? [],
+    addBoardMember: email => save({ action: 'addBoardMember', email }),
+    removeBoardMember: email => save({ action: 'removeBoardMember', email }),
     reviewSubmission: (id, decision, comment) => save({ action: 'reviewSubmission', id, decision, comment }),
     submitUpload: async ({ file, ...input }) => {
       if (isDemo) throw new Error('The board demo is read-only.')
