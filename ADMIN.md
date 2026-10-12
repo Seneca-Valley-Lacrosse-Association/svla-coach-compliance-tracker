@@ -56,6 +56,12 @@ folders (one folder per coach). If the app is ever shut down, the files remain i
 4. Re-import coaches from the latest Excel export (Coaches sheet) using Add coach. Submission history cannot be re-imported
    automatically, so keep the Excel export and the certificates bucket download as your record.
 
+## Email templates (Supabase)
+Emails link to this app's own confirmation page so they work in any browser. In Supabase, Authentication, then Emails, set:
+- **Reset Password** link: `https://compliance.svlacrosse.org/auth/confirm?token_hash={{ .TokenHash }}&type=recovery`
+- **Confirm signup** link: `https://compliance.svlacrosse.org/auth/confirm?token_hash={{ .TokenHash }}&type=email`
+Keep the sender as no-reply@mail.svlacrosse.org (Resend SMTP). If the domain ever changes, update these links.
+
 ## Security notes
 - Anyone can create an account, but an account sees nothing unless its confirmed email is a board member or is on the coach roster.
 - Never share the Supabase service-role key or database password. They are stored as Sensitive variables in Vercel.
