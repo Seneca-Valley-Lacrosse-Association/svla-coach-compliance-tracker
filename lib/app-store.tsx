@@ -27,6 +27,7 @@ interface AppState {
   addCoach: (input: Omit<Coach, 'id'>) => Promise<void>
   registerSelf: (input: { name: string; phone: string; team: Coach['team']; role: Coach['role']; paResident10Years: boolean }) => Promise<void>
   deleteCoach: (id: string) => Promise<void>
+  removeAccount: (email: string) => Promise<void>
   editCoach: (id: string, input: Omit<Coach, 'id' | 'email'>) => Promise<void>
   pendingAccounts: { email: string; created_at: string }[]
   requirements: Requirement[]
@@ -81,6 +82,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     getSummary: id => summaries.find(s => s.coach.id === id),
     addCoach: input => save({ action: 'addCoach', input }),
     registerSelf: input => save({ action: 'registerSelf', input }),
+    removeAccount: email => save({ action: 'removeAccount', email }),
     deleteCoach: id => save({ action: 'deleteCoach', id }),
     editCoach: (id, input) => save({ action: 'editCoach', id, input }),
     pendingAccounts: snapshot.pendingAccounts ?? [],

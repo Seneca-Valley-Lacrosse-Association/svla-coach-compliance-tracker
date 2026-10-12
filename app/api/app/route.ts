@@ -69,10 +69,18 @@ export async function POST(request: Request) {
         break
       }
       case 'deleteCoach': {
+        const owner = await db.from('coaches').select('email').eq('id', command.id).single()
+        if (owner.error) throw owner.error
         const files = await db.from('submissions').select('file_path').eq('coach_id', command.id).not('file_path', 'is', null)
         if (files.error) throw files.error
         result = await db.from('coaches').delete().eq('id', command.id).select('id').single()
         if (!result.error && files.data?.length) await db.storage.from('certificates').remove(files.data.map(f => f.file_path as string))
+        if (!result.error) await db.rpc('delete_account', { p_email: owner.data.email })
+        break
+      }
+      case 'removeAccount': {
+        const rpc = await db.rpc('delete_account', { p_email: command.email })
+        result = { data: rpc.data, error: rpc.error }
         break
       }
       case 'registerSelf': {

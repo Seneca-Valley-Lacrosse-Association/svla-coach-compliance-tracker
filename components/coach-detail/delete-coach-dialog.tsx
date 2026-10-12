@@ -32,7 +32,7 @@ export function DeleteCoachDialog({ coach }: { coach: Coach }) {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Delete {coach.name}?</DialogTitle>
-          <DialogDescription>This permanently removes {coach.name} from the roster, along with every submission and uploaded document on their record. It cannot be undone. Export the data from Reports first if you need a copy. Their sign-in account is not deleted; if they sign in again they will be asked to complete a new profile.</DialogDescription>
+          <DialogDescription>This permanently removes {coach.name} from the roster, along with every submission and uploaded document on their record. It cannot be undone. Export the data from Reports first if you need a copy. Their sign-in account is also removed (unless they are a board member), so they would need to sign up again to return.</DialogDescription>
         </DialogHeader>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <DialogFooter>
