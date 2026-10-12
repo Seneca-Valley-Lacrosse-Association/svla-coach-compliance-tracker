@@ -71,3 +71,7 @@ Keep the sender as no-reply@mail.svlacrosse.org (Resend SMTP). If the domain eve
 
 - **Change a coach's team, role, pay status, name, phone or PA-resident flag:** open the coach from the Coaches page and use **Edit coach**. The email can't be changed (it is how the account is matched). Changing role or pay status re-evaluates which requirements apply.
 - **Someone signed up but isn't on the roster:** the Coaches page shows a "Signed up, not on the roster" list (confirmed accounts only). Click **Add to roster** to set their team and role. Until then they see nothing in the app.
+
+## Coach self-registration
+
+After a coach confirms their email, they fill in their own profile (name, phone, team, role, and whether they have lived in PA for 10 years). This creates their roster record automatically, always as **Volunteer**. The board then opens the coach and uses **Edit coach** to set **Paid** where it applies; fingerprint requirements then apply to them. Anyone with a confirmed account can create a roster record this way, so review new names on the Coaches page. Board accounts skip this step.

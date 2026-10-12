@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     const parsed = mutationSchema.safeParse(await request.json())
     if (!parsed.success) return respond({ error: parsed.error.issues[0]?.message ?? 'Check the form values.' }, 400)
     const command = parsed.data
-    if (command.action !== 'submitUpload') {
+    if (command.action !== 'submitUpload' && command.action !== 'registerSelf') {
       const board = await db.from('board_members').select('email').eq('email', user.email?.toLowerCase() ?? '').maybeSingle()
       if (board.error || !board.data) return respond({ error: 'Board access is required.' }, 403)
     }
@@ -66,6 +66,12 @@ export async function POST(request: Request) {
       case 'addCoach': {
         const { paResident10Years, ...coach } = command.input
         result = await db.from('coaches').insert({ ...coach, pa_resident_10_years: paResident10Years }).select('id').single()
+        break
+      }
+      case 'registerSelf': {
+        const i = command.input
+        const rpc = await db.rpc('register_self', { p_name: i.name, p_phone: i.phone, p_team: i.team, p_role: i.role, p_pa_resident: i.paResident10Years })
+        result = { data: rpc.data, error: rpc.error }
         break
       }
       case 'editCoach': {

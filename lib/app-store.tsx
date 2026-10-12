@@ -9,6 +9,7 @@ import { createClient } from './supabase/client'
 import { AuthPanel } from '@/components/auth-panel'
 import { ResetPasswordPanel } from '@/components/reset-password-panel'
 import { ConfirmLinkPanel } from '@/components/confirm-link-panel'
+import { CompleteProfilePanel } from '@/components/complete-profile-panel'
 import type { Coach, Requirement, Submission } from './types'
 
 export type ViewMode = 'board' | 'coach'
@@ -24,6 +25,7 @@ interface AppState {
   currentCoachId: string
   coaches: Coach[]
   addCoach: (input: Omit<Coach, 'id'>) => Promise<void>
+  registerSelf: (input: { name: string; phone: string; team: Coach['team']; role: Coach['role']; paResident10Years: boolean }) => Promise<void>
   editCoach: (id: string, input: Omit<Coach, 'id' | 'email'>) => Promise<void>
   pendingAccounts: { email: string; created_at: string }[]
   requirements: Requirement[]
@@ -77,6 +79,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     coaches, requirements, submissions, summaries,
     getSummary: id => summaries.find(s => s.coach.id === id),
     addCoach: input => save({ action: 'addCoach', input }),
+    registerSelf: input => save({ action: 'registerSelf', input }),
     editCoach: (id, input) => save({ action: 'editCoach', id, input }),
     pendingAccounts: snapshot.pendingAccounts ?? [],
     addRequirement: input => save({ action: 'addRequirement', input }),
@@ -109,7 +112,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   if (!isDemo && isLoading) return <main className="flex min-h-dvh items-center justify-center"><p role="status">Loading your secure workspace…</p></main>
   if (!isDemo && error) return <main className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6"><p role="alert">Unable to load the workspace. Your records have not been changed.</p><button onClick={() => void mutate()} className="text-primary underline">Try again</button><a href="/demo" className="text-primary underline">Open board demo</a></main>
   if (!isDemo && !user) return <AuthPanel onSignedIn={() => mutate()} />
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>
+  const needsProfile = !isDemo && user?.role === 'coach' && !value.currentCoachId
+  return <AppContext.Provider value={value}>{needsProfile ? <CompleteProfilePanel /> : children}</AppContext.Provider>
 }
 
 export function useApp() {
