@@ -20,6 +20,15 @@ export type Validity =
   | { kind: 'one-time' }
   | { kind: 'membership' }
 
+/** Which SVLA programs a requirement comes from. */
+export const LEVELS = ['youth', 'high-school', 'both'] as const
+export type Level = (typeof LEVELS)[number]
+export const LEVEL_LABELS: Record<Level, string> = {
+  youth: 'Youth programs',
+  'high-school': 'High school programs',
+  both: 'Youth and high school',
+}
+
 export interface Requirement {
   id: string
   order: number
@@ -33,6 +42,14 @@ export interface Requirement {
   help: string
   helpUrl: string
   helpLinkLabel: string
+  /** Youth, high school or both. Missing means both. */
+  level?: Level
+  /** Plain-language reason shown in the "Why we require this" dropdown. */
+  why?: string
+  /** Where the requirement comes from, for example "PA law" or "PIAA". */
+  source?: string
+  /** Optional link to the rule or policy behind the requirement. */
+  sourceUrl?: string
   /** PA clearances record whether they were obtained for volunteer or employment purposes. */
   tracksObtainedAs?: boolean
   /** FBI check: eligible volunteers may submit a Volunteer Disclosure Statement instead. */

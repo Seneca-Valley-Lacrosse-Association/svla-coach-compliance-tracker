@@ -2,7 +2,8 @@
 
 import { AlertTriangle, ExternalLink, FileText, MessageSquareWarning } from 'lucide-react'
 import { daysBetween, eligibilityIssue, formatDate, TODAY, type ChecklistItem } from '@/lib/compliance'
-import type { Coach, Submission } from '@/lib/types'
+import { LEVEL_LABELS, type Coach, type Submission } from '@/lib/types'
+import { reasonFor } from '@/lib/requirement-reasons'
 import { ItemStatusPill } from '@/components/status-pill'
 import { UploadButton } from './upload-dialog'
 import { ReviewActions } from '@/components/review/review-actions'
@@ -39,6 +40,7 @@ export function ChecklistRow({
   const shown = latest?.status === 'pending' ? latest : approved ?? latest
   const pendingIssue = latest?.status === 'pending' ? eligibilityIssue(coach, req, latest) : null
   const helpOpenByDefault = mode === 'coach' && !item.satisfied
+  const reason = reasonFor(req)
 
   return (
     <li className="flex flex-col gap-4 p-4 sm:p-5">
@@ -136,6 +138,31 @@ export function ChecklistRow({
           <span className="sr-only">(opens in a new tab)</span>
         </a>}
       </details>
+
+      {reason && (
+        <details className="group rounded-lg bg-secondary/60 px-3 py-2 text-sm">
+          <summary className="cursor-pointer font-medium text-brand">Why we require this</summary>
+          <p className="mt-2 font-medium text-navy">{LEVEL_LABELS[reason.level]}</p>
+          <p className="mt-1 leading-relaxed text-foreground">{reason.why}</p>
+          {reason.source && (
+            <p className="mt-2 leading-relaxed text-muted-foreground">
+              <span className="font-medium text-foreground">Where it comes from:</span> {reason.source}
+            </p>
+          )}
+          {reason.sourceUrl && (
+            <a
+              href={reason.sourceUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 inline-flex items-center gap-1 font-medium text-brand underline underline-offset-4"
+            >
+              Read the source
+              <ExternalLink className="size-3.5" aria-hidden="true" />
+              <span className="sr-only">(opens in a new tab)</span>
+            </a>
+          )}
+        </details>
+      )}
     </li>
   )
 }
