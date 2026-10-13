@@ -38,3 +38,14 @@ test('mutations reject untrusted URLs and invalid coach fields', () => {
   assert.equal(mutationSchema.safeParse({ action: 'updateResource', id: 'handbook', input: { help: 'Read this', helpUrl: 'javascript:alert(1)', helpLinkLabel: 'Document' } }).success, false)
   assert.equal(mutationSchema.safeParse({ action: 'addCoach', input: { ...coaches[0], email: 'bad-email' } }).success, false)
 })
+test('level tags hide requirements that do not apply to a coach\'s program', () => {
+  const youthCoach = { ...coaches[0], team: '10U', role: 'Head Coach', pay: 'Volunteer' }
+  const hsCoach = { ...youthCoach, team: 'HS-Varsity' }
+  const base = requirements.find(r => r.id === 'handbook')
+  const youthOnly = { ...base, id: 'youth-only', level: 'youth' }
+  const hsOnly = { ...base, id: 'hs-only', level: 'high-school' }
+  const both = { ...base, id: 'both-level', level: 'both' }
+  const ids = coach => applicableRequirements([youthOnly, hsOnly, both, base], coach).map(r => r.id)
+  assert.deepEqual(ids(youthCoach).sort(), ['both-level', 'handbook', 'youth-only'])
+  assert.deepEqual(ids(hsCoach).sort(), ['both-level', 'handbook', 'hs-only'])
+})

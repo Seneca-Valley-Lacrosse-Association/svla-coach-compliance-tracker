@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useApp } from '@/lib/app-store'
 import { ResourceEditor } from './resource-editor'
 import { validityLabel } from '@/lib/compliance'
-import { ROLES, type Requirement } from '@/lib/types'
+import { LEVEL_LABELS, ROLES, type Requirement } from '@/lib/types'
 import { PageHeader } from '@/components/page-header'
 import { AddRequirementDialog } from './add-requirement-dialog'
 import { cn } from '@/lib/utils'
@@ -12,7 +12,8 @@ import { cn } from '@/lib/utils'
 function appliesLabel(req: Requirement) {
   const roles = req.appliesToRoles.length === ROLES.length ? 'All roles' : req.appliesToRoles.join(', ')
   const pay = req.appliesToPay.length === 2 ? '' : ` · ${req.appliesToPay[0]} only`
-  return roles + pay
+  const level = req.level && req.level !== 'both' ? ` · ${LEVEL_LABELS[req.level]} only` : ''
+  return roles + pay + level
 }
 
 function ActiveToggle({ req }: { req: Requirement }) {

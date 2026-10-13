@@ -73,8 +73,23 @@ export function validityLabel(validity: Validity) {
   }
 }
 
+/** HS-JV and HS-Varsity are high school programs. Every other team is a youth program. */
+export function coachLevel(coach: Coach): 'youth' | 'high-school' {
+  return coach.team.startsWith('HS-') ? 'high-school' : 'youth'
+}
+
+/** A requirement with no level set applies to both youth and high school. */
+export function appliesToLevel(req: Requirement, coach: Coach) {
+  const level = req.level ?? 'both'
+  return level === 'both' || level === coachLevel(coach)
+}
+
 export function appliesTo(req: Requirement, coach: Coach) {
-  return req.appliesToRoles.includes(coach.role) && req.appliesToPay.includes(coach.pay)
+  return (
+    req.appliesToRoles.includes(coach.role) &&
+    req.appliesToPay.includes(coach.pay) &&
+    appliesToLevel(req, coach)
+  )
 }
 
 export function applicableRequirements(requirements: Requirement[], coach: Coach) {
