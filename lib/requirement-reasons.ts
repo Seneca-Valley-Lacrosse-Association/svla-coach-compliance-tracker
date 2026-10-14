@@ -36,10 +36,9 @@ export const DEFAULT_REASONS: Record<string, Reason> = {
     sourceUrl: 'https://www.usalacrosse.com/membership',
   },
   'usal-bronze': {
-    level: 'both',
-    why: 'The USA Lacrosse background screen and Bronze course cover safety, abuse prevention and coaching basics. Youth programs use it as SVLA\'s main coaching standard.',
-    source: 'USA Lacrosse program requirement. Whether high school coaches need it is to confirm with the insurance carrier.',
-    sourceUrl: 'https://www.usalacrosse.com/coaches',
+    level: 'youth',
+    why: 'WPYLA requires every youth coach to complete USA Lacrosse training, and each team must have at least one Bronze-certified coach to be eligible to play. Bronze is the USA Lacrosse baseline training, including the background screen, abuse prevention, concussion and cardiac care.',
+    source: 'WPYLA League Rules, section 6 (Coaches Rosters). Not required for high school coaches.',
   },
   concussion: {
     level: 'both',
