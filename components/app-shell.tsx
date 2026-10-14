@@ -49,11 +49,11 @@ function Brand() {
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
-  const { viewMode, summaries, isDemo } = useApp()
+  const { viewMode, summaries, isDemo, awaitingCoaches } = useApp()
   const pendingCount = summaries.reduce(
     (n, s) => n + s.items.filter((i) => i.latest?.status === 'pending').length,
     0,
-  )
+  ) + (isDemo ? 0 : awaitingCoaches.filter((c) => c.status === 'pending').length)
 
   if (viewMode === 'coach') {
     return (

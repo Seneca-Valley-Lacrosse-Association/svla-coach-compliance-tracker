@@ -7,9 +7,11 @@ import { eligibilityIssue, formatDate } from '@/lib/compliance'
 import { PageHeader } from '@/components/page-header'
 import { ItemStatusPill, PayBadge } from '@/components/status-pill'
 import { ReviewActions } from './review-actions'
+import { AwaitingApproval } from '@/components/coaches/awaiting-approval'
 
 export function ReviewQueue() {
-  const { submissions, coaches, requirements } = useApp()
+  const { submissions, coaches, requirements, awaitingCoaches, isDemo } = useApp()
+  const profilesWaiting = !isDemo && awaitingCoaches.length > 0
   const coachById = new Map(coaches.map((c) => [c.id, c]))
   const reqById = new Map(requirements.map((r) => [r.id, r]))
 
@@ -26,10 +28,12 @@ export function ReviewQueue() {
     <>
       <PageHeader
         title="Review Queue"
-        description="Uploads waiting for a board member to approve or reject. Oldest first."
+        description="New coach profiles and uploads waiting for a board member to approve or reject."
       />
 
-      {pending.length === 0 ? (
+      <AwaitingApproval />
+
+      {pending.length === 0 ? profilesWaiting ? null : (
         <div className="flex flex-col items-center gap-3 rounded-xl border bg-card p-12 text-center">
           <Inbox className="size-10 text-muted-foreground" aria-hidden="true" />
           <p className="font-medium">All caught up. Nothing is waiting for review.</p>
