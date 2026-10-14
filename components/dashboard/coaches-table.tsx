@@ -1,16 +1,69 @@
 'use client'
 
 import Link from '@/components/app-link'
+import { useMemo, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { ChevronRight } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight } from 'lucide-react'
 import type { CoachSummary } from '@/lib/compliance'
+import { useApp } from '@/lib/app-store'
+import { loginStateOf } from '@/lib/types'
 import { ComplianceStatusPill, PayBadge } from '@/components/status-pill'
 import { RequirementProgress } from '@/components/requirement-progress'
 import { LoginCell } from '@/components/coaches/login-status'
 
+type SortKey = 'name' | 'team' | 'role' | 'pay' | 'login' | 'status' | 'progress'
+type SortState = { key: SortKey; dir: 'asc' | 'desc' } | null
+
+// Worst first when ascending, so the people who need attention rise to the top.
+const STATUS_RANK: Record<string, number> = { expired: 0, incomplete: 1, expiring: 2, cleared: 3 }
+const LOGIN_RANK = { none: 0, invited: 1, active: 2 }
+const TEAM_ORDER = ['8U', '10U', '12U', '14U', 'HS-JV', 'HS-Varsity', 'Board', 'Volunteer']
+
+function SortHeader({ label, sortKey, sort, onSort }: { label: string; sortKey: SortKey; sort: SortState; onSort: (k: SortKey) => void }) {
+  const active = sort?.key === sortKey
+  const Icon = !active ? ArrowUpDown : sort.dir === 'asc' ? ArrowUp : ArrowDown
+  return (
+    <th scope="col" aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'} className="px-4 py-3 font-medium">
+      <button type="button" onClick={() => onSort(sortKey)} className="-mx-1 inline-flex items-center gap-1.5 rounded px-1 hover:text-foreground focus-visible:outline-2 focus-visible:outline-brand">
+        {label}
+        <Icon className={active ? 'size-4 text-foreground' : 'size-4 opacity-50'} aria-hidden="true" />
+      </button>
+    </th>
+  )
+}
+
 export function CoachesTable({ summaries, showLogin = false }: { summaries: CoachSummary[]; showLogin?: boolean }) {
   const router = useRouter()
   const pathname = usePathname()
+  const { loginByEmail } = useApp()
+  const [sort, setSort] = useState<SortState>(null)
+
+  // Click cycles ascending, descending, then back to the original order.
+  function onSort(key: SortKey) {
+    setSort((cur) => (cur?.key !== key ? { key, dir: 'asc' } : cur.dir === 'asc' ? { key, dir: 'desc' } : null))
+  }
+
+  const rows = useMemo(() => {
+    if (!sort) return summaries
+    const loginOf = (s: CoachSummary) => LOGIN_RANK[loginStateOf(loginByEmail?.[s.coach.email.toLowerCase()])]
+    const value = (s: CoachSummary): string | number => {
+      switch (sort.key) {
+        case 'name': return s.coach.name.toLowerCase()
+        case 'team': { const i = TEAM_ORDER.indexOf(s.coach.team); return i === -1 ? TEAM_ORDER.length : i }
+        case 'role': return String(s.coach.role).toLowerCase()
+        case 'pay': return String(s.coach.pay).toLowerCase()
+        case 'login': return loginOf(s)
+        case 'status': return STATUS_RANK[s.status] ?? 99
+        case 'progress': return s.total ? s.satisfiedCount / s.total : 0
+      }
+    }
+    const dir = sort.dir === 'asc' ? 1 : -1
+    return [...summaries].sort((a, b) => {
+      const va = value(a), vb = value(b)
+      const c = typeof va === 'number' && typeof vb === 'number' ? va - vb : String(va).localeCompare(String(vb))
+      return c !== 0 ? c * dir : a.coach.name.localeCompare(b.coach.name)
+    })
+  }, [summaries, sort, loginByEmail])
 
   if (summaries.length === 0) {
     return (
@@ -25,17 +78,17 @@ export function CoachesTable({ summaries, showLogin = false }: { summaries: Coac
       <table className="hidden w-full text-left md:table">
         <thead className="border-b bg-muted/60 text-sm text-muted-foreground">
           <tr>
-            <th scope="col" className="px-4 py-3 font-medium">Name</th>
-            <th scope="col" className="px-4 py-3 font-medium">Team</th>
-            <th scope="col" className="px-4 py-3 font-medium">Role</th>
-            <th scope="col" className="px-4 py-3 font-medium">Pay Status</th>
-            {showLogin && <th scope="col" className="px-4 py-3 font-medium">Login</th>}
-            <th scope="col" className="px-4 py-3 font-medium">Compliance</th>
-            <th scope="col" className="px-4 py-3 font-medium">Progress</th>
+            <SortHeader label="Name" sortKey="name" sort={sort} onSort={onSort} />
+            <SortHeader label="Team" sortKey="team" sort={sort} onSort={onSort} />
+            <SortHeader label="Role" sortKey="role" sort={sort} onSort={onSort} />
+            <SortHeader label="Pay Status" sortKey="pay" sort={sort} onSort={onSort} />
+            {showLogin && <SortHeader label="Login" sortKey="login" sort={sort} onSort={onSort} />}
+            <SortHeader label="Compliance" sortKey="status" sort={sort} onSort={onSort} />
+            <SortHeader label="Progress" sortKey="progress" sort={sort} onSort={onSort} />
           </tr>
         </thead>
         <tbody className="divide-y">
-          {summaries.map((s) => (
+          {rows.map((s) => (
             <tr
               key={s.coach.id}
               onClick={() => router.push(`${pathname.startsWith('/demo') ? '/demo' : ''}/coaches/${s.coach.id}`)}
