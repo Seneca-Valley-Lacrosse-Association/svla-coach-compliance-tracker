@@ -73,7 +73,7 @@ export async function POST(request: Request) {
     const parsed = mutationSchema.safeParse(await request.json())
     if (!parsed.success) return respond({ error: parsed.error.issues[0]?.message ?? 'Check the form values.' }, 400)
     const command = parsed.data
-    if (command.action !== 'submitUpload' && command.action !== 'registerSelf') {
+    if (command.action !== 'submitUpload' && command.action !== 'registerSelf' && command.action !== 'removeSubmission') {
       const board = await db.from('board_members').select('email').eq('email', user.email?.toLowerCase() ?? '').maybeSingle()
       if (board.error || !board.data) return respond({ error: 'Board access is required.' }, 403)
     }
@@ -93,6 +93,15 @@ export async function POST(request: Request) {
         result = await db.from('coaches').delete().eq('id', command.id).select('id').single()
         if (!result.error && files.data?.length) await db.storage.from('certificates').remove(files.data.map(f => f.file_path as string))
         if (!result.error) await db.rpc('delete_account', { p_email: owner.data.email })
+        break
+      }
+      case 'removeSubmission': {
+        // Coaches may remove their own entries; board members may remove any. The database function enforces this.
+        const rpc = await db.rpc('remove_submission', { p_id: command.id })
+        if (rpc.error) { result = { data: null, error: rpc.error }; break }
+        const paths = ((rpc.data ?? []) as string[]).filter(Boolean)
+        if (paths.length) await db.storage.from('certificates').remove(paths)
+        result = { data: rpc.data, error: null }
         break
       }
       case 'archiveCoach':

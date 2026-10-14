@@ -7,6 +7,7 @@ import { reasonFor } from '@/lib/requirement-reasons'
 import { ItemStatusPill } from '@/components/status-pill'
 import { UploadButton } from './upload-dialog'
 import { EditDatesDialog } from './edit-dates-dialog'
+import { RemoveEntryDialog } from './remove-entry-dialog'
 import { ReviewActions } from '@/components/review/review-actions'
 import { useHelp } from '@/components/help/help-provider'
 
@@ -108,6 +109,7 @@ export function ChecklistRow({
             />
           )}
           {mode === 'board' && shown && <EditDatesDialog key={`${shown.id}-${shown.completedOn}-${shown.expiresOn}`} submission={shown} requirement={req} />}
+          {shown && <RemoveEntryDialog submission={shown} requirementName={req.name} mode={mode} />}
           {needsHelpLink && (
             <button
               type="button"
