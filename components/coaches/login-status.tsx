@@ -61,17 +61,15 @@ export function PortalAccess({ coach }: { coach: Coach }) {
   const [error, setError] = useState('')
   const [link, setLink] = useState('')
   const [copied, setCopied] = useState(false)
-  if (isDemo) return null
-
   async function run(deliver: 'email' | 'link') {
     if (busy) return
     setBusy(deliver); setError(''); setMessage(''); setLink(''); setCopied(false)
     try {
       const result = await inviteCoach(coach.id, deliver)
       if (result.link) setLink(result.link)
-      if (result.emailSent) setMessage(`Invite emailed to ${coach.email}.`)
+      if (result.emailSent) setMessage(`Invite emailed to ${coach.email}.${isDemo ? ' (Demo: no email was actually sent.)' : ''}`)
       else if (deliver === 'email') setMessage('The email could not be sent, so copy the sign-in link below and send it to the coach yourself.')
-      else setMessage('Copy this one-time link and send it to the coach. It works once and expires, and anyone who has it can sign in as them, so share it privately.')
+      else setMessage('Copy this one-time link and send it to the coach. It works once and expires, and anyone who has it can sign in as them, so share it privately.' + (isDemo ? ' (Demo: this sample link does not work.)' : ''))
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not create the invite.') }
     finally { setBusy('') }
   }

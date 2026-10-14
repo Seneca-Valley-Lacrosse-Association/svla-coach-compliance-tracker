@@ -1,6 +1,6 @@
 import { coaches as examples, requirements } from './mock-data'
 import { applicableRequirements, computeExpiry, needsEmploymentClearances, TODAY } from './compliance'
-import type { Submission } from './types'
+import type { LoginInfo, Submission } from './types'
 
 export { requirements }
 export const coaches = ['c1', 'c3', 'c4', 'c6', 'c7'].map(id => examples.find(coach => coach.id === id)!)
@@ -23,3 +23,11 @@ export const submissions: Submission[] = coaches.flatMap(coach => applicableRequ
     fileName: req.type === 'File' || req.type === 'Training' ? 'Sample record — no real certificate' : undefined,
   } satisfies Submission]
 }))
+
+/** Sample sign-in accounts for the demo: two active, one invited, two with no login yet. All invented. */
+const at = (days: number, time: string) => `${shiftDays(days)}T${time}Z`
+export const loginStatus: LoginInfo[] = [
+  { email: 'alex.rivera@example.org', has_account: true, last_sign_in_at: at(-1, '23:12:00'), invited_at: at(-9, '14:00:00') },
+  { email: 'jordan.lee@example.org', has_account: true, last_sign_in_at: at(-4, '19:45:00'), invited_at: at(-9, '14:00:00') },
+  { email: 'taylor.brooks@example.org', has_account: false, last_sign_in_at: null, invited_at: at(-3, '14:00:00') },
+]

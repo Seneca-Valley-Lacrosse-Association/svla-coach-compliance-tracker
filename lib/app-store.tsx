@@ -55,7 +55,8 @@ interface AppState {
 }
 const AppContext = createContext<AppState | null>(null)
 const empty: Snapshot = { user: null, coaches: [], requirements: [], submissions: [], boardMembers: [], pendingAccounts: [] }
-const demoSnapshot: Snapshot = { user: { id: 'demo', email: 'board-demo@example.org', role: 'board' }, ...demo }
+const demoSnapshot: Snapshot = { user: { id: 'demo', email: 'board-demo@example.org', role: 'board' }, coaches: demo.coaches, requirements: demo.requirements, submissions: demo.submissions }
+const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 async function loadSnapshot(url: string): Promise<Snapshot> {
   const response = await fetch(url, { cache: 'no-store' })
   const result = await response.json()
@@ -67,6 +68,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const isDemo = pathname === '/demo' || pathname.startsWith('/demo/')
   const [demoView, setDemoView] = useState<ViewMode>('board')
+  // Demo only: invites change this local sample list so the badges update. Nothing is sent or saved anywhere.
+  const [demoLogins, setDemoLogins] = useState<LoginInfo[]>(demo.loginStatus)
   const { data, error, isLoading, mutate } = useSWR<Snapshot>(isDemo ? null : '/api/app', loadSnapshot, { refreshInterval: 60000, shouldRetryOnError: false })
   const snapshot = isDemo ? demoSnapshot : data ?? empty
   const { requirements, submissions, user } = snapshot
@@ -75,6 +78,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const awaitingCoaches = useMemo(() => allCoaches.filter(c => c.status === 'pending' || c.status === 'declined'), [allCoaches])
   const mine = isDemo ? undefined : allCoaches.find(c => c.email.toLowerCase() === user?.email?.toLowerCase())
   const summaries = useMemo(() => coaches.map(c => summarizeCoach(c, requirements, submissions)), [coaches, requirements, submissions])
+  function markInvited(emails: string[]) {
+    const now = new Date().toISOString()
+    setDemoLogins(list => {
+      const next = list.map(l => emails.includes(l.email) && !l.has_account ? { ...l, invited_at: now } : l)
+      for (const email of emails) if (!next.some(l => l.email === email)) next.push({ email, has_account: false, last_sign_in_at: null, invited_at: now })
+      return next
+    })
+  }
   async function save(command: Record<string, unknown>) {
     if (isDemo) throw new Error('The board demo is read-only. Sign in to manage live records.')
     const response = await fetch('/api/app', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-SVLA-Request': '1' }, body: JSON.stringify(command) })
@@ -102,9 +113,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     deleteCoach: id => save({ action: 'deleteCoach', id }),
     editCoach: (id, input) => save({ action: 'editCoach', id, input }),
     pendingAccounts: snapshot.pendingAccounts ?? [],
-    loginByEmail: Object.fromEntries((snapshot.loginStatus ?? []).map(l => [l.email.toLowerCase(), l])),
-    inviteCoach: (id, deliver) => save({ action: 'inviteCoach', id, deliver }),
-    inviteCoaches: ids => save({ action: 'inviteCoaches', ids }),
+    loginByEmail: Object.fromEntries((isDemo ? demoLogins : snapshot.loginStatus ?? []).map(l => [l.email.toLowerCase(), l])),
+    inviteCoach: async (id, deliver) => {
+      if (!isDemo) return save({ action: 'inviteCoach', id, deliver })
+      await pause(700)
+      const coach = coaches.find(c => c.id === id)
+      if (coach) markInvited([coach.email])
+      return deliver === 'email' ? { emailSent: true } : { link: 'https://example.org/demo-sign-in-link-not-real' }
+    },
+    inviteCoaches: async ids => {
+      if (!isDemo) return save({ action: 'inviteCoaches', ids })
+      await pause(1200)
+      markInvited(coaches.filter(c => ids.includes(c.id)).map(c => c.email))
+      return { sent: ids.length, failed: [] }
+    },
     addRequirement: input => save({ action: 'addRequirement', input }),
     setRequirementActive: (id, active) => save({ action: 'setRequirementActive', id, active }),
     updateResource: (id, input) => save({ action: 'updateResource', id, input }),

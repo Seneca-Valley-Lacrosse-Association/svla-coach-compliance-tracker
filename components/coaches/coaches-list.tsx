@@ -26,7 +26,7 @@ export function CoachesList() {
   const [bulkMessage, setBulkMessage] = useState('')
 
   const stateOf = (email: string) => loginStateOf(loginByEmail[email.toLowerCase()])
-  const hasLoginData = !isDemo && Object.keys(loginByEmail).length > 0
+  const hasLoginData = Object.keys(loginByEmail).length > 0
   const counts = { active: 0, invited: 0, none: 0 }
   for (const s of summaries) counts[stateOf(s.coach.email)]++
   const uninvited = summaries.filter((s) => stateOf(s.coach.email) === 'none')
@@ -35,7 +35,7 @@ export function CoachesList() {
     setBulk('sending'); setBulkMessage('')
     try {
       const { sent, failed } = await inviteCoaches(uninvited.map((s) => s.coach.id))
-      setBulkMessage(`${sent} invite${sent === 1 ? '' : 's'} sent.${failed.length ? ` Could not send to: ${failed.join(', ')}. Open each coach and use Copy sign-in link instead.` : ''}`)
+      setBulkMessage(`${sent} invite${sent === 1 ? '' : 's'} sent.${isDemo ? ' (Demo: no emails were actually sent.)' : ''}${failed.length ? ` Could not send to: ${failed.join(', ')}. Open each coach and use Copy sign-in link instead.` : ''}`)
     } catch (e) { setBulkMessage(e instanceof Error ? e.message : 'Could not send the invites.') }
     finally { setBulk('idle') }
   }
