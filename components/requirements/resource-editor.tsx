@@ -2,7 +2,7 @@
 
 import { useId, useState, type FormEvent } from 'react'
 import { useApp } from '@/lib/app-store'
-import { LEVELS, LEVEL_LABELS, PAY_STATUSES, ROLES, type Level, type PayStatus, type Requirement, type Role } from '@/lib/types'
+import { LEVELS, LEVEL_LABELS, PAY_STATUSES, ROLES, TEAMS, type Team, type Level, type PayStatus, type Requirement, type Role } from '@/lib/types'
 import { reasonFor } from '@/lib/requirement-reasons'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
@@ -24,14 +24,15 @@ export function ResourceEditor({ requirement }: { requirement: Requirement }) {
   const [sourceUrl, setSourceUrl] = useState(current?.sourceUrl ?? '')
   const [roles, setRoles] = useState<Role[]>(requirement.appliesToRoles)
   const [pay, setPay] = useState<PayStatus[]>(requirement.appliesToPay)
+  const [teams, setTeams] = useState<Team[]>(requirement.appliesToTeams?.length ? requirement.appliesToTeams : [...TEAMS])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (busy) return
-    if (roles.length === 0 || pay.length === 0) return setError('Pick at least one role and one pay status.')
+    if (roles.length === 0 || pay.length === 0 || teams.length === 0) return setError('Pick at least one role, one pay status and one team.')
     setBusy(true); setError('')
-    try { await updateResource(requirement.id, { help, helpUrl, helpLinkLabel, level, why, source, sourceUrl, appliesToRoles: roles, appliesToPay: pay }); setOpen(false) }
+    try { await updateResource(requirement.id, { help, helpUrl, helpLinkLabel, level, why, source, sourceUrl, appliesToRoles: roles, appliesToPay: pay, appliesToTeams: teams.length === TEAMS.length ? [] : teams }); setOpen(false) }
     catch (error) { setError(error instanceof Error ? error.message : 'Could not save resource.') }
     finally { setBusy(false) }
   }
@@ -56,6 +57,13 @@ export function ResourceEditor({ requirement }: { requirement: Requirement }) {
               <div className="flex gap-6 text-sm">
                 {PAY_STATUSES.map(p => <label key={p} className="flex items-center gap-2"><input type="checkbox" checked={pay.includes(p)} onChange={() => setPay(pay.includes(p) ? pay.filter(x => x !== p) : [...pay, p])} className="size-4 accent-brand" />{p}</label>)}
               </div>
+            </fieldset>
+            <fieldset>
+              <legend className="mb-2 text-sm font-medium">Teams it applies to</legend>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                {TEAMS.map(t => <label key={t} className="flex items-center gap-2"><input type="checkbox" checked={teams.includes(t)} onChange={() => setTeams(teams.includes(t) ? teams.filter(x => x !== t) : [...teams, t])} className="size-4 accent-brand" />{t}</label>)}
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">All teams checked means every team.</p>
             </fieldset>
             <Field>
               <FieldLabel htmlFor={`${id}-level`}>Program (youth, high school or both)</FieldLabel>

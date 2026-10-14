@@ -96,7 +96,10 @@ export function RequirementsView() {
                   })()}
                 </td>
                 <td className="px-4 py-3">{r.type}</td>
-                <td className="px-4 py-3">{LEVEL_LABELS[reasonFor(r)?.level ?? r.level ?? 'both']}</td>
+                <td className="px-4 py-3">
+                  {LEVEL_LABELS[reasonFor(r)?.level ?? r.level ?? 'both']}
+                  {r.appliesToTeams?.length ? <p className="text-sm text-muted-foreground">{r.appliesToTeams.join(', ')} only</p> : null}
+                </td>
                 <td className="px-4 py-3">{appliesLabel(r)}</td>
                 <td className="px-4 py-3">{validityLabel(r.validity)}</td>
                 <td className="px-4 py-3">{r.required ? 'Yes' : 'Optional'}</td>

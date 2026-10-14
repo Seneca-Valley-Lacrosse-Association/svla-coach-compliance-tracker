@@ -60,3 +60,13 @@ test('high school coaches need employment clearances and cannot use the voluntee
   assert.equal(eligibilityIssue(youthVolunteer, req, { obtainedAs: 'Volunteer', fbiMethod: 'fingerprint' }), null)
   assert.equal(eligibilityIssue(hsVolunteer, req, { obtainedAs: 'Employment', fbiMethod: 'fingerprint' }), null)
 })
+test('teams limit where a requirement applies', () => {
+  const base = requirements.find(r => r.id === 'handbook')
+  const coachOn = team => ({ ...coaches[0], team, role: 'Head Coach', pay: 'Volunteer' })
+  const only8u10u = { ...base, id: 'small-teams', appliesToTeams: ['8U', '10U'] }
+  const ids = team => applicableRequirements([only8u10u], coachOn(team)).map(r => r.id)
+  assert.deepEqual(ids('10U'), ['small-teams'])
+  assert.deepEqual(ids('14U'), [])
+  assert.deepEqual(ids('HS-Varsity'), [])
+  assert.deepEqual(applicableRequirements([{ ...base, appliesToTeams: [] }], coachOn('14U')).length, 1)
+})

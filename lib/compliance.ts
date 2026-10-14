@@ -84,11 +84,17 @@ export function appliesToLevel(req: Requirement, coach: Coach) {
   return level === 'both' || level === coachLevel(coach)
 }
 
+/** A requirement with no teams listed applies to every team. */
+export function appliesToTeam(req: Requirement, coach: Coach) {
+  return !req.appliesToTeams?.length || req.appliesToTeams.includes(coach.team)
+}
+
 export function appliesTo(req: Requirement, coach: Coach) {
   return (
     req.appliesToRoles.includes(coach.role) &&
     req.appliesToPay.includes(coach.pay) &&
-    appliesToLevel(req, coach)
+    appliesToLevel(req, coach) &&
+    appliesToTeam(req, coach)
   )
 }
 

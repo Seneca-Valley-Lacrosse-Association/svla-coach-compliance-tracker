@@ -44,6 +44,8 @@ export interface Requirement {
   helpLinkLabel: string
   /** Youth, high school or both. Missing means both. */
   level?: Level
+  /** Limit the requirement to specific teams. Missing or empty means every team. */
+  appliesToTeams?: Team[]
   /** Plain-language reason shown in the "Why we require this" dropdown. */
   why?: string
   /** Where the requirement comes from, for example "PA law" or "PIAA". */
