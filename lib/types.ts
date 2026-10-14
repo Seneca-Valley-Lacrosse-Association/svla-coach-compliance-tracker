@@ -120,8 +120,18 @@ export interface EditLogEntry {
   note?: string
 }
 
+/** A requirement the coach has started (for example applied for, waiting on a certificate). Never counts as cleared. */
+export interface Progress {
+  coachId: string
+  requirementId: string
+  startedOn: string
+  followUpOn?: string | null
+  note?: string | null
+}
+
 export type ItemStatus =
   | 'not-started'
+  | 'in-progress'
   | 'pending'
   | 'approved'
   | 'expiring'

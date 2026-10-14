@@ -31,12 +31,18 @@ export const uploadSchema = z.object({
   membershipNumber: z.string().trim().max(150).optional(), membershipExpiry: z.iso.date().optional(),
   signedName: z.string().trim().max(120).optional(), agreed: z.boolean().optional(),
 })
+export const progressSchema = z.object({
+  coachId: z.uuid(), requirementId: z.string().min(1).max(100), startedOn: z.iso.date(),
+  followUpOn: z.iso.date().optional(), note: z.string().trim().max(300).optional(),
+})
 export const mutationSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('addCoach'), input: coachSchema }),
   z.object({ action: z.literal('addRequirement'), input: requirementSchema }),
   z.object({ action: z.literal('setRequirementActive'), id: z.string().max(100), active: z.boolean() }),
   z.object({ action: z.literal('updateResource'), id: z.string().max(100), input: resourceSchema.extend(reasonSchema.partial().shape).extend({ appliesToRoles: z.array(z.enum(ROLES)).min(1).max(4).optional(), appliesToPay: z.array(z.enum(PAY_STATUSES)).min(1).max(2).optional() }) }),
   z.object({ action: z.literal('submitUpload'), input: uploadSchema }),
+  z.object({ action: z.literal('markInProgress'), input: progressSchema }),
+  z.object({ action: z.literal('clearInProgress'), coachId: z.uuid(), requirementId: z.string().min(1).max(100) }),
   z.object({ action: z.literal('reviewCoach'), id: z.uuid(), decision: z.enum(['approved', 'declined']), pay: z.enum(PAY_STATUSES) }),
   z.object({ action: z.literal('removeAccount'), email: z.string().trim().toLowerCase().email().max(254) }),
   z.object({ action: z.literal('deleteCoach'), id: z.uuid() }),

@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { sendApprovalEmail, sendBoardInviteEmail, sendInviteEmail } from '@/lib/email'
 import { createAccessLink } from '@/lib/invite'
 import { mutationSchema } from '@/lib/validation'
-import type { Coach, LoginInfo, Requirement, Submission } from '@/lib/types'
+import type { Coach, LoginInfo, Progress, Requirement, Submission } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -34,6 +34,12 @@ export async function GET() {
     const coaches = coachRows.map(r => ({ id: r.id, name: r.name, email: r.email, phone: r.phone, team: r.team, role: r.role, pay: r.pay, paResident10Years: r.pa_resident_10_years, status: r.status, archivedAt: r.archived_at })) as Coach[]
     const requirements = requirementRows.map(r => ({ ...r.definition, id: r.id, order: r.sort_order })) as Requirement[]
     const submissions = submissionRows.map(r => ({ ...r.details, id: r.id, coachId: r.coach_id, requirementId: r.requirement_id, status: r.status, uploadedOn: r.uploaded_at, completedOn: r.completed_on, expiresOn: r.expires_on, filePath: r.file_path ?? undefined, fileName: r.file_name ?? undefined, reviewComment: r.review_comment ?? undefined, reviewedOn: r.reviewed_on ?? undefined, editLog: Array.isArray(r.edit_log) && r.edit_log.length ? r.edit_log : undefined })) as Submission[]
+    // "In progress" markers are a nice-to-have: if the lookup fails, the rest of the app still loads.
+    let progress: Progress[] = []
+    try {
+      const rows = await allRows('progress', 'coach_id,requirement_id,started_on,follow_up_on,note', 'coach_id')
+      progress = rows.map(r => ({ coachId: r.coach_id, requirementId: r.requirement_id, startedOn: r.started_on, followUpOn: r.follow_up_on, note: r.note }))
+    } catch { /* table not available yet */ }
     let boardMembers: { email: string; lastSignInAt?: string | null }[] = []
     if (board.data) {
       const members = await db.from('board_members').select('email').order('email')
@@ -58,7 +64,7 @@ export async function GET() {
       const status = await db.rpc('coach_login_status')
       if (!status.error) loginStatus = (status.data ?? []) as LoginInfo[]
     }
-    return respond({ user: { id: user.id, email: user.email, role: board.data ? 'board' : 'coach' }, coaches, requirements, submissions, boardMembers, pendingAccounts, loginStatus })
+    return respond({ user: { id: user.id, email: user.email, role: board.data ? 'board' : 'coach' }, coaches, requirements, submissions, progress, boardMembers, pendingAccounts, loginStatus })
   } catch {
     return respond({ error: 'Unable to load your records. Please try again.' }, 500)
   }
@@ -73,7 +79,7 @@ export async function POST(request: Request) {
     const parsed = mutationSchema.safeParse(await request.json())
     if (!parsed.success) return respond({ error: parsed.error.issues[0]?.message ?? 'Check the form values.' }, 400)
     const command = parsed.data
-    if (command.action !== 'submitUpload' && command.action !== 'registerSelf' && command.action !== 'removeSubmission') {
+    if (command.action !== 'submitUpload' && command.action !== 'registerSelf' && command.action !== 'removeSubmission' && command.action !== 'markInProgress' && command.action !== 'clearInProgress') {
       const board = await db.from('board_members').select('email').eq('email', user.email?.toLowerCase() ?? '').maybeSingle()
       if (board.error || !board.data) return respond({ error: 'Board access is required.' }, 403)
     }
@@ -102,6 +108,18 @@ export async function POST(request: Request) {
         const paths = ((rpc.data ?? []) as string[]).filter(Boolean)
         if (paths.length) await db.storage.from('certificates').remove(paths)
         result = { data: rpc.data, error: null }
+        break
+      }
+      case 'markInProgress': {
+        // Coaches may mark their own items; board members may mark any. The database function enforces this.
+        const i = command.input
+        const rpc = await db.rpc('mark_in_progress', { p_coach_id: i.coachId, p_requirement_id: i.requirementId, p_started_on: i.startedOn, p_follow_up_on: i.followUpOn ?? null, p_note: i.note ?? null })
+        result = { data: rpc.data, error: rpc.error }
+        break
+      }
+      case 'clearInProgress': {
+        const rpc = await db.rpc('clear_in_progress', { p_coach_id: command.coachId, p_requirement_id: command.requirementId })
+        result = { data: rpc.data, error: rpc.error }
         break
       }
       case 'archiveCoach':

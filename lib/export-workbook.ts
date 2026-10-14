@@ -4,6 +4,7 @@ import type { Coach, ItemStatus, Requirement, Submission } from './types'
 
 const ITEM_LABEL: Record<ItemStatus, string> = {
   'not-started': 'Not started',
+  'in-progress': 'In progress',
   pending: 'Pending review',
   approved: 'Approved',
   expiring: 'Expiring soon',
@@ -13,7 +14,7 @@ const ITEM_LABEL: Record<ItemStatus, string> = {
 }
 const FILL: Record<string, string> = {
   Approved: 'FFD1FAE5', 'Expiring soon': 'FFFDE68A', Expired: 'FFFECACA', Rejected: 'FFFECACA',
-  'Not valid for role': 'FFFED7AA', 'Pending review': 'FFBAE6FD', 'Not started': 'FFE2E8F0',
+  'Not valid for role': 'FFFED7AA', 'Pending review': 'FFBAE6FD', 'Not started': 'FFE2E8F0', 'In progress': 'FFDDD6FE',
   Cleared: 'FFD1FAE5', Incomplete: 'FFE2E8F0', Expiring: 'FFFDE68A',
 }
 const HEADER_FILL = 'FF0F2A4A'

@@ -12,12 +12,12 @@ import { ConfirmLinkPanel } from '@/components/confirm-link-panel'
 import { CompleteProfilePanel } from '@/components/complete-profile-panel'
 import { WaitingApprovalPanel } from '@/components/waiting-approval-panel'
 import { ArchivedPanel } from '@/components/archived-panel'
-import type { Coach, LoginInfo, Requirement, Submission } from './types'
+import type { Coach, LoginInfo, Progress, Requirement, Submission } from './types'
 
 export type ViewMode = 'board' | 'coach'
 export type UploadInput = Pick<Submission, 'coachId' | 'requirementId' | 'completedOn' | 'fileName' | 'obtainedAs' | 'fbiMethod' | 'membershipNumber' | 'signedName'> & { membershipExpiry?: string; agreed?: boolean; file?: File }
 type ResourceInput = Pick<Requirement, 'help' | 'helpUrl' | 'helpLinkLabel'> & Partial<Pick<Requirement, 'level' | 'why' | 'source' | 'sourceUrl' | 'appliesToRoles' | 'appliesToPay' | 'appliesToTeams'>>
-interface Snapshot { user: { id: string; email: string; role: ViewMode } | null; coaches: Coach[]; requirements: Requirement[]; submissions: Submission[]; boardMembers?: { email: string; lastSignInAt?: string | null }[]; pendingAccounts?: { email: string; created_at: string }[]; loginStatus?: LoginInfo[] }
+interface Snapshot { user: { id: string; email: string; role: ViewMode } | null; coaches: Coach[]; requirements: Requirement[]; submissions: Submission[]; progress?: Progress[]; boardMembers?: { email: string; lastSignInAt?: string | null }[]; pendingAccounts?: { email: string; created_at: string }[]; loginStatus?: LoginInfo[] }
 interface AppState {
   viewMode: ViewMode
   setViewMode: (mode: ViewMode) => void
@@ -53,6 +53,9 @@ interface AppState {
   summaries: CoachSummary[]
   getSummary: (coachId: string) => CoachSummary | undefined
   submitUpload: (input: UploadInput) => Promise<void>
+  progress: Progress[]
+  markInProgress: (input: { coachId: string; requirementId: string; startedOn: string; followUpOn?: string; note?: string }) => Promise<void>
+  clearInProgress: (coachId: string, requirementId: string) => Promise<void>
   reviewSubmission: (id: string, decision: 'approved' | 'rejected', comment?: string) => Promise<void>
   addRequirement: (req: Omit<Requirement, 'id' | 'order'>) => Promise<void>
   setRequirementActive: (id: string, active: boolean) => Promise<void>
@@ -79,13 +82,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const { data, error, isLoading, mutate } = useSWR<Snapshot>(isDemo ? null : '/api/app', loadSnapshot, { refreshInterval: 60000, shouldRetryOnError: false })
   const snapshot = isDemo ? demoSnapshot : data ?? empty
   const { requirements, submissions, user } = snapshot
+  const progress = useMemo(() => snapshot.progress ?? [], [snapshot.progress])
   const allCoaches = snapshot.coaches
   const coaches = useMemo(() => allCoaches.filter(c => (c.status ?? 'approved') === 'approved' && !c.archivedAt), [allCoaches])
   const archivedCoaches = useMemo(() => allCoaches.filter(c => (c.status ?? 'approved') === 'approved' && !!c.archivedAt), [allCoaches])
   const awaitingCoaches = useMemo(() => allCoaches.filter(c => c.status === 'pending' || c.status === 'declined'), [allCoaches])
   const mine = isDemo ? undefined : allCoaches.find(c => c.email.toLowerCase() === user?.email?.toLowerCase())
-  const summaries = useMemo(() => coaches.map(c => summarizeCoach(c, requirements, submissions)), [coaches, requirements, submissions])
-  const archivedSummaries = useMemo(() => archivedCoaches.map(c => summarizeCoach(c, requirements, submissions)), [archivedCoaches, requirements, submissions])
+  const summaries = useMemo(() => coaches.map(c => summarizeCoach(c, requirements, submissions, progress)), [coaches, requirements, submissions, progress])
+  const archivedSummaries = useMemo(() => archivedCoaches.map(c => summarizeCoach(c, requirements, submissions, progress)), [archivedCoaches, requirements, submissions, progress])
   async function save(command: Record<string, unknown>) {
     if (isDemo) throw new Error('The board demo is read-only. Sign in to manage live records.')
     const response = await fetch('/api/app', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-SVLA-Request': '1' }, body: JSON.stringify(command) })
@@ -127,6 +131,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     addBoardMember: email => save({ action: 'addBoardMember', email }),
     removeBoardMember: email => save({ action: 'removeBoardMember', email }),
     inviteBoardMember: (email, deliver) => save({ action: 'inviteBoardMember', email, deliver }),
+    progress,
+    markInProgress: input => save({ action: 'markInProgress', input }),
+    clearInProgress: (coachId, requirementId) => save({ action: 'clearInProgress', coachId, requirementId }),
     reviewSubmission: (id, decision, comment) => save({ action: 'reviewSubmission', id, decision, comment }),
     submitUpload: async ({ file, ...input }) => {
       if (isDemo) throw new Error('The board demo is read-only.')

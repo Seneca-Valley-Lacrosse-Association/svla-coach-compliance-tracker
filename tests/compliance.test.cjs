@@ -70,3 +70,43 @@ test('teams limit where a requirement applies', () => {
   assert.deepEqual(ids('HS-Varsity'), [])
   assert.deepEqual(applicableRequirements([{ ...base, appliesToTeams: [] }], coachOn('14U')).length, 1)
 })
+
+test('a started requirement shows as in progress but never counts toward clearance', () => {
+  const { progress } = require('../lib/demo-data.ts')
+  const withProgress = summarizeCoach(coaches.find(c => c.id === 'c3'), requirements, submissions, progress)
+  const without = summarizeCoach(coaches.find(c => c.id === 'c3'), requirements, submissions)
+  const item = withProgress.items.find(i => i.requirement.id === 'fbi-fingerprint')
+  assert.equal(item.status, 'in-progress')
+  assert.equal(item.satisfied, false)
+  assert.equal(withProgress.cleared, false)
+  assert.equal(withProgress.satisfiedCount, without.satisfiedCount)
+  assert.equal(withProgress.hasInProgress, true)
+  assert.equal(without.hasInProgress, false)
+  assert.equal(without.items.find(i => i.requirement.id === 'fbi-fingerprint').status, 'not-started')
+})
+test('started markers do not override pending, approved or rejected states', () => {
+  const coach = coaches.find(c => c.id === 'c7')
+  const marker = [{ coachId: 'c7', requirementId: 'handbook', startedOn: '2026-01-01' }, { coachId: 'c7', requirementId: 'concussion', startedOn: '2026-01-01' }]
+  const summary = summarizeCoach(coach, requirements, submissions, marker)
+  assert.equal(summary.items.find(i => i.requirement.id === 'handbook').status, 'pending')
+  assert.equal(summary.items.find(i => i.requirement.id === 'concussion').status, 'approved')
+  assert.equal(summary.hasInProgress, false)
+})
+test('days in progress and overdue follow-ups are computed from the start and follow-up dates', () => {
+  const { daysInProgress, followUpOverdue, TODAY } = require('../lib/compliance.ts')
+  const shift = d => new Date(Date.parse(`${TODAY}T12:00:00Z`) + d * 86400000).toISOString().slice(0, 10)
+  assert.equal(daysInProgress({ startedOn: shift(-12) }), 12)
+  assert.equal(daysInProgress({ startedOn: TODAY }), 0)
+  assert.equal(followUpOverdue({ startedOn: shift(-12), followUpOn: shift(-1) }), true)
+  assert.equal(followUpOverdue({ startedOn: shift(-12), followUpOn: shift(5) }), false)
+  assert.equal(followUpOverdue({ startedOn: shift(-12) }), false)
+})
+test('in-progress mutations validate ids, dates and note length', () => {
+  const id = '3f2504e0-4f89-41d3-9a0c-0305e82c3301'
+  const ok = { action: 'markInProgress', input: { coachId: id, requirementId: 'pa-child-abuse', startedOn: '2026-10-14', followUpOn: '2026-11-01', note: 'Applied online' } }
+  assert.equal(mutationSchema.safeParse(ok).success, true)
+  assert.equal(mutationSchema.safeParse({ ...ok, input: { ...ok.input, coachId: 'nope' } }).success, false)
+  assert.equal(mutationSchema.safeParse({ ...ok, input: { ...ok.input, startedOn: 'yesterday' } }).success, false)
+  assert.equal(mutationSchema.safeParse({ ...ok, input: { ...ok.input, note: 'x'.repeat(301) } }).success, false)
+  assert.equal(mutationSchema.safeParse({ action: 'clearInProgress', coachId: id, requirementId: 'pa-child-abuse' }).success, true)
+})

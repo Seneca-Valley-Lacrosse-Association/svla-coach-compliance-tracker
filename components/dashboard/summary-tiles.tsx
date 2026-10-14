@@ -1,10 +1,10 @@
 'use client'
 
-import { AlertTriangle, CheckCircle2, CircleDashed, Clock, Inbox } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, CircleDashed, Clock, Hourglass, Inbox } from 'lucide-react'
 import type { CoachSummary } from '@/lib/compliance'
 import { cn } from '@/lib/utils'
 
-export type TileFilter = 'all' | 'cleared' | 'incomplete' | 'expiring' | 'expired' | 'pending'
+export type TileFilter = 'all' | 'cleared' | 'incomplete' | 'expiring' | 'expired' | 'pending' | 'in-progress'
 
 export const tileFilters: Record<Exclude<TileFilter, 'all'>, (s: CoachSummary) => boolean> = {
   cleared: (s) => s.cleared,
@@ -12,6 +12,7 @@ export const tileFilters: Record<Exclude<TileFilter, 'all'>, (s: CoachSummary) =
   expiring: (s) => s.hasExpiring,
   expired: (s) => s.hasExpired,
   pending: (s) => s.hasPending,
+  'in-progress': (s) => s.hasInProgress,
 }
 
 const tiles = [
@@ -20,6 +21,7 @@ const tiles = [
   { key: 'expiring', label: 'Expiring in 60 Days', icon: Clock, accent: 'text-amber-800 bg-amber-50' },
   { key: 'expired', label: 'Expired', icon: AlertTriangle, accent: 'text-red-700 bg-red-50' },
   { key: 'pending', label: 'Awaiting Review', icon: Inbox, accent: 'text-brand bg-sky-50' },
+  { key: 'in-progress', label: 'In Progress', icon: Hourglass, accent: 'text-violet-800 bg-violet-50' },
 ] as const
 
 export function SummaryTiles({
@@ -32,7 +34,7 @@ export function SummaryTiles({
   onChange: (f: TileFilter) => void
 }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
       {tiles.map(({ key, label, icon: Icon, accent }) => {
         const count = summaries.filter(tileFilters[key]).length
         const selected = active === key

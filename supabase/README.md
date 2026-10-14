@@ -22,3 +22,10 @@ Use the app's "Add coach" screen as a board member. The coach then signs up with
 `tickets` and `ticket_routing` are closed to the browser (RLS on, no policies). The app reaches them only through the
 functions `submit_ticket`, `my_tickets`, `admin_tickets`, `admin_open_ticket_count` and `admin_update_ticket`, which check
 who is calling. Coaches see only their own tickets; the internal `bug_issue` status is shown to them as In Progress.
+
+## In-progress tracking
+`progress` holds "I have started this" markers (start date, optional follow-up date, optional short note). It is
+read-only from the browser (coach sees their own, board sees all); writes go through `mark_in_progress` and
+`clear_in_progress`, which allow the coach or any board member. A marker never counts toward "Cleared to Coach" and
+is removed automatically when a document is submitted for that requirement. Do not put clearance numbers in notes.
+Migration: `20261015000600_in_progress.sql` (additive; no existing data is changed).

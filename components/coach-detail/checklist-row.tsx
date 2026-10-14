@@ -1,11 +1,12 @@
 'use client'
 
-import { AlertTriangle, ExternalLink, FileText, LifeBuoy, MessageSquareWarning } from 'lucide-react'
-import { daysBetween, eligibilityIssue, formatDate, TODAY, type ChecklistItem } from '@/lib/compliance'
+import { AlertTriangle, ExternalLink, FileText, Hourglass, LifeBuoy, MessageSquareWarning } from 'lucide-react'
+import { daysBetween, daysInProgress, eligibilityIssue, followUpOverdue, formatDate, TODAY, type ChecklistItem } from '@/lib/compliance'
 import { LEVEL_LABELS, type Coach, type Submission } from '@/lib/types'
 import { reasonFor } from '@/lib/requirement-reasons'
 import { ItemStatusPill } from '@/components/status-pill'
 import { UploadButton } from './upload-dialog'
+import { InProgressButton } from './in-progress-dialog'
 import { EditDatesDialog } from './edit-dates-dialog'
 import { RemoveEntryDialog } from './remove-entry-dialog'
 import { ReviewActions } from '@/components/review/review-actions'
@@ -44,9 +45,12 @@ export function ChecklistRow({
   const pendingIssue = latest?.status === 'pending' ? eligibilityIssue(coach, req, latest) : null
   const helpOpenByDefault = mode === 'coach' && !item.satisfied
   const reason = reasonFor(req)
+  const progress = item.progress
+  const canMarkStarted = latest?.status !== 'pending' && ['not-started', 'in-progress', 'rejected', 'expired', 'expiring'].includes(status)
+  const showProgress = !!progress && latest?.status !== 'pending' && status !== 'approved' && status !== 'invalid'
   const { openHelp, enabled: helpEnabled } = useHelp()
   // Offer help where people most often get stuck: something missing, pending, rejected, expired or not valid.
-  const needsHelpLink = mode === 'coach' && helpEnabled && ['not-started', 'pending', 'rejected', 'expired', 'invalid'].includes(status)
+  const needsHelpLink = mode === 'coach' && helpEnabled && ['not-started', 'in-progress', 'pending', 'rejected', 'expired', 'invalid'].includes(status)
 
   return (
     <li className="flex flex-col gap-4 p-4 sm:p-5">
@@ -108,6 +112,7 @@ export function ChecklistRow({
               variant={item.satisfied && status !== 'expiring' ? 'outline' : 'default'}
             />
           )}
+          {canMarkStarted && <InProgressButton key={`${progress?.startedOn}-${progress?.followUpOn}-${progress?.note}`} coach={coach} requirement={req} progress={progress} />}
           {mode === 'board' && shown && <EditDatesDialog key={`${shown.id}-${shown.completedOn}-${shown.expiresOn}`} submission={shown} requirement={req} />}
           {shown && <RemoveEntryDialog submission={shown} requirementName={req.name} mode={mode} />}
           {needsHelpLink && (
@@ -122,6 +127,19 @@ export function ChecklistRow({
           )}
         </div>
       </div>
+
+      {showProgress && progress && (
+        <p className="flex gap-2 rounded-lg bg-violet-50 p-3 text-sm text-violet-900">
+          <Hourglass className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <span>
+            <span className="font-medium">{status === 'in-progress' ? 'Started' : 'Renewal started'} {formatDate(progress.startedOn)}</span>
+            {' '}({daysInProgress(progress) === 0 ? 'today' : `${daysInProgress(progress)} ${daysInProgress(progress) === 1 ? 'day' : 'days'} ago`})
+            {progress.followUpOn && <> · Follow up by {formatDate(progress.followUpOn)}{followUpOverdue(progress) && <span className="font-medium text-red-800"> (overdue)</span>}</>}
+            {progress.note && <><br />{progress.note}</>}
+            <br /><span className="text-violet-900/80">Not counted as complete until the document is uploaded and approved.</span>
+          </span>
+        </p>
+      )}
 
       {shown?.editLog && shown.editLog.length > 0 && (
         <details className="rounded-lg bg-secondary/60 px-3 py-2 text-sm">
