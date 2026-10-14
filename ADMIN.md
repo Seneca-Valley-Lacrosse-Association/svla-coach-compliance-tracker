@@ -1,4 +1,4 @@
-# SVLA Coach Compliance Tracker: Administrator Guide
+# SVLA Compliance Tracker: Administrator Guide
 
 Written so a new SVLA board member or volunteer can keep this running without the person who built it.
 Contains no passwords. Account owners are listed so you know whom to ask or which account to recover.
@@ -78,7 +78,7 @@ After a coach confirms their email, they fill in their own profile (name, phone,
 
 The board sees them under **Awaiting approval** on the Coaches page (and a banner on the Dashboard). For each person, choose **Paid** or **Volunteer** and click **Approve**; the coach is emailed that they can log in. Paid coaches must provide fingerprints. **Decline** moves them to a Declined list, where you can **Approve** later or **Delete** them manually (this also removes their sign-in account).
 
-The approval email is sent through Resend and needs the `RESEND_API_KEY` environment variable on the Vercel project (optional `EMAIL_FROM`, default `SVLA Coach Compliance <no-reply@mail.svlacrosse.org>`). Without the key, approval still works but no email is sent and the board is told to let the coach know.
+The approval email is sent through Resend and needs the `RESEND_API_KEY` environment variable on the Vercel project (optional `EMAIL_FROM`, default `SVLA Compliance <no-reply@mail.svlacrosse.org>`). Without the key, approval still works but no email is sent and the board is told to let the coach know.
 
 ## Deleting a coach
 

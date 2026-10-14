@@ -24,7 +24,7 @@ const boardNav = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/review', label: 'Review Queue', icon: Inbox },
   { href: '/requirements', label: 'Requirements', icon: ListChecks },
-  { href: '/coaches', label: 'Coaches', icon: Users },
+  { href: '/coaches', label: 'Coaches & Volunteers', icon: Users },
   { href: '/reports', label: 'Reports', icon: BarChart3 },
   { href: '/board', label: 'Board Access', icon: UserCog },
 ]
@@ -41,7 +41,7 @@ function Brand() {
       </span>
       <div className="leading-tight">
         <p className="font-semibold text-white">SVLA</p>
-        <p className="text-sm text-sidebar-foreground/80">Coach Compliance</p>
+        <p className="text-sm text-sidebar-foreground/80">Compliance Tracker</p>
       </div>
     </div>
   )
@@ -167,7 +167,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             <Menu className="size-5" aria-hidden="true" />
           </button>
-          <p className="truncate font-semibold lg:hidden">SVLA Coach Compliance</p>
+          <p className="truncate font-semibold lg:hidden">SVLA Compliance</p>
           {viewMode === 'coach' && me && (
             <p className="hidden truncate text-sm text-white/80 lg:block">
               {isDemo ? 'Demo checklist:' : 'Signed in as'} <span className="font-medium text-white">{me.coach.name}</span>

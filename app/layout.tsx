@@ -8,7 +8,7 @@ import './globals.css'
 const geist = Geist({ subsets: ['latin'], variable: '--font-geist-sans' })
 
 export const metadata: Metadata = {
-  title: 'SVLA Coach Compliance',
+  title: 'SVLA Compliance',
   description:
     'Track coach clearances, trainings, and certifications for the SVLA youth lacrosse association.',
   generator: 'v0.app',

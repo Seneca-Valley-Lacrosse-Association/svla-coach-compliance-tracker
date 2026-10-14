@@ -53,8 +53,8 @@ export function CoachesList() {
   return (
     <>
       <PageHeader
-        title="Coaches"
-        description={hasLoginData ? `${summaries.length} coaches on staff this season · ${counts.active} active · ${counts.invited} invited · ${counts.none} no login` : `${summaries.length} coaches on staff this season.`}
+        title="Coaches & Volunteers"
+        description={hasLoginData ? `${summaries.length} people on staff this season · ${counts.active} active · ${counts.invited} invited · ${counts.none} no login` : `${summaries.length} people on staff this season.`}
         actions={<AddCoachDialog onAdded={(name) => {
           setQuery('')
           setTeam('all')

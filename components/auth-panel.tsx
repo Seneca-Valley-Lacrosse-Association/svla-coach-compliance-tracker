@@ -63,7 +63,7 @@ export function AuthPanel({ onSignedIn }: { onSignedIn: () => Promise<unknown> }
       <section className="flex w-full max-w-md flex-col gap-6 rounded-xl border bg-card p-6 text-card-foreground shadow-sm">
         <header className="flex flex-col gap-2">
           <ShieldCheck className="size-9 text-primary" aria-hidden="true" />
-          <h1 className="text-balance text-2xl font-semibold">SVLA Coach Compliance</h1>
+          <h1 className="text-balance text-2xl font-semibold">SVLA Compliance</h1>
           <p className="leading-relaxed text-muted-foreground">{forgot ? 'Enter your account email and we will send you a link to choose a new password.' : signUp ? 'Create an account with the email address on your coach or board roster.' : 'Sign in to securely manage your clearances and certifications.'}</p>
         </header>
         <form onSubmit={submit} className="flex flex-col gap-5" onKeyDown={e => { if (e.key === 'Enter' && (e.nativeEvent.isComposing || e.keyCode === 229)) e.preventDefault() }}>

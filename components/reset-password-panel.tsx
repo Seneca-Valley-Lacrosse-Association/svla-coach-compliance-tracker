@@ -34,7 +34,7 @@ export function ResetPasswordPanel({ signedIn }: { signedIn: boolean }) {
         <header className="flex flex-col gap-2">
           <ShieldCheck className="size-9 text-primary" aria-hidden="true" />
           <h1 className="text-balance text-2xl font-semibold">Choose a new password</h1>
-          <p className="leading-relaxed text-muted-foreground">{signedIn ? 'Enter a new password for your SVLA Coach Compliance account.' : 'This reset link is not active. Go back to the sign-in page and request a new one.'}</p>
+          <p className="leading-relaxed text-muted-foreground">{signedIn ? 'Enter a new password for your SVLA Compliance account.' : 'This reset link is not active. Go back to the sign-in page and request a new one.'}</p>
         </header>
         {done ? <p role="status" className="text-sm leading-relaxed">Your password has been updated. Taking you to your workspace…</p> : signedIn ? (
           <form onSubmit={submit} className="flex flex-col gap-5">
