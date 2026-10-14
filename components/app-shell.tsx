@@ -54,7 +54,7 @@ function Brand() {
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
-  const { viewMode, summaries, isDemo, awaitingCoaches } = useApp()
+  const { viewMode, summaries, isDemo, awaitingCoaches, currentCoachId } = useApp()
   const { data: tickets } = useTickets()
   const openTickets = tickets?.openCount ?? 0
   const pendingCount = summaries.reduce(
@@ -75,7 +75,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <nav aria-label="Main" className="flex flex-col gap-1 px-3">
-      {boardNav.filter(({ href }) => !(isDemo && (href === '/board' || href === '/tickets'))).map(({ href, label, icon: Icon }) => {
+      {[...(!isDemo && currentCoachId ? [{ href: '/my-checklist', label: 'My Checklist', icon: ClipboardCheck }] : []), ...boardNav].filter(({ href }) => !(isDemo && (href === '/board' || href === '/tickets'))).map(({ href, label, icon: Icon }) => {
         const active = isActive(pathname.replace(/^\/demo(?=\/|$)/, '') || '/', href)
         return (
           <Link
