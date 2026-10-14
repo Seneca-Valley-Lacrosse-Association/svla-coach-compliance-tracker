@@ -11,7 +11,8 @@ const selectClass = 'h-10 rounded-lg border border-input bg-background px-3 text
 // New coach profiles wait here (shown at the top of the Review Queue) until the board confirms paid/volunteer status and approves them.
 export function AwaitingApproval() {
   const { awaitingCoaches, reviewCoach, isDemo } = useApp()
-  const [pay, setPay] = useState<Record<string, Coach['pay']>>({})
+  // Nothing is preselected: the board must choose Paid or Volunteer for each person before approving.
+  const [pay, setPay] = useState<Record<string, Coach['pay'] | ''>>({})
   const [busy, setBusy] = useState('')
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
@@ -21,9 +22,11 @@ export function AwaitingApproval() {
 
   async function review(coach: Coach, decision: 'approved' | 'declined') {
     if (busy) return
+    const chosen = pay[coach.id]
+    if (decision === 'approved' && !chosen) { setNotice(''); setError(`Choose Paid or Volunteer for ${coach.name} before approving.`); return }
     setBusy(coach.id); setError(''); setNotice('')
     try {
-      const result = await reviewCoach(coach.id, decision, pay[coach.id] ?? coach.pay)
+      const result = await reviewCoach(coach.id, decision, chosen || coach.pay)
       if (decision === 'approved') setNotice(result.emailSent ? `${coach.name} approved. We emailed them that they can log in.` : `${coach.name} approved, but the email could not be sent (email is not set up yet). Please tell them they can log in now.`)
       else setNotice(`${coach.name} declined. Use Delete to remove them, or Approve if you change your mind.`)
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not save this decision.') }
@@ -39,10 +42,11 @@ export function AwaitingApproval() {
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <label className="sr-only" htmlFor={`pay-${coach.id}`}>Pay status for {coach.name}</label>
-        <select id={`pay-${coach.id}`} className={selectClass} value={pay[coach.id] ?? coach.pay} onChange={e => setPay({ ...pay, [coach.id]: e.target.value as Coach['pay'] })}>
+        <select id={`pay-${coach.id}`} className={selectClass} value={pay[coach.id] ?? ''} onChange={e => { setError(''); setPay({ ...pay, [coach.id]: e.target.value as Coach['pay'] }) }}>
+          <option value="" disabled>Select pay status…</option>
           {PAY_STATUSES.map(p => <option key={p}>{p}</option>)}
         </select>
-        <Button type="button" className="h-10 px-4" disabled={busy === coach.id} onClick={() => void review(coach, 'approved')}>Approve</Button>
+        <Button type="button" className="h-10 px-4" disabled={busy === coach.id || !pay[coach.id]} onClick={() => void review(coach, 'approved')}>Approve</Button>
         {isDeclined ? <DeleteCoachDialog coach={coach} /> : <Button type="button" variant="outline" className="h-10 px-4 text-destructive" disabled={busy === coach.id} onClick={() => void review(coach, 'declined')}>Decline</Button>}
       </div>
     </li>
