@@ -81,6 +81,7 @@ export function AuthPanel({ onSignedIn }: { onSignedIn: () => Promise<unknown> }
         <div className="flex flex-col gap-2 border-t pt-5">
           <Link href="/demo" className="font-medium text-primary underline underline-offset-4">Open board demo — 5 sample coaches</Link>
           <p className="text-sm leading-relaxed text-muted-foreground">The demo is read-only and separate from live records. Account creation does not grant board access.</p>
+          <p className="text-sm leading-relaxed text-muted-foreground">Can&apos;t get in? Email <a className="font-medium text-primary underline underline-offset-4" href="mailto:it@svlacrosse.org">it@svlacrosse.org</a>.</p>
         </div>
       </section>
     </main>

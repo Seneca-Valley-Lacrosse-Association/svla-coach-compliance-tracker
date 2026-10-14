@@ -17,3 +17,8 @@ insert into public.board_members (email) values ('name@example.org');  -- lowerc
 
 ## Add a coach
 Use the app's "Add coach" screen as a board member. The coach then signs up with that same email.
+
+## Help requests
+`tickets` and `ticket_routing` are closed to the browser (RLS on, no policies). The app reaches them only through the
+functions `submit_ticket`, `my_tickets`, `admin_tickets`, `admin_open_ticket_count` and `admin_update_ticket`, which check
+who is calling. Coaches see only their own tickets; the internal `bug_issue` status is shown to them as In Progress.
