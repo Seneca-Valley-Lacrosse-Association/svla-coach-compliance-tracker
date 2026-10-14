@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/page-header'
 import { SummaryTiles, tileFilters, type TileFilter } from './summary-tiles'
 import { CoachesTable } from './coaches-table'
 import { TeamsOverview } from './teams-overview'
+import { InProgressList } from './in-progress-list'
 import { formatDate, TODAY } from '@/lib/compliance'
 
 const filterLabels: Record<TileFilter, string> = {
@@ -16,6 +17,7 @@ const filterLabels: Record<TileFilter, string> = {
   expiring: 'Expiring in 60 Days',
   expired: 'Expired',
   pending: 'Awaiting Review',
+  'in-progress': 'In Progress',
 }
 
 export function DashboardView() {
@@ -39,6 +41,7 @@ export function DashboardView() {
 
         <TabsContent value="coaches" className="flex flex-col gap-6">
           <SummaryTiles summaries={summaries} active={filter} onChange={setFilter} />
+          {(filter === 'all' || filter === 'in-progress') && <InProgressList summaries={summaries} />}
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between gap-2">
               <h2 className="text-lg font-semibold text-navy" aria-live="polite">

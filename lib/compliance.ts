@@ -2,6 +2,7 @@ import type {
   Coach,
   ComplianceStatus,
   ItemStatus,
+  Progress,
   Requirement,
   Submission,
   Validity,
@@ -152,6 +153,17 @@ export interface ChecklistItem {
   satisfied: boolean
   issue: string | null
   daysUntilExpiry: number | null
+  /** Coach-reported "I have started this" marker. Visibility only; it never makes an item satisfied. */
+  progress: Progress | null
+}
+
+/** Whole days since the coach marked the item started (0 on the day itself). */
+export function daysInProgress(progress: Progress) {
+  return Math.max(0, daysBetween(progress.startedOn, TODAY))
+}
+
+export function followUpOverdue(progress: Progress) {
+  return !!progress.followUpOn && progress.followUpOn < TODAY
 }
 
 function approvedState(coach: Coach, req: Requirement, sub: Submission) {
@@ -169,7 +181,9 @@ export function checklistItem(
   coach: Coach,
   req: Requirement,
   submissions: Submission[],
+  progressRows: Progress[] = [],
 ): ChecklistItem {
+  const progress = progressRows.find((p) => p.coachId === coach.id && p.requirementId === req.id) ?? null
   const subs = submissions
     .filter((s) => s.coachId === coach.id && s.requirementId === req.id)
     .sort((a, b) => (a.uploadedOn === b.uploadedOn ? b.id.localeCompare(a.id) : b.uploadedOn.localeCompare(a.uploadedOn)))
@@ -181,6 +195,8 @@ export function checklistItem(
   if (latest?.status === 'pending') status = 'pending'
   else if (latest?.status === 'rejected') status = 'rejected'
   else if (approvedResult) status = approvedResult.status
+  // Only an item with nothing on file shows as in progress; other states keep their own status.
+  else if (progress) status = 'in-progress'
 
   return {
     requirement: req,
@@ -190,6 +206,7 @@ export function checklistItem(
     satisfied: approvedResult?.satisfied ?? false,
     issue: approvedResult?.issue ?? null,
     daysUntilExpiry: approvedResult?.days ?? null,
+    progress,
   }
 }
 
@@ -203,6 +220,9 @@ export interface CoachSummary {
   hasExpiring: boolean
   hasExpired: boolean
   hasPending: boolean
+  /** Items the coach has marked as started and that are still waiting on a document. */
+  inProgress: ChecklistItem[]
+  hasInProgress: boolean
   missing: ChecklistItem[]
 }
 
@@ -210,9 +230,10 @@ export function summarizeCoach(
   coach: Coach,
   requirements: Requirement[],
   submissions: Submission[],
+  progress: Progress[] = [],
 ): CoachSummary {
   const items = applicableRequirements(requirements, coach).map((r) =>
-    checklistItem(coach, r, submissions),
+    checklistItem(coach, r, submissions, progress),
   )
   const satisfiedCount = items.filter((i) => i.satisfied).length
   const cleared = items.length > 0 && satisfiedCount === items.length
@@ -221,6 +242,7 @@ export function summarizeCoach(
   )
   const hasExpiring = items.some((i) => i.satisfied && i.daysUntilExpiry !== null && i.daysUntilExpiry <= EXPIRING_WINDOW_DAYS)
   const hasPending = items.some((i) => i.latest?.status === 'pending')
+  const inProgress = items.filter((i) => i.progress && !i.satisfied && i.latest?.status !== 'pending')
 
   let status: ComplianceStatus = 'cleared'
   if (hasExpired) status = 'expired'
@@ -237,6 +259,8 @@ export function summarizeCoach(
     hasExpiring,
     hasExpired,
     hasPending,
+    inProgress,
+    hasInProgress: inProgress.length > 0,
     missing: items.filter((i) => !i.satisfied),
   }
 }

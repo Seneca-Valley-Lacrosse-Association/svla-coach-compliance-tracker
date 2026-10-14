@@ -11,6 +11,7 @@ const tones = {
   red: 'bg-red-50 text-red-800 ring-red-200',
   blue: 'bg-sky-50 text-brand ring-sky-200',
   orange: 'bg-orange-50 text-orange-900 ring-orange-200',
+  violet: 'bg-violet-50 text-violet-900 ring-violet-200',
 }
 
 const dotTones = {
@@ -20,6 +21,7 @@ const dotTones = {
   red: 'bg-red-600',
   blue: 'bg-brand',
   orange: 'bg-orange-600',
+  violet: 'bg-violet-600',
 }
 
 const complianceMap: Record<ComplianceStatus, { label: string; tone: keyof typeof tones }> = {
@@ -31,6 +33,7 @@ const complianceMap: Record<ComplianceStatus, { label: string; tone: keyof typeo
 
 export const itemStatusMap: Record<ItemStatus, { label: string; tone: keyof typeof tones }> = {
   'not-started': { label: 'Not started', tone: 'gray' },
+  'in-progress': { label: 'In progress', tone: 'violet' },
   pending: { label: 'Pending review', tone: 'blue' },
   approved: { label: 'Approved', tone: 'green' },
   expiring: { label: 'Expiring', tone: 'amber' },

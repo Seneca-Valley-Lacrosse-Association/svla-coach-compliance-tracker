@@ -1,6 +1,6 @@
 import { coaches as examples, requirements } from './mock-data'
 import { applicableRequirements, computeExpiry, TODAY } from './compliance'
-import type { Submission } from './types'
+import type { Progress, Submission } from './types'
 
 export { requirements }
 export const coaches = ['c1', 'c3', 'c4', 'c6', 'c7'].map(id => examples.find(coach => coach.id === id)!)
@@ -23,3 +23,6 @@ export const submissions: Submission[] = coaches.flatMap(coach => applicableRequ
     fileName: req.type === 'File' || req.type === 'Training' ? 'Sample record — no real certificate' : undefined,
   } satisfies Submission]
 }))
+
+/** Demo: the incomplete coach (c3) has applied for the FBI check and is waiting on results. */
+export const progress: Progress[] = [{ coachId: 'c3', requirementId: 'fbi-fingerprint', startedOn: shiftDays(-12), followUpOn: shiftDays(-2), note: 'Applied online, waiting on results.' }]
