@@ -43,7 +43,7 @@ const text = (value: string | null | undefined) => value ?? ''
 
 export async function buildWorkbook({ coaches, requirements, submissions, origin, generatedBy }: ExportInput) {
   const wb = new ExcelJS.Workbook()
-  wb.creator = 'SVLA Coach Compliance Tracker'
+  wb.creator = 'SVLA Compliance Tracker'
   wb.created = new Date()
   const reqs = [...requirements].sort((a, b) => a.order - b.order)
   const activeReqs = reqs.filter((r) => r.active)
@@ -55,7 +55,7 @@ export async function buildWorkbook({ coaches, requirements, submissions, origin
   const readme = wb.addWorksheet('Read Me')
   readme.columns = [{ width: 110 }]
   ;[
-    'SVLA Coach Compliance: full data export',
+    'SVLA Compliance: full data export',
     `Generated ${TODAY}${generatedBy ? ` by ${generatedBy}` : ''}. Contains personal information about coaches. Store it securely and share only with SVLA board members.`,
     '',
     'Sheets in this file:',

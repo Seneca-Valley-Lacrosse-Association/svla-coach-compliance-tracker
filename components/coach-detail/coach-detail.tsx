@@ -5,6 +5,7 @@ import { ArrowLeft, Mail, Phone } from 'lucide-react'
 import { useApp } from '@/lib/app-store'
 import { PayBadge } from '@/components/status-pill'
 import { RequirementProgress } from '@/components/requirement-progress'
+import { PortalAccess } from '@/components/coaches/login-status'
 import { ChecklistRow } from './checklist-row'
 import { ClearedBadge } from './cleared-badge'
 import { EditCoachDialog } from './edit-coach-dialog'
@@ -69,6 +70,8 @@ export function CoachDetail({ id }: { id: string }) {
           )}
         </div>
       </section>
+
+      {viewMode === 'board' && <PortalAccess key={coach.id} coach={coach} />}
 
       <section aria-labelledby="checklist-heading" className="flex flex-col gap-3">
         <h2 id="checklist-heading" className="text-lg font-semibold text-navy">

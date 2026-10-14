@@ -1,4 +1,4 @@
-# SVLA Coach Compliance Tracker: Administrator Guide
+# SVLA Compliance Tracker: Administrator Guide
 
 Written so a new SVLA board member or volunteer can keep this running without the person who built it.
 Contains no passwords. Account owners are listed so you know whom to ask or which account to recover.
@@ -32,7 +32,7 @@ To keep copies of the files themselves, open Supabase, then Storage, then the **
 folders (one folder per coach). If the app is ever shut down, the files remain in that bucket.
 
 ## Everyday tasks
-- **Add a coach:** Coaches, then Add coach. The coach then creates an account with that same email address.
+- **Add a coach:** Coaches, then Add coach. The coach then creates an account with that same email address, or you send them an invite (see below).
 - **Add a board member (admin):** sign in as a board member, open **Board Access**, enter their email, and click Add.
   They then create an account on the sign-in page with that exact email and confirm it. They get board access automatically.
 - **Remove a board member:** Board Access, then Remove next to their email. You cannot remove yourself, so the board is never left empty.
@@ -78,8 +78,20 @@ After a coach confirms their email, they fill in their own profile (name, phone,
 
 The board sees them under **Awaiting approval** on the Coaches page (and a banner on the Dashboard). For each person, choose **Paid** or **Volunteer** and click **Approve**; the coach is emailed that they can log in. Paid coaches must provide fingerprints. **Decline** moves them to a Declined list, where you can **Approve** later or **Delete** them manually (this also removes their sign-in account).
 
-The approval email is sent through Resend and needs the `RESEND_API_KEY` environment variable on the Vercel project (optional `EMAIL_FROM`, default `SVLA Coach Compliance <no-reply@mail.svlacrosse.org>`). Without the key, approval still works but no email is sent and the board is told to let the coach know.
+The approval email is sent through Resend and needs the `RESEND_API_KEY` environment variable on the Vercel project (optional `EMAIL_FROM`, default `SVLA Compliance <no-reply@mail.svlacrosse.org>`). Without the key, approval still works but no email is sent and the board is told to let the coach know.
 
 ## Deleting a coach
 
 Open the coach's page and click **Delete coach** (board only). This permanently removes the roster record, all submissions, and the uploaded files. Export from Reports first if a copy is needed. The person's sign-in account stays; if they sign in again they are asked to complete a new profile.
+
+## Coach logins and invites
+
+Every coach has a **Login** status on the Coaches page: **No login** (nothing sent), **Invited** (email sent, account not set up yet) or **Active** (has an account). The header shows the totals, and the **Login** filter lists who still needs a nudge. A coach without a login is still fully tracked: the board can enter and approve their records.
+
+- **Invite one coach:** open the coach, then **Portal access**, then **Send invite** (or **Resend invite**). They get an email with a one-time link to set a password.
+- **Invite everyone at once:** on the Coaches page click **Invite all without a login** and confirm.
+- **Email did not arrive:** on the coach's page click **Copy sign-in link** and send it to them yourself (text or in person). The link works once and expires, and anyone holding it can sign in as that coach, so share it privately. You never see or set their password.
+- **Change password:** anyone signed in can use **Change password** in the top bar. If they forget it, **Forgot your password?** on the sign-in page still works.
+- **The email must match the roster.** A login is linked to a coach by email address, so an invite only goes to the email on the roster. If a coach prefers another address, remove them and add them again with the right one before inviting.
+
+Needs these on the Vercel project: `SUPABASE_SERVICE_ROLE_KEY` (already set, used only to create sign-in links after checking the user is on the board) and `RESEND_API_KEY` (to send the email). Without the Resend key, invites still create the link but the email is not sent, and the screen shows the link to copy instead.

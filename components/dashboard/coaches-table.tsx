@@ -6,8 +6,9 @@ import { ChevronRight } from 'lucide-react'
 import type { CoachSummary } from '@/lib/compliance'
 import { ComplianceStatusPill, PayBadge } from '@/components/status-pill'
 import { RequirementProgress } from '@/components/requirement-progress'
+import { LoginCell } from '@/components/coaches/login-status'
 
-export function CoachesTable({ summaries }: { summaries: CoachSummary[] }) {
+export function CoachesTable({ summaries, showLogin = false }: { summaries: CoachSummary[]; showLogin?: boolean }) {
   const router = useRouter()
   const pathname = usePathname()
 
@@ -28,6 +29,7 @@ export function CoachesTable({ summaries }: { summaries: CoachSummary[] }) {
             <th scope="col" className="px-4 py-3 font-medium">Team</th>
             <th scope="col" className="px-4 py-3 font-medium">Role</th>
             <th scope="col" className="px-4 py-3 font-medium">Pay Status</th>
+            {showLogin && <th scope="col" className="px-4 py-3 font-medium">Login</th>}
             <th scope="col" className="px-4 py-3 font-medium">Compliance</th>
             <th scope="col" className="px-4 py-3 font-medium">Progress</th>
           </tr>
@@ -53,6 +55,7 @@ export function CoachesTable({ summaries }: { summaries: CoachSummary[] }) {
               <td className="px-4 py-3">
                 <PayBadge pay={s.coach.pay} />
               </td>
+              {showLogin && <td className="px-4 py-3"><LoginCell coach={s.coach} /></td>}
               <td className="px-4 py-3">
                 <ComplianceStatusPill status={s.status} />
               </td>
@@ -75,6 +78,7 @@ export function CoachesTable({ summaries }: { summaries: CoachSummary[] }) {
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium text-brand">{s.coach.name}</span>
                   <ComplianceStatusPill status={s.status} />
+                  {showLogin && <LoginCell coach={s.coach} />}
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {s.coach.team} · {s.coach.role} · {s.coach.pay}

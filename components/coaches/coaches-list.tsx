@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { Search } from 'lucide-react'
 import { useApp } from '@/lib/app-store'
-import { PAY_STATUSES, TEAMS } from '@/lib/types'
+import { PAY_STATUSES, TEAMS, loginStateOf } from '@/lib/types'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PageHeader } from '@/components/page-header'
@@ -16,35 +17,67 @@ const selectClass =
   'h-10 rounded-lg border border-input bg-card px-3 text-base focus-visible:outline-2 focus-visible:outline-brand'
 
 export function CoachesList() {
-  const { summaries } = useApp()
+  const { summaries, loginByEmail, inviteCoaches, isDemo } = useApp()
   const [query, setQuery] = useState('')
   const [team, setTeam] = useState('all')
   const [pay, setPay] = useState('all')
   const [addedName, setAddedName] = useState('')
+  const [login, setLogin] = useState('all')
+  const [bulk, setBulk] = useState<'idle' | 'confirm' | 'sending'>('idle')
+  const [bulkMessage, setBulkMessage] = useState('')
+
+  const stateOf = (email: string) => loginStateOf(loginByEmail[email.toLowerCase()])
+  const hasLoginData = !isDemo && Object.keys(loginByEmail).length > 0
+  const counts = { active: 0, invited: 0, none: 0 }
+  for (const s of summaries) counts[stateOf(s.coach.email)]++
+  const uninvited = summaries.filter((s) => stateOf(s.coach.email) === 'none')
+
+  async function sendBulk() {
+    setBulk('sending'); setBulkMessage('')
+    try {
+      const { sent, failed } = await inviteCoaches(uninvited.map((s) => s.coach.id))
+      setBulkMessage(`${sent} invite${sent === 1 ? '' : 's'} sent.${failed.length ? ` Could not send to: ${failed.join(', ')}. Open each coach and use Copy sign-in link instead.` : ''}`)
+    } catch (e) { setBulkMessage(e instanceof Error ? e.message : 'Could not send the invites.') }
+    finally { setBulk('idle') }
+  }
 
   const q = query.trim().toLowerCase()
   const visible = summaries.filter(
     (s) =>
       (!q || s.coach.name.toLowerCase().includes(q) || s.coach.email.toLowerCase().includes(q)) &&
       (team === 'all' || s.coach.team === team) &&
-      (pay === 'all' || s.coach.pay === pay),
+      (pay === 'all' || s.coach.pay === pay) &&
+      (login === 'all' || stateOf(s.coach.email) === login),
   )
 
   return (
     <>
       <PageHeader
-        title="Coaches"
-        description={`${summaries.length} coaches on staff this season.`}
+        title="Coaches & Volunteers"
+        description={hasLoginData ? `${summaries.length} people on staff this season · ${counts.active} active · ${counts.invited} invited · ${counts.none} no login` : `${summaries.length} people on staff this season.`}
         actions={<AddCoachDialog onAdded={(name) => {
           setQuery('')
           setTeam('all')
           setPay('all')
+          setLogin('all')
           setAddedName(name)
         }} />}
       />
       <p role="status" className={addedName ? 'mb-4 text-sm text-muted-foreground' : 'sr-only'}>
         {addedName && `${addedName} added to the roster. Their requirements checklist is ready.`}
       </p>
+      {hasLoginData && uninvited.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border bg-card p-4">
+          <p className="flex-1 text-sm leading-relaxed">{uninvited.length} coach{uninvited.length === 1 ? ' has' : 'es have'} no login yet. Send them all an email to set up their account.</p>
+          {bulk === 'idle' ? <Button type="button" className="h-10 px-4" onClick={() => setBulk('confirm')}>Invite all without a login</Button> : bulk === 'confirm' ? (
+            <>
+              <Button type="button" className="h-10 px-4" onClick={() => void sendBulk()}>Confirm: send {uninvited.length}</Button>
+              <Button type="button" variant="outline" className="h-10 px-4" onClick={() => setBulk('idle')}>Cancel</Button>
+            </>
+          ) : <span role="status" className="text-sm text-muted-foreground">Sending… this takes a few seconds.</span>}
+        </div>
+      )}
+      {bulkMessage && <p role="status" className="mb-4 text-sm leading-relaxed">{bulkMessage}</p>}
       <AwaitingApproval />
       <PendingAccounts onAdded={(name) => { setQuery(''); setTeam('all'); setPay('all'); setAddedName(name) }} />
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -72,6 +105,17 @@ export function CoachesList() {
               ))}
             </select>
           </div>
+          {hasLoginData && (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="login-filter">Login</Label>
+              <select id="login-filter" value={login} onChange={(e) => setLogin(e.target.value)} className={selectClass}>
+                <option value="all">All</option>
+                <option value="none">No login</option>
+                <option value="invited">Invited</option>
+                <option value="active">Active</option>
+              </select>
+            </div>
+          )}
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="pay-filter">Pay status</Label>
             <select id="pay-filter" value={pay} onChange={(e) => setPay(e.target.value)} className={selectClass}>
@@ -83,7 +127,7 @@ export function CoachesList() {
           </div>
         </div>
       </div>
-      <CoachesTable summaries={visible} />
+      <CoachesTable summaries={visible} showLogin={hasLoginData} />
     </>
   )
 }

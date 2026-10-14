@@ -76,6 +76,14 @@ export interface Coach {
   status?: CoachStatus
 }
 
+/** Sign-in account state for a roster coach, as reported to the board. */
+export interface LoginInfo { email: string; has_account: boolean; last_sign_in_at: string | null; invited_at: string | null }
+export type LoginState = 'none' | 'invited' | 'active'
+export function loginStateOf(info?: LoginInfo): LoginState {
+  if (info?.has_account) return 'active'
+  return info?.invited_at ? 'invited' : 'none'
+}
+
 export type SubmissionStatus = 'pending' | 'approved' | 'rejected'
 export type ObtainedAs = 'Volunteer' | 'Employment'
 export type FbiMethod = 'fingerprint' | 'affidavit'
