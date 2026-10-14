@@ -35,9 +35,14 @@ export const DEFAULT_REASONS: Record<string, Reason> = {
     source: 'USA Lacrosse program and insurance requirement (to confirm with the SVLA insurance carrier).',
     sourceUrl: 'https://www.usalacrosse.com/membership',
   },
+  'usal-background': {
+    level: 'youth',
+    why: 'WPYLA requires every youth coach to pass the USA Lacrosse background screen. It is separate from the Pennsylvania clearances and does not replace them. It must be renewed every 2 years.',
+    source: 'WPYLA League Rules, section 6 (Coaches Rosters). Not required for high school coaches.',
+  },
   'usal-bronze': {
     level: 'youth',
-    why: 'WPYLA requires every youth coach to complete USA Lacrosse training, and each team must have at least one Bronze-certified coach to be eligible to play. Bronze is the USA Lacrosse baseline training, including the background screen, abuse prevention, concussion and cardiac care.',
+    why: 'WPYLA requires every youth coach to complete USA Lacrosse training, and each team must have at least one Bronze-certified coach to be eligible to play. Bronze is the USA Lacrosse baseline training, including abuse prevention, concussion and cardiac care. You complete it once and it does not expire.',
     source: 'WPYLA League Rules, section 6 (Coaches Rosters). Not required for high school coaches.',
   },
   concussion: {
