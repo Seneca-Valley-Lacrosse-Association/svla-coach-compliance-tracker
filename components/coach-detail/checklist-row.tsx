@@ -55,6 +55,11 @@ export function ChecklistRow({
             {req.type}
             {req.appliesToPay.length === 1 && ` · ${req.appliesToPay[0]} coaches only`}
           </p>
+          {reason?.source && (
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Required by:</span> {reason.source}
+            </p>
+          )}
           {shown && <SubmissionMeta sub={shown} />}
           <dl className="mt-1 grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:flex sm:flex-wrap">
             <div>
