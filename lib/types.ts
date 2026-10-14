@@ -1,4 +1,4 @@
-export const TEAMS = ['8U', '10U', '12U', '14U', 'HS-JV', 'HS-Varsity'] as const
+export const TEAMS = ['8U', '10U', '12U', '14U', 'HS-JV', 'HS-Varsity', 'Board', 'Volunteer'] as const
 export type Team = (typeof TEAMS)[number]
 
 export const ROLES = [

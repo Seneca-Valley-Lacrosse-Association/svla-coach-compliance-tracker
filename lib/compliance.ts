@@ -73,7 +73,7 @@ export function validityLabel(validity: Validity) {
   }
 }
 
-/** HS-JV and HS-Varsity are high school programs. Every other team is a youth program. */
+/** HS-JV and HS-Varsity are high school programs. Every other team, including Board and Volunteer, counts as youth (SVLA is a youth organization). */
 export function coachLevel(coach: Coach): 'youth' | 'high-school' {
   return coach.team.startsWith('HS-') ? 'high-school' : 'youth'
 }
