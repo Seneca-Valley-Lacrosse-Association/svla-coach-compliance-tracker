@@ -17,7 +17,7 @@ export const DEFAULT_REASONS: Record<string, Reason> = {
   'pa-child-abuse': {
     level: 'both',
     why: 'Pennsylvania requires adults who have regular contact with children to clear a child abuse history check. It protects the players and SVLA.',
-    source: 'PA Child Protective Services Law (23 Pa.C.S. § 6344.2). PIAA also requires it for high school coaches.',
+    source: 'PA Child Protective Services Law (23 Pa.C.S. § 6344.2). High school coaches also file it with Seneca Valley as employees (Act 151).',
   },
   'pa-state-police': {
     level: 'both',

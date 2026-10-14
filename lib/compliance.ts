@@ -98,14 +98,24 @@ export function applicableRequirements(requirements: Requirement[], coach: Coach
     .sort((a, b) => a.order - b.order)
 }
 
+/**
+ * Paid coaches and all high school coaches (Seneca Valley treats them as employees under
+ * the Public School Code) need clearances obtained for employment, plus the FBI fingerprint check.
+ */
+export function needsEmploymentClearances(coach: Coach) {
+  return coach.pay === 'Paid' || coachLevel(coach) === 'high-school'
+}
+
 /** Returns a reason the submission cannot count for this coach, or null if it is acceptable. */
 export function eligibilityIssue(coach: Coach, req: Requirement, sub: Submission) {
-  if (req.tracksObtainedAs && coach.pay === 'Paid' && sub.obtainedAs === 'Volunteer') {
-    return 'Obtained as a volunteer. Paid coaches need a clearance obtained for employment.'
+  if (req.tracksObtainedAs && needsEmploymentClearances(coach) && sub.obtainedAs === 'Volunteer') {
+    return coach.pay === 'Paid'
+      ? 'Obtained as a volunteer. Paid coaches need a clearance obtained for employment.'
+      : 'Obtained as a volunteer. High school coaches need clearances obtained for employment (Seneca Valley employee application).'
   }
   if (req.allowsVolunteerAffidavit && sub.fbiMethod === 'affidavit') {
-    if (coach.pay === 'Paid') {
-      return 'Paid coaches must submit an FBI fingerprint check. The affidavit is for volunteers only.'
+    if (needsEmploymentClearances(coach)) {
+      return 'Paid and high school coaches must submit an FBI fingerprint check. The affidavit is for youth volunteers only.'
     }
     if (!coach.paResident10Years) {
       return 'The affidavit is only for volunteers who have lived in PA for the past 10 years.'
@@ -115,8 +125,8 @@ export function eligibilityIssue(coach: Coach, req: Requirement, sub: Submission
 }
 
 export function canUseAffidavit(coach: Coach) {
-  if (coach.pay === 'Paid') {
-    return { allowed: false, reason: 'Not available for paid coaches.' }
+  if (needsEmploymentClearances(coach)) {
+    return { allowed: false, reason: 'Not available for paid or high school coaches.' }
   }
   if (!coach.paResident10Years) {
     return {

@@ -49,3 +49,14 @@ test('level tags hide requirements that do not apply to a coach\'s program', () 
   assert.deepEqual(ids(youthCoach).sort(), ['both-level', 'handbook', 'youth-only'])
   assert.deepEqual(ids(hsCoach).sort(), ['both-level', 'handbook', 'hs-only'])
 })
+test('high school coaches need employment clearances and cannot use the volunteer affidavit', () => {
+  const { eligibilityIssue } = require('../lib/compliance.ts')
+  const hsVolunteer = { ...coaches[0], team: 'HS-JV', role: 'Assistant Coach', pay: 'Volunteer', paResident10Years: true }
+  const youthVolunteer = { ...hsVolunteer, team: '12U' }
+  const req = requirements.find(r => r.id === 'fbi-fingerprint')
+  assert.equal(canUseAffidavit(hsVolunteer).allowed, false)
+  assert.equal(canUseAffidavit(youthVolunteer).allowed, true)
+  assert.ok(eligibilityIssue(hsVolunteer, req, { obtainedAs: 'Volunteer', fbiMethod: 'fingerprint' }))
+  assert.equal(eligibilityIssue(youthVolunteer, req, { obtainedAs: 'Volunteer', fbiMethod: 'fingerprint' }), null)
+  assert.equal(eligibilityIssue(hsVolunteer, req, { obtainedAs: 'Employment', fbiMethod: 'fingerprint' }), null)
+})
