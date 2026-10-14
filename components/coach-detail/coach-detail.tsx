@@ -9,7 +9,7 @@ import { PortalAccess } from '@/components/coaches/login-status'
 import { ChecklistRow } from './checklist-row'
 import { ClearedBadge } from './cleared-badge'
 import { EditCoachDialog } from './edit-coach-dialog'
-import { DeleteCoachDialog } from './delete-coach-dialog'
+import { RemoveCoachDialog } from './delete-coach-dialog'
 
 export function CoachDetail({ id }: { id: string }) {
   const { getSummary, viewMode } = useApp()
@@ -65,13 +65,15 @@ export function CoachDetail({ id }: { id: string }) {
           {viewMode === 'board' && (
             <>
               <EditCoachDialog key={`${coach.id}-${coach.team}-${coach.role}-${coach.pay}-${coach.name}`} coach={coach} />
-              <DeleteCoachDialog coach={coach} />
+              <RemoveCoachDialog coach={coach} />
             </>
           )}
         </div>
       </section>
 
-      {viewMode === 'board' && <PortalAccess key={coach.id} coach={coach} />}
+      {coach.archivedAt && <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">This coach record is archived ({coach.archivedAt.slice(0, 10)}). It is hidden from the roster and dashboard, and the coach cannot use their login. Use “Restore or delete” to change that.</p>}
+
+      {viewMode === 'board' && !coach.archivedAt && <PortalAccess key={coach.id} coach={coach} />}
 
       <section aria-labelledby="checklist-heading" className="flex flex-col gap-3">
         <h2 id="checklist-heading" className="text-lg font-semibold text-navy">

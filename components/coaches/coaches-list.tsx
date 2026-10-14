@@ -16,12 +16,13 @@ const selectClass =
   'h-10 rounded-lg border border-input bg-card px-3 text-base focus-visible:outline-2 focus-visible:outline-brand'
 
 export function CoachesList() {
-  const { summaries, loginByEmail, inviteCoaches, isDemo } = useApp()
+  const { summaries, archivedSummaries, loginByEmail, inviteCoaches, isDemo } = useApp()
   const [query, setQuery] = useState('')
   const [team, setTeam] = useState('all')
   const [pay, setPay] = useState('all')
   const [addedName, setAddedName] = useState('')
   const [login, setLogin] = useState('all')
+  const [showArchived, setShowArchived] = useState(false)
   const [bulk, setBulk] = useState<'idle' | 'confirm' | 'sending'>('idle')
   const [bulkMessage, setBulkMessage] = useState('')
 
@@ -41,7 +42,7 @@ export function CoachesList() {
   }
 
   const q = query.trim().toLowerCase()
-  const visible = summaries.filter(
+  const visible = (showArchived ? archivedSummaries : summaries).filter(
     (s) =>
       (!q || s.coach.name.toLowerCase().includes(q) || s.coach.email.toLowerCase().includes(q)) &&
       (team === 'all' || s.coach.team === team) &&
@@ -125,7 +126,13 @@ export function CoachesList() {
           </div>
         </div>
       </div>
-      <CoachesTable summaries={visible} showLogin={hasLoginData} />
+      {!isDemo && (archivedSummaries.length > 0 || showArchived) && (
+        <div className="mb-4 flex flex-wrap items-center gap-3 text-sm">
+          <label className="inline-flex items-center gap-2"><input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} className="size-4" />Show archived coaches ({archivedSummaries.length})</label>
+          {showArchived && <span className="text-muted-foreground">Open an archived coach to restore the record or delete it permanently.</span>}
+        </div>
+      )}
+      <CoachesTable summaries={visible} showLogin={hasLoginData && !showArchived} />
     </>
   )
 }

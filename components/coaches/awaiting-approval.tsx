@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useApp } from '@/lib/app-store'
 import { PAY_STATUSES, type Coach } from '@/lib/types'
 import { Button } from '@/components/ui/button'
-import { DeleteCoachDialog } from '@/components/coach-detail/delete-coach-dialog'
+import { DeleteCoachDialog } from '@/components/coach-detail/delete-declined-dialog'
 
 const selectClass = 'h-10 rounded-lg border border-input bg-background px-3 text-base text-foreground focus-visible:outline-2 focus-visible:outline-brand'
 
