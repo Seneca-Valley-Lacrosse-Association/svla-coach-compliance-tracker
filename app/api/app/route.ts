@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { sendApprovalEmail, sendInviteEmail } from '@/lib/email'
+import { sendApprovalEmail, sendBoardInviteEmail, sendInviteEmail } from '@/lib/email'
 import { createAccessLink } from '@/lib/invite'
 import { mutationSchema } from '@/lib/validation'
 import type { Coach, LoginInfo, Requirement, Submission } from '@/lib/types'
@@ -104,6 +104,16 @@ export async function POST(request: Request) {
         const emailSent = command.deliver === 'email' ? await sendInviteEmail(coach.data.email, coach.data.name, access.link) : false
         await db.from('coaches').update({ invited_at: new Date().toISOString() }).eq('id', command.id)
         // The link is returned only when the board member must hand it over themselves (copy-link, or the email did not go out).
+        return respond({ ok: true, emailSent, ...(emailSent ? {} : { link: access.link }) })
+      }
+      case 'inviteBoardMember': {
+        // Board-only (checked above). The link goes only to an address that is already on the board list.
+        const member = await db.from('board_members').select('email').eq('email', command.email).maybeSingle()
+        if (member.error || !member.data) return respond({ error: 'That email is not a board member.' }, 404)
+        const access = await createAccessLink(member.data.email)
+        if ('error' in access) return respond({ error: access.error }, 500)
+        const emailSent = command.deliver === 'email' ? await sendBoardInviteEmail(member.data.email, access.link) : false
+        // The link is returned only when the sender must hand it over themselves (copy-link, or the email did not go out).
         return respond({ ok: true, emailSent, ...(emailSent ? {} : { link: access.link }) })
       }
       case 'inviteCoaches': {

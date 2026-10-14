@@ -52,6 +52,7 @@ interface AppState {
   boardMembers: { email: string; lastSignInAt?: string | null }[]
   addBoardMember: (email: string) => Promise<void>
   removeBoardMember: (email: string) => Promise<void>
+  inviteBoardMember: (email: string, deliver: 'email' | 'link') => Promise<{ emailSent?: boolean; link?: string }>
 }
 const AppContext = createContext<AppState | null>(null)
 const empty: Snapshot = { user: null, coaches: [], requirements: [], submissions: [], boardMembers: [], pendingAccounts: [] }
@@ -111,6 +112,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     boardMembers: snapshot.boardMembers ?? [],
     addBoardMember: email => save({ action: 'addBoardMember', email }),
     removeBoardMember: email => save({ action: 'removeBoardMember', email }),
+    inviteBoardMember: (email, deliver) => save({ action: 'inviteBoardMember', email, deliver }),
     reviewSubmission: (id, decision, comment) => save({ action: 'reviewSubmission', id, decision, comment }),
     submitUpload: async ({ file, ...input }) => {
       if (isDemo) throw new Error('The board demo is read-only.')
