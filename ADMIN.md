@@ -95,3 +95,18 @@ Every coach has a **Login** status on the Coaches page: **No login** (nothing se
 - **The email must match the roster.** A login is linked to a coach by email address, so an invite only goes to the email on the roster. If a coach prefers another address, remove them and add them again with the right one before inviting.
 
 Needs these on the Vercel project: `SUPABASE_SERVICE_ROLE_KEY` (already set, used only to create sign-in links after checking the user is on the board) and `RESEND_API_KEY` (to send the email). Without the Resend key, invites still create the link but the email is not sent, and the screen shows the link to copy instead.
+
+## Help requests (the "Need help?" button)
+
+Every signed-in person has a **Need help?** button in the top bar, a **Question about this?** link beside checklist items that are missing, pending, rejected or expired, and a "Still stuck? Email it@svlacrosse.org" line at the bottom of every page (and on the sign-in page, in case the form itself is what is broken). Choosing a topic and describing the problem sends a ticket:
+
+- It is saved with an ID like **SVLA-0001** and emailed to **it@svlacrosse.org** (reply-to is the coach, so replying answers them directly). The coach gets a confirmation email with the ID.
+- **Board members: Help Requests** in the left menu lists every ticket, unresolved first. Set the status to **Open**, **In progress** or **Resolved**, and add an internal note (coaches never see notes).
+- **Bug / Issue** is internal. Choose it when the problem is a real defect in the app: it emails IT once with the description and page details (but not the coach's name or email). The coach keeps seeing the ticket as "In Progress".
+- Tickets hold names and clearance questions. Do not share them outside the board, and do not ask coaches to put Social Security numbers or documents in a ticket.
+- The ticket table is tiny (about 1 to 2 KB per ticket). Nothing needs to be cleaned up.
+- Uses the same `RESEND_API_KEY` as the other emails. If the key is missing, tickets still save, and the person is told to email IT directly.
+
+**Where tickets go:** the `ticket_routing` table maps each topic to an email address. Today every topic and the bug alert go to it@svlacrosse.org. When a clearance coordinator is added, run (in the Supabase SQL Editor) for the topics you want re-routed:
+`update public.ticket_routing set route_to = 'coordinator@example.org' where route_key in ('clearance_status','upload');`
+(Backlog: an admin screen to manage this instead of SQL.)

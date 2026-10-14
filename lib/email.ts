@@ -38,3 +38,69 @@ export async function sendApprovalEmail(to: string, name: string): Promise<boole
     return response.ok
   } catch { return false }
 }
+
+const IT = 'it@svlacrosse.org'
+const TOPIC_LABELS: Record<string, string> = {
+  login: "Can't log in",
+  clearance_status: 'Clearance status looks wrong',
+  upload: "Can't upload a document",
+  broken: 'Something is broken',
+  other: 'Other',
+}
+
+interface TicketForEmail {
+  ticket_code: string
+  topic: string
+  description: string
+  page_context: { page?: string; item?: string; team?: string; browser?: string } | null
+}
+
+function contextLines(ctx: TicketForEmail['page_context']): [string, string][] {
+  const c = ctx ?? {}
+  return ([['Page', c.page], ['Item', c.item], ['Team', c.team], ['Browser', c.browser]] as [string, string | undefined][]).filter((l): l is [string, string] => !!l[1])
+}
+
+async function sendMail(to: string, subject: string, text: string, html: string, replyTo?: string): Promise<boolean> {
+  const key = process.env.RESEND_API_KEY
+  if (!key) return false
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: FROM, to: [to], subject, text, html, ...(replyTo ? { reply_to: replyTo } : {}) }),
+      signal: AbortSignal.timeout(10000),
+    })
+    return response.ok
+  } catch { return false }
+}
+
+/** New help request: notify the routed address (IT for now, reply-to the coach), then confirm to the coach. Never throws. */
+export async function sendTicketEmails(
+  t: TicketForEmail & { id: string; coach_name: string; coach_email: string; route_to: string },
+): Promise<{ notified: boolean; confirmed: boolean }> {
+  const label = TOPIC_LABELS[t.topic] ?? t.topic
+  const ctx = contextLines(t.page_context)
+  const link = `${SITE_URL}/tickets?ticket=${encodeURIComponent(t.id)}`
+  const text = `${t.ticket_code} - ${label}\nFrom: ${t.coach_name} (${t.coach_email})\n\n${t.description}\n\n${ctx.map(([k, v]) => `${k}: ${v}`).join('\n')}\n\nAdmin view: ${link}\n\nReply to this email to respond directly to the coach.`
+  const html = `<p><strong>${escapeHtml(t.ticket_code)}</strong> &mdash; ${escapeHtml(label)}</p><p><strong>From:</strong> ${escapeHtml(t.coach_name)} (${escapeHtml(t.coach_email)})</p><p style="white-space:pre-wrap">${escapeHtml(t.description)}</p>${ctx.length ? `<p><strong>Context</strong><br>${ctx.map(([k, v]) => `${escapeHtml(k)}: ${escapeHtml(v)}`).join('<br>')}</p>` : ''}<p><a href="${escapeHtml(link)}">Open in the Help Requests page</a></p><p style="color:#666">Reply to this email to respond directly to the coach.</p>`
+  const notified = await sendMail(t.route_to, `[SVLA Help] ${t.ticket_code}: ${label}`, text, html, t.coach_email)
+  await new Promise(resolve => setTimeout(resolve, 600)) // Resend allows about 2 emails per second.
+  const first = t.coach_name.trim().split(/\s+/)[0] || 'there'
+  const confirmText = `Hi ${first},\n\nWe received your request and our IT team will follow up. Your ticket ID is ${t.ticket_code}.\n\nIf you need to add anything, reply to this email or write to ${IT} and include the ticket ID.\n\nPlease do not send SSNs or copies of clearance documents by email.\n\nSVLA`
+  const confirmHtml = `<p>Hi ${escapeHtml(first)},</p><p>We received your request and our IT team will follow up. Your ticket ID is <strong>${escapeHtml(t.ticket_code)}</strong>.</p><p>If you need to add anything, reply to this email or write to ${IT} and include the ticket ID.</p><p>Please do not send SSNs or copies of clearance documents by email.</p><p>SVLA</p>`
+  const confirmed = await sendMail(t.coach_email, `We received your request (${t.ticket_code})`, confirmText, confirmHtml, IT)
+  return { notified, confirmed }
+}
+
+/** One-time alert when a board member flags a ticket as Bug / Issue. Deliberately omits the coach's name and email. Never throws. */
+export async function sendBugAlertEmail(
+  t: TicketForEmail & { id: string; admin_notes: string | null; flagged_by_email: string | null },
+  to: string,
+): Promise<boolean> {
+  const label = TOPIC_LABELS[t.topic] ?? t.topic
+  const ctx = contextLines(t.page_context)
+  const link = `${SITE_URL}/tickets?ticket=${encodeURIComponent(t.id)}`
+  const text = `${t.ticket_code} flagged as Bug / Issue - ${label}\nFlagged by: ${t.flagged_by_email ?? 'a board member'}\n${t.admin_notes ? `Admin note: ${t.admin_notes}\n` : ''}\n${t.description}\n\n${ctx.map(([k, v]) => `${k}: ${v}`).join('\n')}\n\nTicket: ${link}`
+  const html = `<p><strong>${escapeHtml(t.ticket_code)}</strong> flagged as Bug / Issue &mdash; ${escapeHtml(label)}</p><p><strong>Flagged by:</strong> ${escapeHtml(t.flagged_by_email ?? 'a board member')}</p>${t.admin_notes ? `<p><strong>Admin note:</strong> ${escapeHtml(t.admin_notes)}</p>` : ''}<p style="white-space:pre-wrap"><strong>Description</strong><br>${escapeHtml(t.description)}</p>${ctx.length ? `<p><strong>Context</strong><br>${ctx.map(([k, v]) => `${escapeHtml(k)}: ${escapeHtml(v)}`).join('<br>')}</p>` : ''}<p><a href="${escapeHtml(link)}">Open ticket</a></p>`
+  return sendMail(to, `[SVLA BUG] ${t.ticket_code}: ${label}`, text, html)
+}

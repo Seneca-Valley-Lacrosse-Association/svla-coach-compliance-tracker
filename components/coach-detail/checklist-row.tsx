@@ -1,12 +1,13 @@
 'use client'
 
-import { AlertTriangle, ExternalLink, FileText, MessageSquareWarning } from 'lucide-react'
+import { AlertTriangle, ExternalLink, FileText, LifeBuoy, MessageSquareWarning } from 'lucide-react'
 import { daysBetween, eligibilityIssue, formatDate, TODAY, type ChecklistItem } from '@/lib/compliance'
 import { LEVEL_LABELS, type Coach, type Submission } from '@/lib/types'
 import { reasonFor } from '@/lib/requirement-reasons'
 import { ItemStatusPill } from '@/components/status-pill'
 import { UploadButton } from './upload-dialog'
 import { ReviewActions } from '@/components/review/review-actions'
+import { useHelp } from '@/components/help/help-provider'
 
 function relative(date: string) {
   const d = daysBetween(TODAY, date)
@@ -41,6 +42,9 @@ export function ChecklistRow({
   const pendingIssue = latest?.status === 'pending' ? eligibilityIssue(coach, req, latest) : null
   const helpOpenByDefault = mode === 'coach' && !item.satisfied
   const reason = reasonFor(req)
+  const { openHelp, enabled: helpEnabled } = useHelp()
+  // Offer help where people most often get stuck: something missing, pending, rejected, expired or not valid.
+  const needsHelpLink = mode === 'coach' && helpEnabled && ['not-started', 'pending', 'rejected', 'expired', 'invalid'].includes(status)
 
   return (
     <li className="flex flex-col gap-4 p-4 sm:p-5">
@@ -101,6 +105,16 @@ export function ChecklistRow({
               requirement={req}
               variant={item.satisfied && status !== 'expiring' ? 'outline' : 'default'}
             />
+          )}
+          {needsHelpLink && (
+            <button
+              type="button"
+              onClick={() => openHelp({ topic: status === 'not-started' ? 'upload' : 'clearance_status', item: req.name })}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-brand underline underline-offset-4"
+            >
+              <LifeBuoy className="size-4" aria-hidden="true" />
+              Question about this?
+            </button>
           )}
         </div>
       </div>

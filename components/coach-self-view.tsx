@@ -7,6 +7,7 @@ import { RequirementProgress } from '@/components/requirement-progress'
 import { PayBadge } from '@/components/status-pill'
 import { ChecklistRow } from '@/components/coach-detail/checklist-row'
 import { ClearedBadge } from '@/components/coach-detail/cleared-badge'
+import { MyRequests } from '@/components/help/my-requests'
 
 export function CoachSelfView() {
   const { getSummary, currentCoachId } = useApp()
@@ -66,6 +67,8 @@ export function CoachSelfView() {
           ))}
         </ol>
       </section>
+
+      <MyRequests />
     </div>
   )
 }
