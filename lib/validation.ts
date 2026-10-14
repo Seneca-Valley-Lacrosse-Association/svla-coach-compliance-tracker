@@ -40,6 +40,7 @@ export const mutationSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('reviewCoach'), id: z.uuid(), decision: z.enum(['approved', 'declined']), pay: z.enum(PAY_STATUSES) }),
   z.object({ action: z.literal('removeAccount'), email: z.string().trim().toLowerCase().email().max(254) }),
   z.object({ action: z.literal('deleteCoach'), id: z.uuid() }),
+  z.object({ action: z.literal('removeSubmission'), id: z.uuid() }),
   z.object({ action: z.literal('archiveCoach'), id: z.uuid() }),
   z.object({ action: z.literal('restoreCoach'), id: z.uuid() }),
   z.object({ action: z.literal('editSubmissionDates'), id: z.uuid(), completedOn: z.iso.date(), membershipExpiry: z.iso.date().optional(), note: z.string().trim().max(500).optional() }),

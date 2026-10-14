@@ -31,6 +31,7 @@ interface AppState {
   /** Archived coaches (board only view). */
   archivedCoaches: Coach[]
   archivedSummaries: CoachSummary[]
+  removeSubmission: (id: string) => Promise<void>
   archiveCoach: (id: string) => Promise<void>
   restoreCoach: (id: string) => Promise<void>
   editSubmissionDates: (id: string, completedOn: string, note?: string, membershipExpiry?: string) => Promise<void>
@@ -104,6 +105,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     },
     currentCoachId: isDemo ? 'c3' : coaches.find(c => c.email.toLowerCase() === user?.email?.toLowerCase())?.id ?? '',
     coaches, awaitingCoaches, myStatus: isDemo ? 'approved' : mine ? (mine.archivedAt ? 'archived' : (mine.status ?? 'approved')) : 'none', archivedCoaches, archivedSummaries,
+    removeSubmission: id => save({ action: 'removeSubmission', id }),
     archiveCoach: id => save({ action: 'archiveCoach', id }),
     restoreCoach: id => save({ action: 'restoreCoach', id }),
     editSubmissionDates: (id, completedOn, note, membershipExpiry) => save({ action: 'editSubmissionDates', id, completedOn, note, membershipExpiry }), requirements, submissions, summaries,
