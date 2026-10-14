@@ -38,7 +38,7 @@ export function CompleteProfilePanel() {
         <header className="flex flex-col gap-2">
           <ClipboardList className="size-9 text-primary" aria-hidden="true" />
           <h1 className="text-balance text-2xl font-semibold">Complete your coach profile</h1>
-          <p className="leading-relaxed text-muted-foreground">Signed in as {email}. Tell us about your coaching role. The SVLA board will review your details and confirm whether you are paid or a volunteer. You will get an email once you are approved and can log in.</p>
+          <p className="leading-relaxed text-muted-foreground">Signed in as {email}. Tell us about your coaching role. The SVLA board will review your details. You will get an email once you are approved and can log in.</p>
         </header>
         <form onSubmit={submit} noValidate className="flex flex-col gap-5">
           <FieldGroup>
