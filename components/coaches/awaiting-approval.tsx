@@ -8,7 +8,7 @@ import { DeleteCoachDialog } from '@/components/coach-detail/delete-coach-dialog
 
 const selectClass = 'h-10 rounded-lg border border-input bg-background px-3 text-base text-foreground focus-visible:outline-2 focus-visible:outline-brand'
 
-// New coach profiles wait here until the board confirms paid/volunteer status and approves them.
+// New coach profiles wait here (shown at the top of the Review Queue) until the board confirms paid/volunteer status and approves them.
 export function AwaitingApproval() {
   const { awaitingCoaches, reviewCoach, isDemo } = useApp()
   const [pay, setPay] = useState<Record<string, Coach['pay']>>({})

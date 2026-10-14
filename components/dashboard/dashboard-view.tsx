@@ -30,7 +30,7 @@ export function DashboardView() {
         title="Dashboard"
         description={`Coach compliance for the current season as of ${formatDate(TODAY)}.`}
       />
-      {waiting > 0 && <a href="/coaches" className="mb-6 block rounded-xl border border-sky-300 bg-sky-50 p-4 text-sm font-medium text-navy underline-offset-4 hover:underline">{waiting} coach {waiting === 1 ? 'profile is' : 'profiles are'} waiting for your approval. Review {waiting === 1 ? 'it' : 'them'} on the Coaches page.</a>}
+      {waiting > 0 && <a href="/review" className="mb-6 block rounded-xl border border-sky-300 bg-sky-50 p-4 text-sm font-medium text-navy underline-offset-4 hover:underline">{waiting} coach {waiting === 1 ? 'profile is' : 'profiles are'} waiting for your approval. Review {waiting === 1 ? 'it' : 'them'} in the Review Queue.</a>}
       <Tabs defaultValue="coaches" className="gap-6">
         <TabsList className="h-10">
           <TabsTrigger value="coaches" className="px-4 text-base">Coaches Overview</TabsTrigger>
