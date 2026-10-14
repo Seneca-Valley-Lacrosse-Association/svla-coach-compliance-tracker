@@ -99,14 +99,14 @@ export function HelpProvider({ children }: { children: React.ReactNode }) {
               </DialogHeader>
               {!sent.notified
                 ? <p role="alert" className="rounded-lg bg-orange-50 p-3 text-sm leading-relaxed text-orange-900">Your request is saved, but we could not email IT automatically. Please also email <a className="font-medium underline" href={`mailto:${IT_EMAIL}?subject=${encodeURIComponent(`Help request ${sent.ticketCode}`)}`}>{IT_EMAIL}</a> and include {sent.ticketCode}.</p>
-                : <p className="text-sm leading-relaxed text-muted-foreground">{sent.confirmed ? 'We emailed you a confirmation. Our IT team will follow up by email.' : 'IT has your request and will follow up by email. We could not send you a confirmation message.'}</p>}
+                : <p className="text-sm leading-relaxed text-muted-foreground">{sent.confirmed ? 'We emailed you a confirmation. If you do not see it, check your spam or junk folder. Our IT team will follow up by email.' : 'IT has your request and will follow up by email. We could not send you a confirmation message, so if you have questions, email ' + IT_EMAIL + ' and include ' + sent.ticketCode + '.'}</p>}
               <DialogFooter><Button type="button" onClick={() => changeOpen(false)}>Done</Button></DialogFooter>
             </>
           ) : (
             <form onSubmit={submit} noValidate className="flex flex-col gap-5">
               <DialogHeader>
                 <DialogTitle>Need help?</DialogTitle>
-                <DialogDescription>Tell us what is going on and our IT team will email you back. Please do not include Social Security numbers or copies of your clearance documents here.</DialogDescription>
+                <DialogDescription>Tell us what is going on and our IT team will email you back. If you do not receive a copy of your request by email, please check your spam or junk folder, then email <a className="font-medium underline" href={`mailto:${IT_EMAIL}`}>{IT_EMAIL}</a> directly. Please do not include Social Security numbers or copies of your clearance documents here.</DialogDescription>
               </DialogHeader>
               <FieldGroup>
                 {item && (
