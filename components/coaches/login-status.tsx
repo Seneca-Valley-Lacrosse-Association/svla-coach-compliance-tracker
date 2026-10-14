@@ -8,6 +8,14 @@ import { loginStateOf, type Coach, type LoginState } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 
+/** Sign-in times are shown in Eastern time so everyone on the board sees the same thing. */
+export function formatLastLogin(iso: string | null | undefined) {
+  if (!iso) return ''
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York', timeZoneName: 'short' })
+}
+
 const LABELS: Record<LoginState, string> = { none: 'No login', invited: 'Invited', active: 'Active' }
 const TONES: Record<LoginState, string> = {
   none: 'bg-slate-100 text-slate-700 ring-slate-200',
@@ -33,7 +41,14 @@ export function useLogin(coach: Coach) {
 }
 
 export function LoginCell({ coach }: { coach: Coach }) {
-  return <LoginBadge state={useLogin(coach).state} />
+  const { info, state } = useLogin(coach)
+  const last = formatLastLogin(info?.last_sign_in_at)
+  return (
+    <span className="inline-flex flex-col items-start gap-0.5">
+      <LoginBadge state={state} />
+      {state === 'active' && <span className="text-xs text-muted-foreground">{last ? `Last login ${last}` : 'Has not signed in yet'}</span>}
+    </span>
+  )
 }
 
 // Board-only panel on a coach's page: see whether they can sign in, send or resend the invite,
@@ -72,7 +87,7 @@ export function PortalAccess({ coach }: { coach: Coach }) {
       </div>
       <p className="text-sm leading-relaxed text-muted-foreground">
         {state === 'active'
-          ? `${coach.name} has an account${info?.last_sign_in_at ? ` and last signed in ${formatDate(info.last_sign_in_at)}` : ''}. If they lose their password they can use “Forgot your password?” on the sign-in page.`
+          ? `${coach.name} has an account${info?.last_sign_in_at ? ` and last signed in ${formatLastLogin(info.last_sign_in_at)}` : ''}. If they lose their password they can use “Forgot your password?” on the sign-in page.`
           : state === 'invited'
             ? `An invite was sent${info?.invited_at ? ` ${formatDate(info.invited_at)}` : ''} but ${coach.name} has not set up an account yet. Resend it, or copy a link to send yourself.`
             : `${coach.name} has no account yet. Until then you can enter their records for them. Send an invite so they can upload their own documents.`}
