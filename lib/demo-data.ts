@@ -1,5 +1,5 @@
 import { coaches as examples, requirements } from './mock-data'
-import { applicableRequirements, computeExpiry, TODAY } from './compliance'
+import { applicableRequirements, computeExpiry, needsEmploymentClearances, TODAY } from './compliance'
 import type { Submission } from './types'
 
 export { requirements }
@@ -16,7 +16,7 @@ export const submissions: Submission[] = coaches.flatMap(coach => applicableRequ
     completedOn: req.id === 'usal-membership' ? shiftDays(-30) : TODAY,
     uploadedOn: TODAY, expiresOn, status: pending ? 'pending' : 'approved',
     reviewedOn: pending ? undefined : TODAY,
-    obtainedAs: req.tracksObtainedAs ? coach.pay === 'Paid' ? 'Employment' : 'Volunteer' : undefined,
+    obtainedAs: req.tracksObtainedAs ? needsEmploymentClearances(coach) ? 'Employment' : 'Volunteer' : undefined,
     fbiMethod: req.allowsVolunteerAffidavit ? 'fingerprint' : undefined,
     signedName: req.type === 'Signature' ? coach.name : undefined,
     membershipNumber: req.type === 'Membership' ? `DEMO-${coach.id}` : undefined,
