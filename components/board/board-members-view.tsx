@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, type FormEvent } from 'react'
-import { UserPlus, UserMinus } from 'lucide-react'
+import { Copy, KeyRound, Mail, UserPlus, UserMinus } from 'lucide-react'
 import { useApp } from '@/lib/app-store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,11 +9,15 @@ import { Label } from '@/components/ui/label'
 import { PageHeader } from '@/components/page-header'
 
 export function BoardMembersView() {
-  const { boardMembers, addBoardMember, removeBoardMember, email: myEmail, isDemo } = useApp()
+  const { boardMembers, addBoardMember, removeBoardMember, inviteBoardMember, email: myEmail, isDemo } = useApp()
   const [email, setEmail] = useState('')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [link, setLink] = useState<{ email: string; url: string } | null>(null)
+  const [copied, setCopied] = useState(false)
+  const [inviteMessage, setInviteMessage] = useState('')
+  const [inviteError, setInviteError] = useState('')
 
   async function run(action: () => Promise<void>, success: string) {
     if (busy) return
@@ -27,6 +31,22 @@ export function BoardMembersView() {
     const value = email.trim().toLowerCase()
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return setError('Enter a valid email address.')
     await run(async () => { await addBoardMember(value); setEmail('') }, `${value} now has board access. They sign in by creating an account with this exact email address and confirming it.`)
+  }
+  async function handleInvite(target: string, deliver: 'email' | 'link') {
+    if (busy) return
+    setBusy(true); setInviteError(''); setInviteMessage(''); setLink(null); setCopied(false)
+    try {
+      const result = await inviteBoardMember(target, deliver)
+      if (result.link) setLink({ email: target, url: result.link })
+      if (result.emailSent) setInviteMessage(`Invite emailed to ${target}.`)
+      else if (deliver === 'email') setInviteMessage(`The email to ${target} could not be sent, so copy the sign-in link below and send it to them yourself.`)
+      else setInviteMessage(`Copy this one-time link and send it to ${target}. It works once and expires, and anyone who has it can sign in as them, so share it privately.`)
+    } catch (e) { setInviteError(e instanceof Error ? e.message : 'Could not create the invite.') }
+    finally { setBusy(false) }
+  }
+  async function copyLink() {
+    if (!link) return
+    try { await navigator.clipboard.writeText(link.url); setCopied(true) } catch { setInviteError('Could not copy automatically. Select the link and copy it.') }
   }
   async function handleRemove(target: string) {
     if (!window.confirm(`Remove board access for ${target}? They will keep any coach record they have.`)) return
@@ -76,11 +96,31 @@ export function BoardMembersView() {
                 </span>
                 {mine
                   ? <span className="text-sm text-muted-foreground">Cannot remove yourself</span>
-                  : <Button type="button" variant="outline" className="h-9" disabled={busy} onClick={() => handleRemove(m.email)}><UserMinus aria-hidden="true" />Remove</Button>}
+                  : (
+                    <span className="flex flex-wrap justify-end gap-2">
+                      {!m.lastSignInAt && !isDemo && (
+                        <>
+                          <Button type="button" variant="outline" className="h-9" disabled={busy} onClick={() => void handleInvite(m.email, 'email')}><Mail aria-hidden="true" />Resend invite</Button>
+                          <Button type="button" variant="outline" className="h-9" disabled={busy} onClick={() => void handleInvite(m.email, 'link')}><KeyRound aria-hidden="true" />Copy sign-in link</Button>
+                        </>
+                      )}
+                      <Button type="button" variant="outline" className="h-9" disabled={busy} onClick={() => handleRemove(m.email)}><UserMinus aria-hidden="true" />Remove</Button>
+                    </span>
+                  )}
               </li>
             )
           })}
         </ul>
+        <p role="status" className={inviteMessage ? 'mt-3 text-sm leading-relaxed' : 'sr-only'}>{inviteMessage}</p>
+        {inviteError && <p role="alert" className="mt-3 text-sm text-destructive">{inviteError}</p>}
+        {link && (
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <input readOnly value={link.url} aria-label={`One-time sign-in link for ${link.email}`} onFocus={(e) => e.currentTarget.select()} className="h-10 min-w-0 flex-1 rounded-lg border border-input bg-background px-3 text-sm" />
+            <Button type="button" variant="outline" className="h-10 px-4" onClick={() => void copyLink()}>
+              <Copy aria-hidden="true" />{copied ? 'Copied' : 'Copy'}
+            </Button>
+          </div>
+        )}
       </section>
     </>
   )

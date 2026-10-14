@@ -6,6 +6,7 @@ import { LEVEL_LABELS, type Coach, type Submission } from '@/lib/types'
 import { reasonFor } from '@/lib/requirement-reasons'
 import { ItemStatusPill } from '@/components/status-pill'
 import { UploadButton } from './upload-dialog'
+import { EditDatesDialog } from './edit-dates-dialog'
 import { ReviewActions } from '@/components/review/review-actions'
 import { useHelp } from '@/components/help/help-provider'
 
@@ -106,6 +107,7 @@ export function ChecklistRow({
               variant={item.satisfied && status !== 'expiring' ? 'outline' : 'default'}
             />
           )}
+          {mode === 'board' && shown && <EditDatesDialog key={`${shown.id}-${shown.completedOn}-${shown.expiresOn}`} submission={shown} requirement={req} />}
           {needsHelpLink && (
             <button
               type="button"
@@ -118,6 +120,17 @@ export function ChecklistRow({
           )}
         </div>
       </div>
+
+      {shown?.editLog && shown.editLog.length > 0 && (
+        <details className="rounded-lg bg-secondary/60 px-3 py-2 text-sm">
+          <summary className="cursor-pointer font-medium text-brand">Date corrections ({shown.editLog.length})</summary>
+          <ul className="mt-2 flex flex-col gap-1.5">
+            {shown.editLog.map((e, i) => (
+              <li key={i} className="leading-relaxed">{formatDate(e.at.slice(0, 10))} by {e.by}: completed {formatDate(e.fromCompletedOn ?? undefined)} → {formatDate(e.toCompletedOn)}{e.note ? ` (${e.note})` : ''}</li>
+            ))}
+          </ul>
+        </details>
+      )}
 
       {shown?.fileName && (
         <div className="flex items-center gap-3 rounded-lg border border-dashed bg-muted/50 p-3 text-sm">

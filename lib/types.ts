@@ -74,6 +74,8 @@ export interface Coach {
   paResident10Years: boolean
   /** Board approval state. Missing means approved (demo data). */
   status?: CoachStatus
+  /** Set when the board archived the record. Archived coaches keep all history but are inactive. */
+  archivedAt?: string | null
 }
 
 /** Sign-in account state for a roster coach, as reported to the board. */
@@ -104,6 +106,18 @@ export interface Submission {
   signedName?: string
   reviewComment?: string
   reviewedOn?: string
+  /** Board corrections to the dates, oldest first. */
+  editLog?: EditLogEntry[]
+}
+
+export interface EditLogEntry {
+  at: string
+  by: string
+  fromCompletedOn: string | null
+  toCompletedOn: string
+  fromExpiresOn: string | null
+  toExpiresOn: string | null
+  note?: string
 }
 
 export type ItemStatus =

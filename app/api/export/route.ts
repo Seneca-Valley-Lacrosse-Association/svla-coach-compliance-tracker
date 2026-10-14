@@ -29,13 +29,13 @@ export async function GET(request: Request) {
       }
     }
     const [coachRows, requirementRows, submissionRows] = await Promise.all([
-      allRows('coaches', 'id,name,email,phone,team,role,pay,pa_resident_10_years,status', 'id'),
+      allRows('coaches', 'id,name,email,phone,team,role,pay,pa_resident_10_years,status,archived_at', 'id'),
       allRows('requirements', 'id,sort_order,definition', 'sort_order'),
-      allRows('submissions', 'id,coach_id,requirement_id,status,uploaded_at,completed_on,expires_on,file_path,file_name,details,review_comment,reviewed_on', 'id'),
+      allRows('submissions', 'id,coach_id,requirement_id,status,uploaded_at,completed_on,expires_on,file_path,file_name,details,review_comment,reviewed_on,edit_log', 'id'),
     ])
-    const coaches = coachRows.filter(r => r.status === 'approved').map(r => ({ id: r.id, name: r.name, email: r.email, phone: r.phone, team: r.team, role: r.role, pay: r.pay, paResident10Years: r.pa_resident_10_years })) as Coach[]
+    const coaches = coachRows.filter(r => r.status === 'approved').map(r => ({ id: r.id, name: r.name, email: r.email, phone: r.phone, team: r.team, role: r.role, pay: r.pay, paResident10Years: r.pa_resident_10_years, archivedAt: r.archived_at })) as Coach[]
     const requirements = requirementRows.map(r => ({ ...r.definition, id: r.id, order: r.sort_order })) as Requirement[]
-    const submissions = submissionRows.map(r => ({ ...r.details, id: r.id, coachId: r.coach_id, requirementId: r.requirement_id, status: r.status, uploadedOn: r.uploaded_at, completedOn: r.completed_on, expiresOn: r.expires_on, filePath: r.file_path ?? undefined, fileName: r.file_name ?? undefined, reviewComment: r.review_comment ?? undefined, reviewedOn: r.reviewed_on ?? undefined })) as Submission[]
+    const submissions = submissionRows.map(r => ({ ...r.details, id: r.id, coachId: r.coach_id, requirementId: r.requirement_id, status: r.status, uploadedOn: r.uploaded_at, completedOn: r.completed_on, expiresOn: r.expires_on, filePath: r.file_path ?? undefined, fileName: r.file_name ?? undefined, reviewComment: r.review_comment ?? undefined, reviewedOn: r.reviewed_on ?? undefined, editLog: Array.isArray(r.edit_log) && r.edit_log.length ? r.edit_log : undefined })) as Submission[]
 
     const workbook = await buildWorkbook({ coaches, requirements, submissions, origin: new URL(request.url).origin, generatedBy: user.email ?? undefined })
     const buffer = await workbook.xlsx.writeBuffer()

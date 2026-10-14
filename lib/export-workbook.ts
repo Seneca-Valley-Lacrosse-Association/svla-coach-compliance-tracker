@@ -59,9 +59,9 @@ export async function buildWorkbook({ coaches, requirements, submissions, origin
     `Generated ${TODAY}${generatedBy ? ` by ${generatedBy}` : ''}. Contains personal information about coaches. Store it securely and share only with SVLA board members.`,
     '',
     'Sheets in this file:',
-    '  Coaches: roster with contact details, team, role, paid or volunteer status.',
+    '  Coaches: roster with contact details, team, role, paid or volunteer status. Archived coaches are included with an Archived on date.',
     '  Compliance Matrix: one row per coach, one column per active requirement, showing current status and expiry date.',
-    '  Submissions: every upload, signature, or membership entry ever submitted, including review decisions and comments.',
+    '  Submissions: every upload, signature, or membership entry ever submitted, including review decisions, comments, and any date corrections made by the board.',
     '  Requirements: the list of requirements and the rules for who each one applies to.',
     '',
     'Uploaded certificate files are stored separately in the Supabase "certificates" bucket. The Submissions sheet lists each file name and a link that works while the app is running and you are signed in as a board member.',
@@ -80,14 +80,14 @@ export async function buildWorkbook({ coaches, requirements, submissions, origin
     { header: 'Phone', key: 'phone', width: 18 }, { header: 'Team', key: 'team', width: 12 },
     { header: 'Role', key: 'role', width: 20 }, { header: 'Paid / Volunteer', key: 'pay', width: 16 },
     { header: 'PA resident 10 years', key: 'pa', width: 20 }, { header: 'Overall status', key: 'status', width: 16 },
-    { header: 'Requirements met', key: 'met', width: 18 }, { header: 'Missing or out of date', key: 'missing', width: 60 },
+    { header: 'Requirements met', key: 'met', width: 18 }, { header: 'Missing or out of date', key: 'missing', width: 60 }, { header: 'Archived on', key: 'archived', width: 14 },
   ]
   summaries.forEach((s) => {
     const label = s.status === 'cleared' ? 'Cleared' : s.status === 'expiring' ? 'Expiring' : s.status === 'expired' ? 'Expired' : 'Incomplete'
     const row = cs.addRow({
       name: s.coach.name, email: s.coach.email, phone: s.coach.phone, team: s.coach.team, role: s.coach.role,
       pay: s.coach.pay, pa: s.coach.paResident10Years ? 'Yes' : 'No', status: label,
-      met: `${s.satisfiedCount} of ${s.total}`, missing: s.missing.map((m) => m.requirement.name).join('; '),
+      met: `${s.satisfiedCount} of ${s.total}`, missing: s.missing.map((m) => m.requirement.name).join('; '), archived: s.coach.archivedAt ? s.coach.archivedAt.slice(0, 10) : '',
     })
     tint(row.getCell('status'), label)
   })
@@ -125,7 +125,7 @@ export async function buildWorkbook({ coaches, requirements, submissions, origin
     { header: 'Reviewed on', key: 'reviewed', width: 14 }, { header: 'Review comment', key: 'comment', width: 40 },
     { header: 'Obtained as', key: 'obtained', width: 14 }, { header: 'FBI method', key: 'fbi', width: 14 },
     { header: 'Membership number', key: 'member', width: 20 }, { header: 'Signed name', key: 'signed', width: 22 },
-    { header: 'File name', key: 'file', width: 34 }, { header: 'Document link', key: 'link', width: 22 },
+    { header: 'File name', key: 'file', width: 34 }, { header: 'Document link', key: 'link', width: 22 }, { header: 'Date edit history', key: 'edits', width: 60 },
   ]
   const ordered = [...submissions].sort((a, b) =>
     text(coachName.get(a.coachId)).localeCompare(text(coachName.get(b.coachId))) || a.requirementId.localeCompare(b.requirementId) || b.uploadedOn.localeCompare(a.uploadedOn))
@@ -136,6 +136,7 @@ export async function buildWorkbook({ coaches, requirements, submissions, origin
       uploaded: s.uploadedOn, reviewed: text(s.reviewedOn), comment: text(s.reviewComment),
       obtained: text(s.obtainedAs), fbi: text(s.fbiMethod), member: text(s.membershipNumber),
       signed: text(s.signedName), file: text(s.fileName), link: '',
+      edits: (s.editLog ?? []).map((e) => `${e.at.slice(0, 10)} by ${e.by}: completed ${e.fromCompletedOn ?? '—'} → ${e.toCompletedOn}, expires ${e.fromExpiresOn ?? '—'} → ${e.toExpiresOn ?? 'never'}${e.note ? ` (${e.note})` : ''}`).join('\n'),
     })
     if (s.filePath) row.getCell('link').value = { text: 'Open document', hyperlink: `${origin}/api/documents/${s.id}` }
     tint(row.getCell('status'), s.status === 'approved' ? 'Approved' : s.status === 'rejected' ? 'Rejected' : 'Pending review')

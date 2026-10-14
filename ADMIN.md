@@ -110,3 +110,13 @@ Every signed-in person has a **Need help?** button in the top bar, a **Question 
 **Where tickets go:** the `ticket_routing` table maps each topic to an email address. Today every topic and the bug alert go to it@svlacrosse.org. When a clearance coordinator is added, run (in the Supabase SQL Editor) for the topics you want re-routed:
 `update public.ticket_routing set route_to = 'coordinator@example.org' where route_key in ('clearance_status','upload');`
 (Backlog: an admin screen to manage this instead of SQL.)
+
+## Archiving, deleting, and correcting dates
+
+- **Archive a coach:** open the coach, choose "Archive or delete", then "Archive coach". The record is hidden from the roster and dashboard and their login stops working, but every submission and file is kept. Use "Show archived coaches" on the Coaches page to find them, then "Restore or delete" > "Restore coach".
+- **Permanently delete:** a second option in the same dialog. It warns that all files will be deleted and offers a ZIP backup of the coach's files and the full Excel export first. You must type the coach's name to confirm.
+- **Correct a date:** on a coach's checklist, a board member can choose "Edit dates". The expiration is recalculated from the requirement's rules, and each correction is logged (who, when, old and new dates, reason). The log appears under "Date corrections" and in the Excel export.
+
+## Keeping the free Supabase project awake
+
+`vercel.json` runs `/api/keepalive` every 5 days. It makes a small read against the database using the `CRON_SECRET` environment variable (Vercel > Settings > Environment Variables). If the secret is rotated, Vercel picks up the new value on the next deployment. A paid Supabase plan makes this unnecessary.

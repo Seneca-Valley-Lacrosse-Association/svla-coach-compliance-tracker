@@ -21,6 +21,23 @@ export async function sendInviteEmail(to: string, name: string, link: string): P
   } catch { return false }
 }
 
+/** Board onboarding email with a one-time link to set a password. Returns true when Resend accepted it. Never throws. */
+export async function sendBoardInviteEmail(to: string, link: string): Promise<boolean> {
+  const key = process.env.RESEND_API_KEY
+  if (!key) return false
+  const text = `Hello,\n\nYou have been given board access to the Seneca Valley Lacrosse Association compliance tracker, where coach clearances and certifications are reviewed. Set up your account here:\n\n${link}\n\nThe link works once and expires, and it is for you only, so please do not forward it. If it stops working, ask another board member to send a new one.\n\nYour account is tied to this email address (${to}). Questions? Reply to this message.\n\nThank you for serving Seneca Valley Lacrosse Association.`
+  const html = `<p>Hello,</p><p>You have been given board access to the Seneca Valley Lacrosse Association compliance tracker, where coach clearances and certifications are reviewed. Set up your account here:</p><p><a href="${escapeHtml(link)}" style="display:inline-block;background:#17558a;color:#ffffff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">Set up my account</a></p><p>The link works once and expires, and it is for you only, so please do not forward it. If it stops working, ask another board member to send a new one.</p><p>Your account is tied to this email address (${escapeHtml(to)}). Questions? Reply to this message.</p><p>Thank you for serving Seneca Valley Lacrosse Association.</p>`
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: FROM, to: [to], reply_to: process.env.EMAIL_REPLY_TO || 'it@svlacrosse.org', subject: 'Set up your SVLA Compliance board account', text, html }),
+      signal: AbortSignal.timeout(10000),
+    })
+    return response.ok
+  } catch { return false }
+}
+
 /** Returns true when Resend accepted the message. Never throws. */
 export async function sendApprovalEmail(to: string, name: string): Promise<boolean> {
   const key = process.env.RESEND_API_KEY

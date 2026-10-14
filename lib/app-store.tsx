@@ -11,6 +11,7 @@ import { ResetPasswordPanel } from '@/components/reset-password-panel'
 import { ConfirmLinkPanel } from '@/components/confirm-link-panel'
 import { CompleteProfilePanel } from '@/components/complete-profile-panel'
 import { WaitingApprovalPanel } from '@/components/waiting-approval-panel'
+import { ArchivedPanel } from '@/components/archived-panel'
 import type { Coach, LoginInfo, Requirement, Submission } from './types'
 
 export type ViewMode = 'board' | 'coach'
@@ -27,8 +28,14 @@ interface AppState {
   coaches: Coach[]
   /** Coaches waiting for (or refused) board approval. */
   awaitingCoaches: Coach[]
+  /** Archived coaches (board only view). */
+  archivedCoaches: Coach[]
+  archivedSummaries: CoachSummary[]
+  archiveCoach: (id: string) => Promise<void>
+  restoreCoach: (id: string) => Promise<void>
+  editSubmissionDates: (id: string, completedOn: string, note?: string, membershipExpiry?: string) => Promise<void>
   /** Approval state of the signed-in coach's own record. */
-  myStatus: 'none' | 'pending' | 'approved' | 'declined'
+  myStatus: 'none' | 'pending' | 'approved' | 'declined' | 'archived'
   reviewCoach: (id: string, decision: 'approved' | 'declined', pay: Coach['pay']) => Promise<{ emailSent?: boolean }>
   addCoach: (input: Omit<Coach, 'id'>) => Promise<void>
   registerSelf: (input: { name: string; phone: string; team: Coach['team']; role: Coach['role']; paResident10Years: boolean }) => Promise<void>
@@ -52,6 +59,7 @@ interface AppState {
   boardMembers: { email: string; lastSignInAt?: string | null }[]
   addBoardMember: (email: string) => Promise<void>
   removeBoardMember: (email: string) => Promise<void>
+  inviteBoardMember: (email: string, deliver: 'email' | 'link') => Promise<{ emailSent?: boolean; link?: string }>
 }
 const AppContext = createContext<AppState | null>(null)
 const empty: Snapshot = { user: null, coaches: [], requirements: [], submissions: [], boardMembers: [], pendingAccounts: [] }
@@ -71,10 +79,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const snapshot = isDemo ? demoSnapshot : data ?? empty
   const { requirements, submissions, user } = snapshot
   const allCoaches = snapshot.coaches
-  const coaches = useMemo(() => allCoaches.filter(c => (c.status ?? 'approved') === 'approved'), [allCoaches])
+  const coaches = useMemo(() => allCoaches.filter(c => (c.status ?? 'approved') === 'approved' && !c.archivedAt), [allCoaches])
+  const archivedCoaches = useMemo(() => allCoaches.filter(c => (c.status ?? 'approved') === 'approved' && !!c.archivedAt), [allCoaches])
   const awaitingCoaches = useMemo(() => allCoaches.filter(c => c.status === 'pending' || c.status === 'declined'), [allCoaches])
   const mine = isDemo ? undefined : allCoaches.find(c => c.email.toLowerCase() === user?.email?.toLowerCase())
   const summaries = useMemo(() => coaches.map(c => summarizeCoach(c, requirements, submissions)), [coaches, requirements, submissions])
+  const archivedSummaries = useMemo(() => archivedCoaches.map(c => summarizeCoach(c, requirements, submissions)), [archivedCoaches, requirements, submissions])
   async function save(command: Record<string, unknown>) {
     if (isDemo) throw new Error('The board demo is read-only. Sign in to manage live records.')
     const response = await fetch('/api/app', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-SVLA-Request': '1' }, body: JSON.stringify(command) })
@@ -93,9 +103,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       await mutate(empty, { revalidate: false })
     },
     currentCoachId: isDemo ? 'c3' : coaches.find(c => c.email.toLowerCase() === user?.email?.toLowerCase())?.id ?? '',
-    coaches, awaitingCoaches, myStatus: isDemo ? 'approved' : mine ? (mine.status ?? 'approved') : 'none', requirements, submissions, summaries,
+    coaches, awaitingCoaches, myStatus: isDemo ? 'approved' : mine ? (mine.archivedAt ? 'archived' : (mine.status ?? 'approved')) : 'none', archivedCoaches, archivedSummaries,
+    archiveCoach: id => save({ action: 'archiveCoach', id }),
+    restoreCoach: id => save({ action: 'restoreCoach', id }),
+    editSubmissionDates: (id, completedOn, note, membershipExpiry) => save({ action: 'editSubmissionDates', id, completedOn, note, membershipExpiry }), requirements, submissions, summaries,
     reviewCoach: (id, decision, pay) => save({ action: 'reviewCoach', id, decision, pay }),
-    getSummary: id => summaries.find(s => s.coach.id === id),
+    getSummary: id => summaries.find(s => s.coach.id === id) ?? archivedSummaries.find(s => s.coach.id === id),
     addCoach: input => save({ action: 'addCoach', input }),
     registerSelf: input => save({ action: 'registerSelf', input }),
     removeAccount: email => save({ action: 'removeAccount', email }),
@@ -111,6 +124,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     boardMembers: snapshot.boardMembers ?? [],
     addBoardMember: email => save({ action: 'addBoardMember', email }),
     removeBoardMember: email => save({ action: 'removeBoardMember', email }),
+    inviteBoardMember: (email, deliver) => save({ action: 'inviteBoardMember', email, deliver }),
     reviewSubmission: (id, decision, comment) => save({ action: 'reviewSubmission', id, decision, comment }),
     submitUpload: async ({ file, ...input }) => {
       if (isDemo) throw new Error('The board demo is read-only.')
@@ -136,7 +150,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   if (!isDemo && error) return <main className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6"><p role="alert">Unable to load the workspace. Your records have not been changed.</p><button onClick={() => void mutate()} className="text-primary underline">Try again</button><a href="/demo" className="text-primary underline">Open board demo</a></main>
   if (!isDemo && !user) return <AuthPanel onSignedIn={() => mutate()} />
   const isCoachUser = !isDemo && user?.role === 'coach'
-  const gate = isCoachUser && value.myStatus === 'none' ? <CompleteProfilePanel /> : isCoachUser && (value.myStatus === 'pending' || value.myStatus === 'declined') ? <WaitingApprovalPanel /> : null
+  const gate = isCoachUser && value.myStatus === 'none' ? <CompleteProfilePanel /> : isCoachUser && (value.myStatus === 'pending' || value.myStatus === 'declined') ? <WaitingApprovalPanel /> : isCoachUser && value.myStatus === 'archived' ? <ArchivedPanel /> : null
   return <AppContext.Provider value={value}>{gate ?? children}</AppContext.Provider>
 }
 
