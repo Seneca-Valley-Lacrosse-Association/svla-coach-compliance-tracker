@@ -11,12 +11,12 @@ import { ResetPasswordPanel } from '@/components/reset-password-panel'
 import { ConfirmLinkPanel } from '@/components/confirm-link-panel'
 import { CompleteProfilePanel } from '@/components/complete-profile-panel'
 import { WaitingApprovalPanel } from '@/components/waiting-approval-panel'
-import type { Coach, Requirement, Submission } from './types'
+import type { Coach, LoginInfo, Requirement, Submission } from './types'
 
 export type ViewMode = 'board' | 'coach'
 export type UploadInput = Pick<Submission, 'coachId' | 'requirementId' | 'completedOn' | 'fileName' | 'obtainedAs' | 'fbiMethod' | 'membershipNumber' | 'signedName'> & { membershipExpiry?: string; agreed?: boolean; file?: File }
 type ResourceInput = Pick<Requirement, 'help' | 'helpUrl' | 'helpLinkLabel'> & Partial<Pick<Requirement, 'level' | 'why' | 'source' | 'sourceUrl' | 'appliesToRoles' | 'appliesToPay' | 'appliesToTeams'>>
-interface Snapshot { user: { id: string; email: string; role: ViewMode } | null; coaches: Coach[]; requirements: Requirement[]; submissions: Submission[]; boardMembers?: { email: string; lastSignInAt?: string | null }[]; pendingAccounts?: { email: string; created_at: string }[] }
+interface Snapshot { user: { id: string; email: string; role: ViewMode } | null; coaches: Coach[]; requirements: Requirement[]; submissions: Submission[]; boardMembers?: { email: string; lastSignInAt?: string | null }[]; pendingAccounts?: { email: string; created_at: string }[]; loginStatus?: LoginInfo[] }
 interface AppState {
   viewMode: ViewMode
   setViewMode: (mode: ViewMode) => void
@@ -36,6 +36,10 @@ interface AppState {
   removeAccount: (email: string) => Promise<void>
   editCoach: (id: string, input: Omit<Coach, 'id' | 'email'>) => Promise<void>
   pendingAccounts: { email: string; created_at: string }[]
+  /** Sign-in account info per coach email (board only). Empty in the demo. */
+  loginByEmail: Record<string, LoginInfo>
+  inviteCoach: (id: string, deliver: 'email' | 'link') => Promise<{ emailSent?: boolean; link?: string }>
+  inviteCoaches: (ids: string[]) => Promise<{ sent: number; failed: string[] }>
   requirements: Requirement[]
   submissions: Submission[]
   summaries: CoachSummary[]
@@ -98,6 +102,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     deleteCoach: id => save({ action: 'deleteCoach', id }),
     editCoach: (id, input) => save({ action: 'editCoach', id, input }),
     pendingAccounts: snapshot.pendingAccounts ?? [],
+    loginByEmail: Object.fromEntries((snapshot.loginStatus ?? []).map(l => [l.email.toLowerCase(), l])),
+    inviteCoach: (id, deliver) => save({ action: 'inviteCoach', id, deliver }),
+    inviteCoaches: ids => save({ action: 'inviteCoaches', ids }),
     addRequirement: input => save({ action: 'addRequirement', input }),
     setRequirementActive: (id, active) => save({ action: 'setRequirementActive', id, active }),
     updateResource: (id, input) => save({ action: 'updateResource', id, input }),

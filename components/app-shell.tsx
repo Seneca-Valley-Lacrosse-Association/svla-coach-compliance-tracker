@@ -18,6 +18,7 @@ import { useApp, type ViewMode } from '@/lib/app-store'
 import { cn } from '@/lib/utils'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { CoachSelfView } from './coach-self-view'
+import { ChangePasswordDialog } from './change-password-dialog'
 
 const boardNav = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -173,7 +174,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </p>
           )}
           <div className="ml-auto flex min-w-0 items-center gap-3">
-            {isDemo ? <><ViewToggle /><a href="/" className="text-sm underline underline-offset-4">Exit demo</a></> : <><span className="hidden truncate text-sm sm:inline">{email} · {viewMode === 'board' ? 'Board' : 'Coach'}</span><button type="button" className="shrink-0 text-sm underline underline-offset-4" onClick={async () => { try { await signOut() } catch { setSignOutError('Unable to sign out. Please try again.') } }}>Sign out</button></>}
+            {isDemo ? <><ViewToggle /><a href="/" className="text-sm underline underline-offset-4">Exit demo</a></> : <><span className="hidden truncate text-sm sm:inline">{email} · {viewMode === 'board' ? 'Board' : 'Coach'}</span><ChangePasswordDialog /><button type="button" className="shrink-0 text-sm underline underline-offset-4" onClick={async () => { try { await signOut() } catch { setSignOutError('Unable to sign out. Please try again.') } }}>Sign out</button></>}
           </div>
         </header>
         {isDemo && <p className="border-b bg-secondary px-4 py-3 text-sm leading-relaxed text-secondary-foreground lg:px-8"><strong>Read-only board demo.</strong> Five fictional coaches show cleared, incomplete, expiring, expired, and awaiting-review stages. No live records or real certificates.</p>}

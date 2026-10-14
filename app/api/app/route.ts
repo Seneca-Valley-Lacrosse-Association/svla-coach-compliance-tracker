@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { sendApprovalEmail } from '@/lib/email'
+import { sendApprovalEmail, sendInviteEmail } from '@/lib/email'
+import { createAccessLink } from '@/lib/invite'
 import { mutationSchema } from '@/lib/validation'
-import type { Coach, Requirement, Submission } from '@/lib/types'
+import type { Coach, LoginInfo, Requirement, Submission } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 const respond = (data: unknown, status = 200) => NextResponse.json(data, { status, headers: { 'Cache-Control': 'private, no-store' } })
 
 export async function GET() {
@@ -49,7 +52,13 @@ export async function GET() {
       if (pending.error) throw pending.error
       pendingAccounts = (pending.data ?? []) as { email: string; created_at: string }[]
     }
-    return respond({ user: { id: user.id, email: user.email, role: board.data ? 'board' : 'coach' }, coaches, requirements, submissions, boardMembers, pendingAccounts })
+    // Which roster coaches have a sign-in account. Nice-to-have: if the lookup fails, the rest still loads.
+    let loginStatus: LoginInfo[] = []
+    if (board.data) {
+      const status = await db.rpc('coach_login_status')
+      if (!status.error) loginStatus = (status.data ?? []) as LoginInfo[]
+    }
+    return respond({ user: { id: user.id, email: user.email, role: board.data ? 'board' : 'coach' }, coaches, requirements, submissions, boardMembers, pendingAccounts, loginStatus })
   } catch {
     return respond({ error: 'Unable to load your records. Please try again.' }, 500)
   }
@@ -85,6 +94,31 @@ export async function POST(request: Request) {
         if (!result.error && files.data?.length) await db.storage.from('certificates').remove(files.data.map(f => f.file_path as string))
         if (!result.error) await db.rpc('delete_account', { p_email: owner.data.email })
         break
+      }
+      case 'inviteCoach': {
+        // Board-only (checked above). The coach must already be on the roster; the link goes only to that email.
+        const coach = await db.from('coaches').select('id,name,email').eq('id', command.id).maybeSingle()
+        if (coach.error || !coach.data) return respond({ error: 'Coach not found.' }, 404)
+        const access = await createAccessLink(coach.data.email)
+        if ('error' in access) return respond({ error: access.error }, 500)
+        const emailSent = command.deliver === 'email' ? await sendInviteEmail(coach.data.email, coach.data.name, access.link) : false
+        await db.from('coaches').update({ invited_at: new Date().toISOString() }).eq('id', command.id)
+        // The link is returned only when the board member must hand it over themselves (copy-link, or the email did not go out).
+        return respond({ ok: true, emailSent, ...(emailSent ? {} : { link: access.link }) })
+      }
+      case 'inviteCoaches': {
+        const rows = await db.from('coaches').select('id,name,email').in('id', command.ids)
+        if (rows.error) throw rows.error
+        const failed: string[] = []
+        let sent = 0
+        for (const coach of rows.data ?? []) {
+          const access = await createAccessLink(coach.email)
+          const ok = !('error' in access) && await sendInviteEmail(coach.email, coach.name, access.link)
+          if (ok) { sent++; await db.from('coaches').update({ invited_at: new Date().toISOString() }).eq('id', coach.id) }
+          else failed.push(coach.name)
+          await sleep(600) // Resend allows about 2 emails per second.
+        }
+        return respond({ ok: true, sent, failed })
       }
       case 'reviewCoach': {
         result = await db.from('coaches').update({ status: command.decision, pay: command.pay }).eq('id', command.id).neq('status', command.decision).select('id,email,name').single()
