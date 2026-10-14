@@ -13,8 +13,7 @@ import { cn } from '@/lib/utils'
 function appliesLabel(req: Requirement) {
   const roles = req.appliesToRoles.length === ROLES.length ? 'All roles' : req.appliesToRoles.join(', ')
   const pay = req.appliesToPay.length === 2 ? '' : ` · ${req.appliesToPay[0]} only`
-  const level = req.level && req.level !== 'both' ? ` · ${LEVEL_LABELS[req.level]} only` : ''
-  return roles + pay + level
+  return roles + pay
 }
 
 function ActiveToggle({ req }: { req: Requirement }) {
@@ -64,7 +63,8 @@ export function RequirementsView() {
               <th scope="col" className="px-4 py-3 font-medium">Requirement</th>
               <th scope="col" className="px-4 py-3 font-medium">Why, and where it comes from</th>
               <th scope="col" className="px-4 py-3 font-medium">Type</th>
-              <th scope="col" className="px-4 py-3 font-medium">Applies to</th>
+              <th scope="col" className="px-4 py-3 font-medium">Program</th>
+              <th scope="col" className="px-4 py-3 font-medium">Roles and pay</th>
               <th scope="col" className="px-4 py-3 font-medium">Valid for</th>
               <th scope="col" className="px-4 py-3 font-medium">Required</th>
               <th scope="col" className="px-4 py-3 font-medium">Active</th>
@@ -96,6 +96,7 @@ export function RequirementsView() {
                   })()}
                 </td>
                 <td className="px-4 py-3">{r.type}</td>
+                <td className="px-4 py-3">{LEVEL_LABELS[reasonFor(r)?.level ?? r.level ?? 'both']}</td>
                 <td className="px-4 py-3">{appliesLabel(r)}</td>
                 <td className="px-4 py-3">{validityLabel(r.validity)}</td>
                 <td className="px-4 py-3">{r.required ? 'Yes' : 'Optional'}</td>

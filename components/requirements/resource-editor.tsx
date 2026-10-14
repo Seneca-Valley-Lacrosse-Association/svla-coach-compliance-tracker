@@ -2,7 +2,7 @@
 
 import { useId, useState, type FormEvent } from 'react'
 import { useApp } from '@/lib/app-store'
-import { LEVELS, LEVEL_LABELS, type Level, type Requirement } from '@/lib/types'
+import { LEVELS, LEVEL_LABELS, PAY_STATUSES, ROLES, type Level, type PayStatus, type Requirement, type Role } from '@/lib/types'
 import { reasonFor } from '@/lib/requirement-reasons'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
@@ -22,18 +22,21 @@ export function ResourceEditor({ requirement }: { requirement: Requirement }) {
   const [why, setWhy] = useState(current?.why ?? '')
   const [source, setSource] = useState(current?.source ?? '')
   const [sourceUrl, setSourceUrl] = useState(current?.sourceUrl ?? '')
+  const [roles, setRoles] = useState<Role[]>(requirement.appliesToRoles)
+  const [pay, setPay] = useState<PayStatus[]>(requirement.appliesToPay)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (busy) return
+    if (roles.length === 0 || pay.length === 0) return setError('Pick at least one role and one pay status.')
     setBusy(true); setError('')
-    try { await updateResource(requirement.id, { help, helpUrl, helpLinkLabel, level, why, source, sourceUrl }); setOpen(false) }
+    try { await updateResource(requirement.id, { help, helpUrl, helpLinkLabel, level, why, source, sourceUrl, appliesToRoles: roles, appliesToPay: pay }); setOpen(false) }
     catch (error) { setError(error instanceof Error ? error.message : 'Could not save resource.') }
     finally { setBusy(false) }
   }
   return <>
-    <Button variant="link" size="sm" disabled={isDemo} onClick={() => setOpen(true)}>Edit instructions / why</Button>
+    <Button variant="link" size="sm" disabled={isDemo} onClick={() => setOpen(true)}>Edit requirement</Button>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent>
         <form onSubmit={submit} className="flex flex-col gap-5">
@@ -42,8 +45,20 @@ export function ResourceEditor({ requirement }: { requirement: Requirement }) {
             <Field><FieldLabel htmlFor={`${id}-help`}>Instructions</FieldLabel><Textarea id={`${id}-help`} value={help} onChange={e => setHelp(e.target.value)} required maxLength={3000} /></Field>
             <Field><FieldLabel htmlFor={`${id}-url`}>HTTPS document or help URL</FieldLabel><Input id={`${id}-url`} type="url" value={helpUrl} onChange={e => setHelpUrl(e.target.value)} placeholder="https://" /></Field>
             <Field><FieldLabel htmlFor={`${id}-label`}>Link label</FieldLabel><Input id={`${id}-label`} value={helpLinkLabel} onChange={e => setHelpLinkLabel(e.target.value)} maxLength={150} /></Field>
+            <fieldset>
+              <legend className="mb-2 text-sm font-medium">Roles it applies to</legend>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                {ROLES.map(r => <label key={r} className="flex items-center gap-2"><input type="checkbox" checked={roles.includes(r)} onChange={() => setRoles(roles.includes(r) ? roles.filter(x => x !== r) : [...roles, r])} className="size-4 accent-brand" />{r}</label>)}
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend className="mb-2 text-sm font-medium">Pay status it applies to</legend>
+              <div className="flex gap-6 text-sm">
+                {PAY_STATUSES.map(p => <label key={p} className="flex items-center gap-2"><input type="checkbox" checked={pay.includes(p)} onChange={() => setPay(pay.includes(p) ? pay.filter(x => x !== p) : [...pay, p])} className="size-4 accent-brand" />{p}</label>)}
+              </div>
+            </fieldset>
             <Field>
-              <FieldLabel htmlFor={`${id}-level`}>Who this applies to</FieldLabel>
+              <FieldLabel htmlFor={`${id}-level`}>Program (youth, high school or both)</FieldLabel>
               <select id={`${id}-level`} value={level} onChange={e => setLevel(e.target.value as Level)} className="h-10 w-full rounded-md border bg-background px-3 text-sm">
                 {LEVELS.map(l => <option key={l} value={l}>{LEVEL_LABELS[l]}</option>)}
               </select>

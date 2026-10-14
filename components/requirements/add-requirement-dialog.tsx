@@ -3,7 +3,7 @@
 import { useId, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { useApp } from '@/lib/app-store'
-import { PAY_STATUSES, ROLES, type PayStatus, type RequirementType, type Role, type Validity } from '@/lib/types'
+import { LEVELS, LEVEL_LABELS, PAY_STATUSES, ROLES, type Level, type PayStatus, type RequirementType, type Role, type Validity } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -34,6 +34,7 @@ export function AddRequirementDialog() {
   const [validityKind, setValidityKind] = useState<ValidityKind>('years')
   const [years, setYears] = useState(1)
   const [required, setRequired] = useState(true)
+  const [level, setLevel] = useState<Level>('both')
   const [help, setHelp] = useState('')
   const [helpUrl, setHelpUrl] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -46,6 +47,7 @@ export function AddRequirementDialog() {
     setValidityKind('years')
     setYears(1)
     setRequired(true)
+    setLevel('both')
     setHelp('')
     setHelpUrl('')
     setError(null)
@@ -72,7 +74,7 @@ export function AddRequirementDialog() {
     setBusy(true)
     try {
       await addRequirement({
-        name: name.trim(), type, appliesToRoles: roles, appliesToPay: pay,
+        name: name.trim(), type, appliesToRoles: roles, appliesToPay: pay, level,
         validity, required, active: true,
         help: help.trim() || 'Ask the board for instructions on completing this requirement.',
         helpUrl: helpUrl.trim(), helpLinkLabel: helpUrl ? 'More information' : '',
@@ -166,6 +168,13 @@ export function AddRequirementDialog() {
                 ))}
               </div>
             </fieldset>
+
+            <div className="flex flex-col gap-2">
+              <Label htmlFor={`${id}-level`}>Program</Label>
+              <select id={`${id}-level`} className={selectClass} value={level} onChange={(e) => setLevel(e.target.value as Level)}>
+                {LEVELS.map((l) => <option key={l} value={l}>{LEVEL_LABELS[l]}</option>)}
+              </select>
+            </div>
 
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={required} onChange={(e) => setRequired(e.target.checked)} className="size-4 accent-brand" />
