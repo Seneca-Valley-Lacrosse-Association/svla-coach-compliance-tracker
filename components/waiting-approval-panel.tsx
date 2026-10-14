@@ -18,7 +18,7 @@ export function WaitingApprovalPanel() {
           <p className="leading-relaxed text-muted-foreground">
             {declined
               ? `The board did not approve this profile (${email}). If you think this is a mistake, please contact the SVLA board.`
-              : `Thank you${me ? `, ${me.name.split(' ')[0]}` : ''}. Your coach profile has been sent to the SVLA board. They will confirm your details, including whether you are paid or a volunteer. We will email ${email} as soon as you are approved, and then you can log in and start your requirements checklist.`}
+              : `Thank you${me ? `, ${me.name.split(' ')[0]}` : ''}. Your coach profile has been sent to the SVLA board. They will review your details. We will email ${email} as soon as you are approved, and then you can log in and start your requirements checklist.`}
           </p>
         </header>
         {me && !declined && <dl className="grid grid-cols-2 gap-2 rounded-lg bg-muted p-4 text-sm"><dt className="text-muted-foreground">Team</dt><dd>{me.team}</dd><dt className="text-muted-foreground">Role</dt><dd>{me.role}</dd></dl>}
