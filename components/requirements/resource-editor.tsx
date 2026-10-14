@@ -39,7 +39,7 @@ export function ResourceEditor({ requirement }: { requirement: Requirement }) {
   return <>
     <Button variant="link" size="sm" disabled={isDemo} onClick={() => setOpen(true)}>Edit requirement</Button>
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-lg">
         <form onSubmit={submit} className="flex flex-col gap-5">
           <DialogHeader><DialogTitle>Edit resource</DialogTitle><DialogDescription>{requirement.name}. Use the current approved document or provider link.</DialogDescription></DialogHeader>
           <FieldGroup>
