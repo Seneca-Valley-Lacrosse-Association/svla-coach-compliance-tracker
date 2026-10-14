@@ -31,11 +31,17 @@ export async function GET() {
     const coaches = coachRows.map(r => ({ id: r.id, name: r.name, email: r.email, phone: r.phone, team: r.team, role: r.role, pay: r.pay, paResident10Years: r.pa_resident_10_years, status: r.status })) as Coach[]
     const requirements = requirementRows.map(r => ({ ...r.definition, id: r.id, order: r.sort_order })) as Requirement[]
     const submissions = submissionRows.map(r => ({ ...r.details, id: r.id, coachId: r.coach_id, requirementId: r.requirement_id, status: r.status, uploadedOn: r.uploaded_at, completedOn: r.completed_on, expiresOn: r.expires_on, filePath: r.file_path ?? undefined, fileName: r.file_name ?? undefined, reviewComment: r.review_comment ?? undefined, reviewedOn: r.reviewed_on ?? undefined })) as Submission[]
-    let boardMembers: { email: string }[] = []
+    let boardMembers: { email: string; lastSignInAt?: string | null }[] = []
     if (board.data) {
       const members = await db.from('board_members').select('email').order('email')
       if (members.error) throw members.error
       boardMembers = members.data ?? []
+      // Last sign-in is a nice-to-have: if the lookup fails, still show the list.
+      const activity = await db.rpc('board_member_activity')
+      if (!activity.error) {
+        const seen = new Map<string, string | null>((activity.data ?? []).map((a: { email: string; last_sign_in_at: string | null }) => [a.email.toLowerCase(), a.last_sign_in_at] as [string, string | null]))
+        boardMembers = boardMembers.map(m => ({ ...m, lastSignInAt: seen.get(m.email.toLowerCase()) ?? null }))
+      }
     }
     let pendingAccounts: { email: string; created_at: string }[] = []
     if (board.data) {

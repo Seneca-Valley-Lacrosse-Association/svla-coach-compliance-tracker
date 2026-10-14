@@ -66,7 +66,14 @@ export function BoardMembersView() {
             const mine = m.email.toLowerCase() === myEmail.toLowerCase()
             return (
               <li key={m.email} className="flex items-center justify-between gap-3 py-3">
-                <span className="font-medium">{m.email}{mine && <span className="ml-2 text-sm font-normal text-muted-foreground">(you)</span>}</span>
+                <span className="flex min-w-0 flex-col">
+                  <span className="font-medium">{m.email}{mine && <span className="ml-2 text-sm font-normal text-muted-foreground">(you)</span>}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {m.lastSignInAt
+                      ? `Last signed in ${new Date(m.lastSignInAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/New_York' })} ET`
+                      : 'Has not signed in yet'}
+                  </span>
+                </span>
                 {mine
                   ? <span className="text-sm text-muted-foreground">Cannot remove yourself</span>
                   : <Button type="button" variant="outline" className="h-9" disabled={busy} onClick={() => handleRemove(m.email)}><UserMinus aria-hidden="true" />Remove</Button>}

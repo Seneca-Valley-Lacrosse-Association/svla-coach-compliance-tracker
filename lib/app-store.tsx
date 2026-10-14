@@ -16,7 +16,7 @@ import type { Coach, Requirement, Submission } from './types'
 export type ViewMode = 'board' | 'coach'
 export type UploadInput = Pick<Submission, 'coachId' | 'requirementId' | 'completedOn' | 'fileName' | 'obtainedAs' | 'fbiMethod' | 'membershipNumber' | 'signedName'> & { membershipExpiry?: string; agreed?: boolean; file?: File }
 type ResourceInput = Pick<Requirement, 'help' | 'helpUrl' | 'helpLinkLabel'> & Partial<Pick<Requirement, 'level' | 'why' | 'source' | 'sourceUrl' | 'appliesToRoles' | 'appliesToPay' | 'appliesToTeams'>>
-interface Snapshot { user: { id: string; email: string; role: ViewMode } | null; coaches: Coach[]; requirements: Requirement[]; submissions: Submission[]; boardMembers?: { email: string }[]; pendingAccounts?: { email: string; created_at: string }[] }
+interface Snapshot { user: { id: string; email: string; role: ViewMode } | null; coaches: Coach[]; requirements: Requirement[]; submissions: Submission[]; boardMembers?: { email: string; lastSignInAt?: string | null }[]; pendingAccounts?: { email: string; created_at: string }[] }
 interface AppState {
   viewMode: ViewMode
   setViewMode: (mode: ViewMode) => void
@@ -45,7 +45,7 @@ interface AppState {
   addRequirement: (req: Omit<Requirement, 'id' | 'order'>) => Promise<void>
   setRequirementActive: (id: string, active: boolean) => Promise<void>
   updateResource: (id: string, input: ResourceInput) => Promise<void>
-  boardMembers: { email: string }[]
+  boardMembers: { email: string; lastSignInAt?: string | null }[]
   addBoardMember: (email: string) => Promise<void>
   removeBoardMember: (email: string) => Promise<void>
 }
