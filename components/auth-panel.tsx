@@ -17,8 +17,14 @@ function authErrorFromUrl() {
     : ''
 }
 
+// Lets other pages link straight to the reset form, e.g. /?mode=forgot
+function initialModeFromUrl(): Mode {
+  if (typeof window === 'undefined') return 'signin'
+  return new URLSearchParams(window.location.search).get('mode') === 'forgot' ? 'forgot' : 'signin'
+}
+
 export function AuthPanel({ onSignedIn }: { onSignedIn: () => Promise<unknown> }) {
-  const [mode, setMode] = useState<Mode>('signin')
+  const [mode, setMode] = useState<Mode>(initialModeFromUrl)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
