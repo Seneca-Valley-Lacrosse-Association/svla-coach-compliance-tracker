@@ -51,6 +51,14 @@ export function ConfirmLinkPanel() {
         {copy && tokenHash && <Button onClick={confirm} disabled={busy}>{busy ? 'Please wait…' : copy.button}</Button>}
         {error && <p role="alert" className="text-sm leading-relaxed text-destructive">{error}</p>}
         <a href="/" className="text-sm font-medium text-primary underline underline-offset-4">Back to sign in</a>
+        {(error || !copy || !tokenHash) && (
+          <div className="flex flex-col gap-2 border-t pt-4">
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              You can use Forgot password to get a fresh link. Make sure you enter the email address that is registered in the system.
+            </p>
+            <a href="/?mode=forgot" className="text-sm font-medium text-primary underline underline-offset-4">Forgot password</a>
+          </div>
+        )}
       </section>
     </main>
   )
