@@ -39,6 +39,8 @@ export interface Requirement {
   validity: Validity
   required: boolean
   active: boolean
+  /** When false, new submissions are approved automatically and skip the board review queue. Missing means true. */
+  requiresReview?: boolean
   help: string
   helpUrl: string
   helpLinkLabel: string

@@ -34,6 +34,7 @@ export function AddRequirementDialog() {
   const [validityKind, setValidityKind] = useState<ValidityKind>('years')
   const [years, setYears] = useState(1)
   const [required, setRequired] = useState(true)
+  const [requiresReview, setRequiresReview] = useState(true)
   const [level, setLevel] = useState<Level>('both')
   const [help, setHelp] = useState('')
   const [helpUrl, setHelpUrl] = useState('')
@@ -47,6 +48,7 @@ export function AddRequirementDialog() {
     setValidityKind('years')
     setYears(1)
     setRequired(true)
+    setRequiresReview(true)
     setLevel('both')
     setHelp('')
     setHelpUrl('')
@@ -75,7 +77,7 @@ export function AddRequirementDialog() {
     try {
       await addRequirement({
         name: name.trim(), type, appliesToRoles: roles, appliesToPay: pay, level,
-        validity, required, active: true,
+        validity, required, active: true, requiresReview,
         help: help.trim() || 'Ask the board for instructions on completing this requirement.',
         helpUrl: helpUrl.trim(), helpLinkLabel: helpUrl ? 'More information' : '',
       })
@@ -179,6 +181,14 @@ export function AddRequirementDialog() {
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={required} onChange={(e) => setRequired(e.target.checked)} className="size-4 accent-brand" />
               Required to be cleared to coach
+            </label>
+
+            <label className="flex items-start gap-2">
+              <input type="checkbox" checked={requiresReview} onChange={(e) => setRequiresReview(e.target.checked)} className="mt-1 size-4 accent-brand" />
+              <span>
+                Needs board review
+                <span className="block text-sm text-muted-foreground">If unchecked, uploads are approved automatically and skip the Review Queue.</span>
+              </span>
             </label>
 
             <div className="flex flex-col gap-2">

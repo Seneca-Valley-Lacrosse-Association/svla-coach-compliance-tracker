@@ -140,6 +140,7 @@ export function ReviewQueue() {
                 <span className="font-medium">{coachById.get(s.coachId)?.name}</span>
                 <span className="text-muted-foreground">{reqById.get(s.requirementId)?.name}</span>
                 <span className="ml-auto flex items-center gap-2">
+                  {s.reviewComment?.startsWith('Auto-approved') && <span className="text-sm text-muted-foreground">Auto-approved</span>}
                   <ItemStatusPill status={s.status === 'approved' ? 'approved' : 'rejected'} />
                   <span className="text-sm text-muted-foreground">{formatDate(s.reviewedOn)}</span>
                 </span>
