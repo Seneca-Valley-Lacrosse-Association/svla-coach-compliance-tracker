@@ -193,10 +193,11 @@ export async function POST(request: Request) {
         result = await db.from('requirements').insert({ definition: command.input }).select('id').single()
         break
       case 'setRequirementActive':
+      case 'setRequirementReview':
       case 'updateResource': {
         const existing = await db.from('requirements').select('definition').eq('id', command.id).single()
         if (existing.error) return respond({ error: 'Requirement not found.' }, 404)
-        const changes = command.action === 'setRequirementActive' ? { active: command.active } : command.input
+        const changes = command.action === 'setRequirementActive' ? { active: command.active } : command.action === 'setRequirementReview' ? { requiresReview: command.requiresReview } : command.input
         result = await db.from('requirements').update({ definition: { ...existing.data.definition, ...changes } }).eq('id', command.id).eq('definition', JSON.stringify(existing.data.definition)).select('id').single()
         break
       }

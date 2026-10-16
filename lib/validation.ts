@@ -21,7 +21,7 @@ export const requirementSchema = resourceSchema.extend(reasonSchema.partial().sh
   name: z.string().trim().min(1).max(200), type: z.enum(['File', 'Training', 'Membership', 'Signature']),
   appliesToRoles: z.array(z.enum(ROLES)).min(1).max(4), appliesToPay: z.array(z.enum(PAY_STATUSES)).min(1).max(2),
   validity: z.discriminatedUnion('kind', [z.object({ kind: z.literal('years'), years: z.number().int().min(1).max(10) }), z.object({ kind: z.literal('school-year') }), z.object({ kind: z.literal('one-time') }), z.object({ kind: z.literal('membership') })]),
-  required: z.boolean(), active: z.boolean(), tracksObtainedAs: z.boolean().optional(),
+  required: z.boolean(), active: z.boolean(), requiresReview: z.boolean().optional(), tracksObtainedAs: z.boolean().optional(),
   allowsVolunteerAffidavit: z.boolean().optional(), dateOnlyAllowed: z.boolean().optional(),
 }).refine(r => (r.type === 'Membership') === (r.validity.kind === 'membership'), 'Membership requirements must use membership-term validity.')
 export const uploadSchema = z.object({
@@ -39,6 +39,7 @@ export const mutationSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('addCoach'), input: coachSchema }),
   z.object({ action: z.literal('addRequirement'), input: requirementSchema }),
   z.object({ action: z.literal('setRequirementActive'), id: z.string().max(100), active: z.boolean() }),
+  z.object({ action: z.literal('setRequirementReview'), id: z.string().max(100), requiresReview: z.boolean() }),
   z.object({ action: z.literal('updateResource'), id: z.string().max(100), input: resourceSchema.extend(reasonSchema.partial().shape).extend({ appliesToRoles: z.array(z.enum(ROLES)).min(1).max(4).optional(), appliesToPay: z.array(z.enum(PAY_STATUSES)).min(1).max(2).optional() }) }),
   z.object({ action: z.literal('submitUpload'), input: uploadSchema }),
   z.object({ action: z.literal('markInProgress'), input: progressSchema }),

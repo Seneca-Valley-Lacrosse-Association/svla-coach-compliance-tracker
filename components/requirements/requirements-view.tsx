@@ -16,31 +16,47 @@ function appliesLabel(req: Requirement) {
   return roles + pay
 }
 
-function ActiveToggle({ req }: { req: Requirement }) {
-  const { setRequirementActive, isDemo } = useApp()
+function SwitchToggle({ checked, label, onToggle }: { checked: boolean; label: string; onToggle: () => Promise<void> }) {
+  const { isDemo } = useApp()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   return (
     <div className="flex flex-col gap-2"><button
       type="button"
       role="switch"
-      aria-checked={req.active}
-      aria-label={`${req.name} active`}
+      aria-checked={checked}
+      aria-label={label}
       disabled={busy || isDemo}
-      onClick={async () => { setBusy(true); setError(''); try { await setRequirementActive(req.id, !req.active) } catch (error) { setError(error instanceof Error ? error.message : 'Could not save.') } finally { setBusy(false) } }}
+      onClick={async () => { setBusy(true); setError(''); try { await onToggle() } catch (error) { setError(error instanceof Error ? error.message : 'Could not save.') } finally { setBusy(false) } }}
       className={cn(
         'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
-        req.active ? 'bg-brand' : 'bg-slate-300',
+        checked ? 'bg-brand' : 'bg-slate-300',
       )}
     >
       <span
         aria-hidden="true"
         className={cn(
           'inline-block size-5 rounded-full bg-white shadow transition-transform',
-          req.active ? 'translate-x-5.5' : 'translate-x-0.5',
+          checked ? 'translate-x-5.5' : 'translate-x-0.5',
         )}
       />
     </button>{error && <p role="alert" className="text-sm text-destructive">{error}</p>}</div>
+  )
+}
+
+function ActiveToggle({ req }: { req: Requirement }) {
+  const { setRequirementActive } = useApp()
+  return <SwitchToggle checked={req.active} label={`${req.name} active`} onToggle={() => setRequirementActive(req.id, !req.active)} />
+}
+
+function ReviewToggle({ req }: { req: Requirement }) {
+  const { setRequirementReview } = useApp()
+  const needsReview = req.requiresReview !== false
+  return (
+    <div className="flex flex-col gap-1">
+      <SwitchToggle checked={needsReview} label={`${req.name} needs board review`} onToggle={() => setRequirementReview(req.id, !needsReview)} />
+      <span className="text-sm text-muted-foreground">{needsReview ? 'Board reviews' : 'Auto-approves'}</span>
+    </div>
   )
 }
 
@@ -52,12 +68,12 @@ export function RequirementsView() {
     <>
       <PageHeader
         title="Requirements"
-        description="The clearances, trainings, and forms coaches must complete. Turning a requirement off removes it from every checklist."
+        description="The clearances, trainings, and forms coaches must complete. Turning a requirement off removes it from every checklist. Turning Board review off approves new uploads automatically instead of sending them to the Review Queue."
         actions={<AddRequirementDialog />}
       />
 
       <div className="overflow-x-auto rounded-xl border bg-card shadow-xs">
-        <table className="w-full min-w-[1100px] text-left">
+        <table className="w-full min-w-[1200px] text-left">
           <thead className="border-b bg-muted/60 text-sm text-muted-foreground">
             <tr>
               <th scope="col" className="px-4 py-3 font-medium">Requirement</th>
@@ -68,6 +84,7 @@ export function RequirementsView() {
               <th scope="col" className="px-4 py-3 font-medium">Valid for</th>
               <th scope="col" className="px-4 py-3 font-medium">Required</th>
               <th scope="col" className="px-4 py-3 font-medium">Active</th>
+              <th scope="col" className="px-4 py-3 font-medium">Board review</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -105,6 +122,9 @@ export function RequirementsView() {
                 <td className="px-4 py-3">{r.required ? 'Yes' : 'Optional'}</td>
                 <td className="px-4 py-3">
                   <ActiveToggle req={r} />
+                </td>
+                <td className="px-4 py-3">
+                  <ReviewToggle req={r} />
                 </td>
               </tr>
             ))}

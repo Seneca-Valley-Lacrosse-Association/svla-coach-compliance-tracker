@@ -59,6 +59,7 @@ interface AppState {
   reviewSubmission: (id: string, decision: 'approved' | 'rejected', comment?: string) => Promise<void>
   addRequirement: (req: Omit<Requirement, 'id' | 'order'>) => Promise<void>
   setRequirementActive: (id: string, active: boolean) => Promise<void>
+  setRequirementReview: (id: string, requiresReview: boolean) => Promise<void>
   updateResource: (id: string, input: ResourceInput) => Promise<void>
   boardMembers: { email: string; lastSignInAt?: string | null }[]
   addBoardMember: (email: string) => Promise<void>
@@ -126,6 +127,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     inviteCoaches: ids => save({ action: 'inviteCoaches', ids }),
     addRequirement: input => save({ action: 'addRequirement', input }),
     setRequirementActive: (id, active) => save({ action: 'setRequirementActive', id, active }),
+    setRequirementReview: (id, requiresReview) => save({ action: 'setRequirementReview', id, requiresReview }),
     updateResource: (id, input) => save({ action: 'updateResource', id, input }),
     boardMembers: snapshot.boardMembers ?? [],
     addBoardMember: email => save({ action: 'addBoardMember', email }),
