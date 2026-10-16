@@ -131,6 +131,39 @@ export interface Progress {
   note?: string | null
 }
 
+/** What the signed-in person may see beyond their own record. Board members get every view at 'manage'. */
+export type AccessLevel = 'none' | 'view' | 'manage'
+export interface AccessInfo {
+  isBoard: boolean
+  role: string | null
+  roleLabel: string | null
+  /** Teams a limited role is scoped to. Null for the board (all teams). */
+  teams: Team[] | null
+  views: Record<string, AccessLevel>
+}
+export const NO_ACCESS: AccessInfo = { isBoard: false, role: null, roleLabel: null, teams: [], views: {} }
+
+/** One roster row for a limited role. email, phone and pay are null unless that view is granted. */
+export interface StaffRosterRow { coach_id: string; name: string; team: Team; role: Role; email: string | null; phone: string | null; pay: PayStatus | null }
+
+export type StaffState = 'complete' | 'expired' | 'pending_review' | 'in_progress' | 'rejected' | 'missing'
+/** Status only. Never carries files, certificate numbers, review comments or notes. */
+export interface StaffStatusRow {
+  coach_id: string; coach_name: string; team: Team; coach_role: Role
+  requirement_id: string; requirement_name: string; state: StaffState
+  expires_on: string | null; days_to_expiry: number | null; follow_up_on: string | null
+}
+export interface StaffData { roster: StaffRosterRow[]; status: StaffStatusRow[] }
+
+/** Board-only configuration for the access matrix. */
+export interface AccessConfig {
+  roles: { key: string; label: string; description: string }[]
+  views: { key: string; label: string; description: string; maxLevel: AccessLevel }[]
+  matrix: { role: string; view: string; level: AccessLevel }[]
+  staff: { email: string; role: string; teams: Team[]; name: string | null; coachTeam: Team | null; lastSignInAt: string | null }[]
+  teams: Team[]
+}
+
 export type ItemStatus =
   | 'not-started'
   | 'in-progress'

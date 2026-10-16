@@ -12,8 +12,10 @@ import {
   ListChecks,
   Menu,
   ShieldCheck,
+  SlidersHorizontal,
   UserCog,
   Users,
+  UsersRound,
 } from 'lucide-react'
 import { useApp, type ViewMode } from '@/lib/app-store'
 import { IT_EMAIL } from '@/lib/tickets'
@@ -32,6 +34,7 @@ const boardNav = [
   { href: '/reports', label: 'Reports', icon: BarChart3 },
   { href: '/tickets', label: 'Help Requests', icon: LifeBuoy },
   { href: '/board', label: 'Board Access', icon: UserCog },
+  { href: '/access', label: 'Roles & Access', icon: SlidersHorizontal },
 ]
 
 function isActive(pathname: string, href: string) {
@@ -54,7 +57,7 @@ function Brand() {
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
-  const { viewMode, summaries, isDemo, awaitingCoaches, currentCoachId } = useApp()
+  const { viewMode, summaries, isDemo, awaitingCoaches, currentCoachId, hasTeamView } = useApp()
   const { data: tickets } = useTickets()
   const openTickets = tickets?.openCount ?? 0
   const pendingCount = summaries.reduce(
@@ -63,19 +66,43 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   ) + (isDemo ? 0 : awaitingCoaches.filter((c) => c.status === 'pending').length)
 
   if (viewMode === 'coach') {
+    // A coach with a view-only role (for example a program lead) also gets their team's compliance page.
+    const coachNav = [
+      { href: '/', label: 'My Checklist', icon: ClipboardCheck },
+      ...(hasTeamView ? [{ href: '/team', label: 'Team Compliance', icon: UsersRound }] : []),
+    ]
     return (
       <nav aria-label="Main" className="flex flex-col gap-1 px-3">
-        <span className="flex items-center gap-3 rounded-lg bg-sidebar-accent px-3 py-2.5 font-medium text-white">
-          <ClipboardCheck className="size-5" aria-hidden="true" />
-          My Checklist
-        </span>
+        {coachNav.map(({ href, label, icon: Icon }) => {
+          const active = isActive(pathname, href)
+          return coachNav.length === 1 ? (
+            <span key={href} className="flex items-center gap-3 rounded-lg bg-sidebar-accent px-3 py-2.5 font-medium text-white">
+              <Icon className="size-5" aria-hidden="true" />
+              {label}
+            </span>
+          ) : (
+            <Link
+              key={href}
+              href={href}
+              onClick={onNavigate}
+              aria-current={active ? 'page' : undefined}
+              className={cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2.5 font-medium transition-colors',
+                active ? 'bg-sidebar-accent text-white' : 'text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-white',
+              )}
+            >
+              <Icon className={cn('size-5', active && 'text-brand-light')} aria-hidden="true" />
+              {label}
+            </Link>
+          )
+        })}
       </nav>
     )
   }
 
   return (
     <nav aria-label="Main" className="flex flex-col gap-1 px-3">
-      {[...(!isDemo && currentCoachId ? [{ href: '/my-checklist', label: 'My Checklist', icon: ClipboardCheck }] : []), ...boardNav].filter(({ href }) => !(isDemo && (href === '/board' || href === '/tickets'))).map(({ href, label, icon: Icon }) => {
+      {[...(!isDemo && currentCoachId ? [{ href: '/my-checklist', label: 'My Checklist', icon: ClipboardCheck }] : []), ...boardNav].filter(({ href }) => !(isDemo && (href === '/board' || href === '/tickets' || href === '/access'))).map(({ href, label, icon: Icon }) => {
         const active = isActive(pathname.replace(/^\/demo(?=\/|$)/, '') || '/', href)
         return (
           <Link
@@ -148,7 +175,8 @@ function ViewToggle() {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false)
-  const { viewMode, getSummary, currentCoachId, isDemo, email, signOut } = useApp()
+  const { viewMode, getSummary, currentCoachId, isDemo, email, signOut, hasTeamView, access } = useApp()
+  const pathname = usePathname()
   const [signOutError, setSignOutError] = useState('')
   const me = getSummary(currentCoachId)
 
@@ -188,13 +216,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </p>
           )}
           <div className="ml-auto flex min-w-0 items-center gap-3">
-            {isDemo ? <><ViewToggle /><a href="/" className="text-sm underline underline-offset-4">Exit demo</a></> : <><span className="hidden truncate text-sm sm:inline">{email} · {viewMode === 'board' ? 'Board' : 'Coach'}</span><HelpButton /><ChangePasswordDialog /><button type="button" className="shrink-0 text-sm underline underline-offset-4" onClick={async () => { try { await signOut() } catch { setSignOutError('Unable to sign out. Please try again.') } }}>Sign out</button></>}
+            {isDemo ? <><ViewToggle /><a href="/" className="text-sm underline underline-offset-4">Exit demo</a></> : <><span className="hidden truncate text-sm sm:inline">{email} · {viewMode === 'board' ? 'Board' : access.roleLabel ?? 'Coach'}</span><HelpButton /><ChangePasswordDialog /><button type="button" className="shrink-0 text-sm underline underline-offset-4" onClick={async () => { try { await signOut() } catch { setSignOutError('Unable to sign out. Please try again.') } }}>Sign out</button></>}
           </div>
         </header>
         {isDemo && <p className="border-b bg-secondary px-4 py-3 text-sm leading-relaxed text-secondary-foreground lg:px-8"><strong>Read-only board demo.</strong> Five fictional coaches show cleared, incomplete, expiring, expired, and awaiting-review stages. No live records or real certificates.</p>}
         {signOutError && <p role="alert" className="px-4 py-3 text-destructive">{signOutError}</p>}
         <main className="flex-1 px-4 py-6 lg:px-8 lg:py-8">
-          {viewMode === 'coach' ? <CoachSelfView /> : children}
+          {viewMode === 'coach' && !(hasTeamView && pathname.startsWith('/team')) ? <CoachSelfView /> : children}
         </main>
         <footer className="border-t px-4 py-4 text-sm text-muted-foreground lg:px-8">
           Still stuck? Email <a className="font-medium text-primary underline underline-offset-4" href={`mailto:${IT_EMAIL}`}>{IT_EMAIL}</a>

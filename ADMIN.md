@@ -111,6 +111,19 @@ Every signed-in person has a **Need help?** button in the top bar, a **Question 
 `update public.ticket_routing set route_to = 'coordinator@example.org' where route_key in ('clearance_status','upload');`
 (Backlog: an admin screen to manage this instead of SQL.)
 
+## Roles & access (view-only roles for coaches who supervise others)
+
+The board sees everything. **Roles & Access** in the left menu lets the board give a coach a limited, read-only role without making them a board member.
+
+- **Roles today:** Program Lead (for example the high school head coach) and Age-Group Coordinator. Both see only the teams you assign.
+- **What a role can see:** status and expiration dates for the coaches on their teams, plus (if you switch it on) contact info and paid/volunteer status. Uploaded documents, certificate numbers, review comments, tickets and account details are board-only and cannot be delegated.
+- **Give someone a role:** Roles & Access, "Give someone a role": choose the coach's email, the role, and the teams they supervise, then Add role. They sign in as usual and see a **Team Compliance** page next to My Checklist.
+- **Change what a role sees:** use the dropdowns in the "What each role can see" grid. Changes apply the next time that person loads the app.
+- **Take a role away:** Roles & Access, "People with a role", Remove. They go back to seeing only their own record.
+- **Audit trail:** every change is written to the `access_audit` table (who, when, what).
+- **How it is enforced:** in the database, not just the menu. Limited roles have no direct access to the coach, submission or file tables. They read through the `staff_roster()` and `staff_compliance_status()` functions, which filter by team and by the views granted.
+- **Emergency:** if the grid ever locks someone out, board members are unaffected (board access does not depend on roles). To remove a role manually: `delete from public.staff_access where email = 'name@example.org';`
+
 ## Archiving, deleting, and correcting dates
 
 - **Archive a coach:** open the coach, choose "Archive or delete", then "Archive coach". The record is hidden from the roster and dashboard and their login stops working, but every submission and file is kept. Use "Show archived coaches" on the Coaches page to find them, then "Restore or delete" > "Restore coach".

@@ -12,12 +12,12 @@ import { ConfirmLinkPanel } from '@/components/confirm-link-panel'
 import { CompleteProfilePanel } from '@/components/complete-profile-panel'
 import { WaitingApprovalPanel } from '@/components/waiting-approval-panel'
 import { ArchivedPanel } from '@/components/archived-panel'
-import type { Coach, LoginInfo, Progress, Requirement, Submission } from './types'
+import { NO_ACCESS, type AccessConfig, type AccessInfo, type Coach, type LoginInfo, type Progress, type Requirement, type StaffData, type Submission, type Team } from './types'
 
 export type ViewMode = 'board' | 'coach'
 export type UploadInput = Pick<Submission, 'coachId' | 'requirementId' | 'completedOn' | 'fileName' | 'obtainedAs' | 'fbiMethod' | 'membershipNumber' | 'signedName'> & { membershipExpiry?: string; agreed?: boolean; file?: File }
 type ResourceInput = Pick<Requirement, 'help' | 'helpUrl' | 'helpLinkLabel'> & Partial<Pick<Requirement, 'level' | 'why' | 'source' | 'sourceUrl' | 'appliesToRoles' | 'appliesToPay' | 'appliesToTeams'>>
-interface Snapshot { user: { id: string; email: string; role: ViewMode } | null; coaches: Coach[]; requirements: Requirement[]; submissions: Submission[]; progress?: Progress[]; boardMembers?: { email: string; lastSignInAt?: string | null }[]; pendingAccounts?: { email: string; created_at: string }[]; loginStatus?: LoginInfo[] }
+interface Snapshot { user: { id: string; email: string; role: ViewMode } | null; coaches: Coach[]; requirements: Requirement[]; submissions: Submission[]; progress?: Progress[]; boardMembers?: { email: string; lastSignInAt?: string | null }[]; pendingAccounts?: { email: string; created_at: string }[]; loginStatus?: LoginInfo[]; access?: AccessInfo; staff?: StaffData; accessConfig?: AccessConfig }
 interface AppState {
   viewMode: ViewMode
   setViewMode: (mode: ViewMode) => void
@@ -65,6 +65,16 @@ interface AppState {
   addBoardMember: (email: string) => Promise<void>
   removeBoardMember: (email: string) => Promise<void>
   inviteBoardMember: (email: string, deliver: 'email' | 'link') => Promise<{ emailSent?: boolean; link?: string }>
+  /** What the signed-in person may see beyond their own record (view-only roles). */
+  access: AccessInfo
+  /** True when a limited role can open the team compliance page. */
+  hasTeamView: boolean
+  /** Status-only rows for a limited role, already filtered to their teams by the database. */
+  staff: StaffData
+  /** Board only: roles, views, the permission matrix and who holds which role. */
+  accessConfig: AccessConfig | null
+  setViewAccess: (role: string, view: string, level: 'none' | 'view' | 'manage') => Promise<void>
+  setStaffAccess: (email: string, role: string | null, teams: Team[]) => Promise<void>
 }
 const AppContext = createContext<AppState | null>(null)
 const empty: Snapshot = { user: null, coaches: [], requirements: [], submissions: [], boardMembers: [], pendingAccounts: [] }
@@ -137,6 +147,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     markInProgress: input => save({ action: 'markInProgress', input }),
     clearInProgress: (coachId, requirementId) => save({ action: 'clearInProgress', coachId, requirementId }),
     reviewSubmission: (id, decision, comment) => save({ action: 'reviewSubmission', id, decision, comment }),
+    access: isDemo ? NO_ACCESS : snapshot.access ?? NO_ACCESS,
+    hasTeamView: !isDemo && !!(snapshot.access?.views.clearance_status || snapshot.access?.views.staff_roster),
+    staff: snapshot.staff ?? { roster: [], status: [] },
+    accessConfig: isDemo ? null : snapshot.accessConfig ?? null,
+    setViewAccess: (role, view, level) => save({ action: 'setViewAccess', role, view, level }),
+    setStaffAccess: (email, role, teams) => save({ action: 'setStaffAccess', email, role, teams }),
     submitUpload: async ({ file, ...input }) => {
       if (isDemo) throw new Error('The board demo is read-only.')
       let filePath: string | undefined

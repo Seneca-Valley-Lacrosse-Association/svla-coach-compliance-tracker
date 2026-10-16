@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { sendApprovalEmail, sendBoardInviteEmail, sendInviteEmail } from '@/lib/email'
 import { createAccessLink } from '@/lib/invite'
 import { mutationSchema } from '@/lib/validation'
-import type { Coach, LoginInfo, Progress, Requirement, Submission } from '@/lib/types'
+import { NO_ACCESS, type AccessConfig, type AccessInfo, type Coach, type LoginInfo, type Progress, type Requirement, type StaffData, type Submission } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -64,7 +64,23 @@ export async function GET() {
       const status = await db.rpc('coach_login_status')
       if (!status.error) loginStatus = (status.data ?? []) as LoginInfo[]
     }
-    return respond({ user: { id: user.id, email: user.email, role: board.data ? 'board' : 'coach' }, coaches, requirements, submissions, progress, boardMembers, pendingAccounts, loginStatus })
+    // What this person may see beyond their own record (view-only roles such as a program lead). Nice-to-have:
+    // if the lookup fails, they simply get no extra access.
+    let access: AccessInfo = NO_ACCESS
+    const mine = await db.rpc('my_access')
+    if (!mine.error && mine.data) access = mine.data as AccessInfo
+    // Limited roles never read the tables. They get status-only rows from functions that filter by team and by view.
+    let staff: StaffData | undefined
+    if (!board.data && (access.views.clearance_status || access.views.staff_roster)) {
+      const [roster, status] = await Promise.all([db.rpc('staff_roster'), db.rpc('staff_compliance_status')])
+      staff = { roster: roster.error ? [] : (roster.data ?? []), status: status.error ? [] : (status.data ?? []) }
+    }
+    let accessConfig: AccessConfig | undefined
+    if (board.data) {
+      const config = await db.rpc('admin_access_config')
+      if (!config.error && config.data) accessConfig = config.data as AccessConfig
+    }
+    return respond({ user: { id: user.id, email: user.email, role: board.data ? 'board' : 'coach' }, coaches, requirements, submissions, progress, boardMembers, pendingAccounts, loginStatus, access, staff, accessConfig })
   } catch {
     return respond({ error: 'Unable to load your records. Please try again.' }, 500)
   }
@@ -207,6 +223,17 @@ export async function POST(request: Request) {
         if (req.error) return respond({ error: 'Requirement not found.' }, 404)
         if (req.data.definition.type === 'Signature' && !req.data.definition.helpUrl) return respond({ error: 'The board must configure the document link before you can sign.' }, 400)
         result = await db.from('submissions').insert({ coach_id: coachId, requirement_id: requirementId, completed_on: completedOn, file_path: filePath ?? null, file_name: fileName ?? null, details: { ...details, ...(req.data.definition.type === 'Signature' ? { documentUrl: req.data.definition.helpUrl } : {}) }, submitted_by: user.id }).select('id').single()
+        break
+      }
+      case 'setViewAccess': {
+        // Board-only (checked above). The database function re-checks and refuses views that are not delegable yet.
+        const rpc = await db.rpc('admin_set_view_access', { p_role: command.role, p_view: command.view, p_level: command.level })
+        result = { data: rpc.data, error: rpc.error }
+        break
+      }
+      case 'setStaffAccess': {
+        const rpc = await db.rpc('admin_set_staff_access', { p_email: command.email, p_role: command.role, p_teams: command.teams })
+        result = { data: rpc.data, error: rpc.error }
         break
       }
       case 'addBoardMember':
