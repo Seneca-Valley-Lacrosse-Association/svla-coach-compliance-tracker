@@ -32,7 +32,11 @@ function formatDate(value: string) {
 }
 
 export function TeamComplianceView() {
-  const { staff, access, hasTeamView } = useApp()
+  const app = useApp()
+  // While a board member is previewing someone, show that person's data instead of the signed-in user's.
+  const staff = app.preview ? app.preview.staff : app.staff
+  const access = app.preview ? app.preview.access : app.access
+  const hasTeamView = app.preview ? !!(access.views.clearance_status || access.views.staff_roster) : app.hasTeamView
   const [team, setTeam] = useState('all')
 
   const coaches = useMemo(() => {

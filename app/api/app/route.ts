@@ -236,6 +236,11 @@ export async function POST(request: Request) {
         result = { data: rpc.data, error: rpc.error }
         break
       }
+      case 'startPreview': {
+        const rpc = await db.rpc('admin_log_preview', { p_email: command.email })
+        result = { data: rpc.data, error: rpc.error }
+        break
+      }
       case 'addBoardMember':
         result = await db.from('board_members').insert({ email: command.email }).select('email').single()
         break

@@ -58,6 +58,7 @@ export const mutationSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('editCoach'), id: z.uuid(), input: coachSchema.omit({ email: true }) }),
   z.object({ action: z.literal('setViewAccess'), role: z.string().regex(/^[a-z][a-z0-9_]{1,40}$/), view: z.string().regex(/^[a-z][a-z0-9_]{1,40}$/), level: z.enum(['none', 'view', 'manage']) }),
   z.object({ action: z.literal('setStaffAccess'), email: z.string().trim().toLowerCase().email().max(254), role: z.string().regex(/^[a-z][a-z0-9_]{1,40}$/).nullable(), teams: z.array(z.enum(TEAMS)).max(TEAMS.length) }),
+  z.object({ action: z.literal('startPreview'), email: z.string().trim().toLowerCase().email().max(254) }),
   z.object({ action: z.literal('addBoardMember'), email: z.string().trim().toLowerCase().email().max(254) }),
   z.object({ action: z.literal('removeBoardMember'), email: z.string().trim().toLowerCase().email().max(254) }),
   z.object({ action: z.literal('reviewSubmission'), id: z.uuid(), decision: z.enum(['approved', 'rejected']), comment: z.string().trim().max(2000).optional() }),

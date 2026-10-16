@@ -120,8 +120,9 @@ The board sees everything. **Roles & Access** in the left menu lets the board gi
 - **Give someone a role:** Roles & Access, "Give someone a role": choose the coach's email, the role, and the teams they supervise, then Add role. They sign in as usual and see a **Team Compliance** page next to My Checklist.
 - **Change what a role sees:** use the dropdowns in the "What each role can see" grid. Changes apply the next time that person loads the app.
 - **Take a role away:** Roles & Access, "People with a role", Remove. They go back to seeing only their own record.
+- **Preview as someone (check a role works):** Roles & Access, "Preview as" next to a person, or "Preview as someone" to pick any coach. You see exactly what that person would see, under an amber banner that says whose view it is. It is read-only: you stay signed in as yourself and nothing changes. Click **Exit preview** in the banner to leave. Each preview start is logged as `preview_start` in `access_audit`. Their own checklist is not part of the preview.
 - **Audit trail:** every change is written to the `access_audit` table (who, when, what).
-- **How it is enforced:** in the database, not just the menu. Limited roles have no direct access to the coach, submission or file tables. They read through the `staff_roster()` and `staff_compliance_status()` functions, which filter by team and by the views granted.
+- **How it is enforced:** in the database, not just the menu. Limited roles have no direct access to the coach, submission or file tables. They read through the `staff_roster()` and `staff_compliance_status()` functions, which filter by team and by the views granted. Preview uses board-only `preview_*` functions that run the same code for another email, so the preview cannot drift from the real thing.
 - **Emergency:** if the grid ever locks someone out, board members are unaffected (board access does not depend on roles). To remove a role manually: `delete from public.staff_access where email = 'name@example.org';`
 
 ## Archiving, deleting, and correcting dates

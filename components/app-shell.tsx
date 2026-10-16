@@ -1,10 +1,11 @@
 'use client'
 
 import Link from '@/components/app-link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import {
   BarChart3,
+  Eye,
   ClipboardCheck,
   Inbox,
   LayoutDashboard,
@@ -57,7 +58,8 @@ function Brand() {
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
-  const { viewMode, summaries, isDemo, awaitingCoaches, currentCoachId, hasTeamView } = useApp()
+  const { viewMode, summaries, isDemo, awaitingCoaches, currentCoachId, hasTeamView: realTeamView, preview } = useApp()
+  const hasTeamView = preview ? !!(preview.access.views.clearance_status || preview.access.views.staff_roster) : realTeamView
   const { data: tickets } = useTickets()
   const openTickets = tickets?.openCount ?? 0
   const pendingCount = summaries.reduce(
@@ -65,10 +67,10 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
     0,
   ) + (isDemo ? 0 : awaitingCoaches.filter((c) => c.status === 'pending').length)
 
-  if (viewMode === 'coach') {
+  if (viewMode === 'coach' || preview) {
     // A coach with a view-only role (for example a program lead) also gets their team's compliance page.
     const coachNav = [
-      { href: '/', label: 'My Checklist', icon: ClipboardCheck },
+      ...(preview ? [] : [{ href: '/', label: 'My Checklist', icon: ClipboardCheck }]),
       ...(hasTeamView ? [{ href: '/team', label: 'Team Compliance', icon: UsersRound }] : []),
     ]
     return (
@@ -173,9 +175,24 @@ function ViewToggle() {
   )
 }
 
+function PreviewNote({ preview }: { preview: NonNullable<ReturnType<typeof useApp>['preview']> }) {
+  const who = preview.name ?? preview.email
+  return (
+    <div className="max-w-2xl rounded-xl border bg-card p-5 shadow-xs">
+      <h1 className="mb-2 text-xl font-semibold text-navy">{who}</h1>
+      <p className="leading-relaxed text-muted-foreground">
+        {preview.access.isBoard
+          ? 'This person is a board member, so they see everything in the tracker, including documents, the review queue and settings.'
+          : 'This person has no extra access. They sign in and see only their own checklist, with no other coaches and no team pages.'}
+      </p>
+    </div>
+  )
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false)
-  const { viewMode, getSummary, currentCoachId, isDemo, email, signOut, hasTeamView, access } = useApp()
+  const { viewMode, getSummary, currentCoachId, isDemo, email, signOut, hasTeamView, access, preview, previewError, stopPreview } = useApp()
+  const router = useRouter()
   const pathname = usePathname()
   const [signOutError, setSignOutError] = useState('')
   const me = getSummary(currentCoachId)
@@ -200,6 +217,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </Sheet>
 
       <div className="flex min-w-0 flex-1 flex-col">
+        {(preview || previewError) && (
+          <div role="status" className="sticky top-0 z-40 flex flex-wrap items-center gap-x-4 gap-y-2 border-b-2 border-amber-500 bg-amber-100 px-4 py-3 text-sm text-amber-950 lg:px-8">
+            <Eye className="size-5 shrink-0" aria-hidden="true" />
+            <p className="min-w-0 flex-1 leading-relaxed">
+              {preview ? (
+                <>
+                  <strong>You are previewing as {preview.name ?? preview.email}</strong> ({preview.email}
+                  {preview.access.roleLabel ? ` · ${preview.access.roleLabel}` : ''}
+                  {preview.access.teams && preview.access.teams.length ? ` · ${preview.access.teams.join(', ')}` : ''}).{' '}
+                  Read-only: you are still signed in as {email}, and nothing here changes any record.
+                </>
+              ) : (
+                <>The preview could not be loaded. {previewError}</>
+              )}
+            </p>
+            <button type="button" className="shrink-0 rounded-md border border-amber-700 bg-white px-3 py-1.5 font-medium hover:bg-amber-50" onClick={() => { stopPreview(); router.push('/access') }}>Exit preview</button>
+          </div>
+        )}
         <header className="sticky top-0 z-30 flex h-16 items-center gap-3 bg-navy px-4 text-white lg:px-8">
           <button
             type="button"
@@ -222,7 +257,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {isDemo && <p className="border-b bg-secondary px-4 py-3 text-sm leading-relaxed text-secondary-foreground lg:px-8"><strong>Read-only board demo.</strong> Five fictional coaches show cleared, incomplete, expiring, expired, and awaiting-review stages. No live records or real certificates.</p>}
         {signOutError && <p role="alert" className="px-4 py-3 text-destructive">{signOutError}</p>}
         <main className="flex-1 px-4 py-6 lg:px-8 lg:py-8">
-          {viewMode === 'coach' && !(hasTeamView && pathname.startsWith('/team')) ? <CoachSelfView /> : children}
+          {preview
+            ? (hasTeamView && pathname.startsWith('/team')
+                ? children
+                : <PreviewNote preview={preview} />)
+            : viewMode === 'coach' && !(hasTeamView && pathname.startsWith('/team')) ? <CoachSelfView /> : children}
         </main>
         <footer className="border-t px-4 py-4 text-sm text-muted-foreground lg:px-8">
           Still stuck? Email <a className="font-medium text-primary underline underline-offset-4" href={`mailto:${IT_EMAIL}`}>{IT_EMAIL}</a>

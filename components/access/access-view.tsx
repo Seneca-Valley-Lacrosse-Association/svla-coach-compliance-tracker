@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { UserMinus, UserPlus } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Eye, UserMinus, UserPlus } from 'lucide-react'
 import { useApp } from '@/lib/app-store'
 import { TEAMS, type AccessLevel, type Team } from '@/lib/types'
 import { Button } from '@/components/ui/button'
@@ -33,12 +34,13 @@ function TeamPicker({ value, onChange, idPrefix }: { value: Team[]; onChange: (t
   )
 }
 
-function StaffRow({ person, roles, busy, onSave, onRemove }: {
+function StaffRow({ person, roles, busy, onSave, onRemove, onPreview }: {
   person: { email: string; role: string; teams: Team[]; name: string | null; coachTeam: Team | null; lastSignInAt: string | null }
   roles: { key: string; label: string }[]
   busy: boolean
   onSave: (email: string, role: string, teams: Team[]) => void
   onRemove: (email: string) => void
+  onPreview: (email: string) => void
 }) {
   const [role, setRole] = useState(person.role)
   const [teams, setTeams] = useState<Team[]>(person.teams)
@@ -64,6 +66,7 @@ function StaffRow({ person, roles, busy, onSave, onRemove }: {
         <div className="flex-1"><TeamPicker value={teams} onChange={setTeams} idPrefix={`t-${person.email}`} /></div>
         <span className="flex gap-2">
           <Button type="button" className="h-9" disabled={busy || !dirty || teams.length === 0} onClick={() => onSave(person.email, role, teams)}>Save</Button>
+          <Button type="button" variant="outline" className="h-9" disabled={busy} onClick={() => onPreview(person.email)}><Eye aria-hidden="true" />Preview as</Button>
           <Button type="button" variant="outline" className="h-9" disabled={busy} onClick={() => onRemove(person.email)}><UserMinus aria-hidden="true" />Remove</Button>
         </span>
       </div>
@@ -72,7 +75,9 @@ function StaffRow({ person, roles, busy, onSave, onRemove }: {
 }
 
 export function AccessView() {
-  const { accessConfig, coaches, setViewAccess, setStaffAccess, isDemo } = useApp()
+  const { accessConfig, coaches, setViewAccess, setStaffAccess, startPreview, isDemo } = useApp()
+  const router = useRouter()
+  const [previewWho, setPreviewWho] = useState('')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -94,6 +99,15 @@ export function AccessView() {
     try { await action(); setMessage(success) }
     catch (e) { setError(e instanceof Error ? e.message : 'Could not save. Please try again.') }
     finally { setBusy(false) }
+  }
+
+  function preview(who: string) {
+    if (busy || !who) return
+    setBusy(true); setError(''); setMessage('')
+    startPreview(who)
+      .then(() => router.push('/team'))
+      .catch((e) => setError(e instanceof Error ? e.message : 'Could not start the preview.'))
+      .finally(() => setBusy(false))
   }
 
   function handleAdd(event: React.FormEvent) {
@@ -198,6 +212,21 @@ export function AccessView() {
         </form>
       </section>
 
+      <section aria-labelledby="preview-heading" className="mb-6 rounded-xl border bg-card p-5 shadow-xs">
+        <h2 id="preview-heading" className="mb-1 text-lg font-semibold text-navy">Preview as someone</h2>
+        <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
+          See exactly what a person would see, to confirm their access is set up correctly. It is read-only: you stay signed in as yourself, nothing is changed,
+          and a banner stays at the top until you exit. Each preview is logged.
+        </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <select aria-label="Person to preview" value={previewWho} onChange={(e) => setPreviewWho(e.target.value)} className={`${selectClass} sm:max-w-sm`}>
+            <option value="">Choose a coach…</option>
+            {coaches.filter((c) => c.email).map((c) => <option key={c.id} value={c.email.toLowerCase()}>{c.name} · {c.team}</option>)}
+          </select>
+          <Button type="button" className="h-10 px-4" disabled={busy || !previewWho} onClick={() => preview(previewWho)}><Eye aria-hidden="true" />Start preview</Button>
+        </div>
+      </section>
+
       <section aria-labelledby="holders-heading" className="rounded-xl border bg-card p-5 shadow-xs">
         <h2 id="holders-heading" className="mb-1 text-lg font-semibold text-navy">People with a role ({config.staff.length})</h2>
         {config.staff.length === 0
@@ -211,6 +240,7 @@ export function AccessView() {
                   roles={config.roles}
                   busy={busy}
                   onSave={(e, r, t) => void run(() => setStaffAccess(e, r, t), `Saved ${e}.`)}
+                  onPreview={preview}
                   onRemove={(e) => { if (window.confirm(`Remove the role for ${e}? They will go back to seeing only their own record.`)) void run(() => setStaffAccess(e, null, []), `${e} no longer has a role.`) }}
                 />
               ))}
