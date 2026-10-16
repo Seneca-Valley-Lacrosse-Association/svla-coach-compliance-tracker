@@ -52,12 +52,7 @@ function ActiveToggle({ req }: { req: Requirement }) {
 function ReviewToggle({ req }: { req: Requirement }) {
   const { setRequirementReview } = useApp()
   const needsReview = req.requiresReview !== false
-  return (
-    <div className="flex items-center gap-3">
-      <SwitchToggle checked={needsReview} label={`${req.name} needs board review`} onToggle={() => setRequirementReview(req.id, !needsReview)} />
-      <span className="whitespace-nowrap text-sm text-muted-foreground">{needsReview ? 'Reviewed' : 'Auto-approve'}</span>
-    </div>
-  )
+  return <SwitchToggle checked={needsReview} label={`${req.name} needs board review`} onToggle={() => setRequirementReview(req.id, !needsReview)} />
 }
 
 export function RequirementsView() {
