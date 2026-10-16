@@ -31,6 +31,26 @@ export function CoachesList() {
   const counts = { active: 0, invited: 0, none: 0 }
   for (const s of summaries) counts[stateOf(s.coach.email)]++
   const uninvited = summaries.filter((s) => stateOf(s.coach.email) === 'none')
+  const invited = summaries.filter((s) => stateOf(s.coach.email) === 'invited')
+  const [resend, setResend] = useState<'idle' | 'confirm' | 'sending'>('idle')
+
+  // Resend to everyone still in Invited status. Sent in small batches so one request never nears the server time limit.
+  async function sendResend() {
+    const ids = invited.map((s) => s.coach.id)
+    let sent = 0
+    const failed: string[] = []
+    setResend('sending'); setBulkMessage('')
+    try {
+      for (let i = 0; i < ids.length; i += 10) {
+        const result = await inviteCoaches(ids.slice(i, i + 10))
+        sent += result.sent
+        failed.push(...result.failed)
+      }
+      setBulkMessage(`${sent} invite${sent === 1 ? '' : 's'} resent.${failed.length ? ` Could not send to: ${failed.join(', ')}. Open each coach and use Copy sign-in link instead.` : ''}`)
+    } catch (e) {
+      setBulkMessage(`${e instanceof Error ? e.message : 'Could not resend the invites.'}${sent ? ` ${sent} invite${sent === 1 ? ' was' : 's were'} sent before the problem.` : ''}`)
+    } finally { setResend('idle') }
+  }
 
   async function sendBulk() {
     setBulk('sending'); setBulkMessage('')
@@ -55,13 +75,25 @@ export function CoachesList() {
       <PageHeader
         title="Coaches & Volunteers"
         description={hasLoginData ? `${summaries.length} people on staff this season · ${counts.active} active · ${counts.invited} invited · ${counts.none} no login` : `${summaries.length} people on staff this season.`}
-        actions={<AddCoachDialog onAdded={(name) => {
-          setQuery('')
-          setTeam('all')
-          setPay('all')
-          setLogin('all')
-          setAddedName(name)
-        }} />}
+        actions={<>
+          {hasLoginData && invited.length > 0 && (
+            resend === 'idle' ? (
+              <Button type="button" variant="outline" className="h-10 px-4" onClick={() => setResend('confirm')}>Resend invites ({invited.length})</Button>
+            ) : resend === 'confirm' ? (
+              <>
+                <Button type="button" className="h-10 px-4" onClick={() => void sendResend()}>Confirm: resend to {invited.length}</Button>
+                <Button type="button" variant="outline" className="h-10 px-4" onClick={() => setResend('idle')}>Cancel</Button>
+              </>
+            ) : <span role="status" className="self-center text-sm text-muted-foreground">Sending… this can take up to a minute.</span>
+          )}
+          <AddCoachDialog onAdded={(name) => {
+            setQuery('')
+            setTeam('all')
+            setPay('all')
+            setLogin('all')
+            setAddedName(name)
+          }} />
+        </>}
       />
       <p role="status" className={addedName ? 'mb-4 text-sm text-muted-foreground' : 'sr-only'}>
         {addedName && `${addedName} added to the roster. Their requirements checklist is ready.`}
