@@ -105,7 +105,7 @@ export function AccessView() {
     if (busy || !who) return
     setBusy(true); setError(''); setMessage('')
     startPreview(who)
-      .then(() => router.push('/team'))
+      .then(() => router.push('/'))
       .catch((e) => setError(e instanceof Error ? e.message : 'Could not start the preview.'))
       .finally(() => setBusy(false))
   }

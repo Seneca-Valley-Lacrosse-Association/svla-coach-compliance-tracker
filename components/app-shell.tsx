@@ -2,7 +2,7 @@
 
 import Link from '@/components/app-link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   BarChart3,
   Eye,
@@ -58,7 +58,7 @@ function Brand() {
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
-  const { viewMode, summaries, isDemo, awaitingCoaches, currentCoachId, hasTeamView: realTeamView, preview } = useApp()
+  const { viewMode, summaries, isDemo, awaitingCoaches, currentCoachId, hasTeamView: realTeamView, preview, previewSummary } = useApp()
   const hasTeamView = preview ? !!(preview.access.views.clearance_status || preview.access.views.staff_roster) : realTeamView
   const { data: tickets } = useTickets()
   const openTickets = tickets?.openCount ?? 0
@@ -70,7 +70,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   if (viewMode === 'coach' || preview) {
     // A coach with a view-only role (for example a program lead) also gets their team's compliance page.
     const coachNav = [
-      ...(preview ? [] : [{ href: '/', label: 'My Checklist', icon: ClipboardCheck }]),
+      ...(!preview || previewSummary ? [{ href: '/', label: 'My Checklist', icon: ClipboardCheck }] : []),
       ...(hasTeamView ? [{ href: '/team', label: 'Team Compliance', icon: UsersRound }] : []),
     ]
     return (
@@ -176,6 +176,7 @@ function ViewToggle() {
 }
 
 function PreviewNote({ preview }: { preview: NonNullable<ReturnType<typeof useApp>['preview']> }) {
+  const { previewRosterState } = useApp()
   const who = preview.name ?? preview.email
   return (
     <div className="max-w-2xl rounded-xl border bg-card p-5 shadow-xs">
@@ -183,7 +184,11 @@ function PreviewNote({ preview }: { preview: NonNullable<ReturnType<typeof useAp
       <p className="leading-relaxed text-muted-foreground">
         {preview.access.isBoard
           ? 'This person is a board member, so they see everything in the tracker, including documents, the review queue and settings.'
-          : 'This person has no extra access. They sign in and see only their own checklist, with no other coaches and no team pages.'}
+          : previewRosterState === 'awaiting'
+            ? 'This person has signed up but is still waiting for board approval, so they only see a waiting-for-approval message.'
+            : previewRosterState === 'archived'
+              ? 'This person\'s record is archived, so they only see an archived message and no checklist.'
+              : 'This person is not on the coach roster, so they have no checklist and no extra access.'}
       </p>
     </div>
   )
@@ -191,11 +196,17 @@ function PreviewNote({ preview }: { preview: NonNullable<ReturnType<typeof useAp
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false)
-  const { viewMode, getSummary, currentCoachId, isDemo, email, signOut, hasTeamView, access, preview, previewError, stopPreview } = useApp()
+  const { viewMode, getSummary, currentCoachId, isDemo, email, signOut, hasTeamView, access, preview, previewSummary, previewError, stopPreview } = useApp()
   const router = useRouter()
   const pathname = usePathname()
   const [signOutError, setSignOutError] = useState('')
   const me = getSummary(currentCoachId)
+  // While previewing, team access is the previewed person's, not the signed-in board member's.
+  const previewTeamView = !!preview && !!(preview.access.views.clearance_status || preview.access.views.staff_roster)
+  // A previewed person with team access but no checklist of their own lands on Team Compliance, as they would.
+  useEffect(() => {
+    if (preview && !previewSummary && previewTeamView && !pathname.startsWith('/team')) router.replace('/team')
+  }, [preview, previewSummary, previewTeamView, pathname, router])
 
   return (
     <HelpProvider>
@@ -258,9 +269,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {signOutError && <p role="alert" className="px-4 py-3 text-destructive">{signOutError}</p>}
         <main className="flex-1 px-4 py-6 lg:px-8 lg:py-8">
           {preview
-            ? (hasTeamView && pathname.startsWith('/team')
+            ? (previewTeamView && pathname.startsWith('/team')
                 ? children
-                : <PreviewNote preview={preview} />)
+                : previewSummary ? <CoachSelfView previewSummary={previewSummary} /> : <PreviewNote preview={preview} />)
             : viewMode === 'coach' && !(hasTeamView && pathname.startsWith('/team')) ? <CoachSelfView /> : children}
         </main>
         <footer className="border-t px-4 py-4 text-sm text-muted-foreground lg:px-8">

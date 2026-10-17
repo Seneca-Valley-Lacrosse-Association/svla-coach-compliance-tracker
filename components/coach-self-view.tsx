@@ -8,10 +8,13 @@ import { PayBadge } from '@/components/status-pill'
 import { ChecklistRow } from '@/components/coach-detail/checklist-row'
 import { ClearedBadge } from '@/components/coach-detail/cleared-badge'
 import { MyRequests } from '@/components/help/my-requests'
+import type { CoachSummary } from '@/lib/compliance'
 
-export function CoachSelfView() {
+/** With `previewSummary`, shows another person's checklist exactly as they see it, with no actions. */
+export function CoachSelfView({ previewSummary }: { previewSummary?: CoachSummary } = {}) {
   const { getSummary, currentCoachId } = useApp()
-  const summary = getSummary(currentCoachId)
+  const readOnly = !!previewSummary
+  const summary = previewSummary ?? getSummary(currentCoachId)
   if (!summary) return <section className="mx-auto flex max-w-xl flex-col gap-3 rounded-xl border bg-card p-6 text-card-foreground"><h1 className="text-2xl font-semibold">Awaiting roster access</h1><p className="leading-relaxed text-muted-foreground">Your account is signed in, but this email is not yet linked to a coach or approved board member. Ask the SVLA administrator to add this exact email to the roster or board access list, then refresh.</p><a href="/demo" className="text-primary underline underline-offset-4">Explore the five-coach board demo</a></section>
 
   const { coach, items, satisfiedCount, total } = summary
@@ -52,6 +55,7 @@ export function CoachSelfView() {
               item={item}
               coach={coach}
               mode="coach"
+              readOnly={readOnly}
               stepLabel={
                 <span
                   aria-label={item.satisfied ? `Step ${index + 1}, done` : `Step ${index + 1}`}
@@ -68,7 +72,7 @@ export function CoachSelfView() {
         </ol>
       </section>
 
-      <MyRequests />
+      {!readOnly && <MyRequests />}
     </div>
   )
 }

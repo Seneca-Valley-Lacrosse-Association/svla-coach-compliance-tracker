@@ -78,6 +78,10 @@ interface AppState {
   setStaffAccess: (email: string, role: string | null, teams: Team[]) => Promise<void>
   /** Board only. What another person would see; null unless a preview is running. Read-only: nothing here changes who you are signed in as. */
   preview: PreviewData | null
+  /** The previewed person's own checklist, built the same way they see it. Null if they are not an active roster coach. */
+  previewSummary: CoachSummary | null
+  /** Why there is no checklist to show for the previewed person. */
+  previewRosterState: 'active' | 'awaiting' | 'archived' | 'none'
   previewLoading: boolean
   previewError: string
   startPreview: (email: string) => Promise<void>
@@ -113,6 +117,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const awaitingCoaches = useMemo(() => allCoaches.filter(c => c.status === 'pending' || c.status === 'declined'), [allCoaches])
   const mine = isDemo ? undefined : allCoaches.find(c => c.email.toLowerCase() === user?.email?.toLowerCase())
   const summaries = useMemo(() => coaches.map(c => summarizeCoach(c, requirements, submissions, progress)), [coaches, requirements, submissions, progress])
+  const previewCoach = useMemo(() => previewData ? allCoaches.find(c => c.email.toLowerCase() === previewData.email.toLowerCase()) : undefined, [previewData, allCoaches])
+  const previewRosterState: 'active' | 'awaiting' | 'archived' | 'none' = !previewCoach ? 'none' : previewCoach.archivedAt ? 'archived' : (previewCoach.status ?? 'approved') === 'approved' ? 'active' : 'awaiting'
+  const previewSummary = useMemo(() => previewCoach && previewRosterState === 'active' ? summarizeCoach(previewCoach, requirements, submissions, progress) : null, [previewCoach, previewRosterState, requirements, submissions, progress])
   const archivedSummaries = useMemo(() => archivedCoaches.map(c => summarizeCoach(c, requirements, submissions, progress)), [archivedCoaches, requirements, submissions, progress])
   async function save(command: Record<string, unknown>) {
     if (isDemo) throw new Error('The board demo is read-only. Sign in to manage live records.')
@@ -167,6 +174,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setViewAccess: (role, view, level) => save({ action: 'setViewAccess', role, view, level }),
     setStaffAccess: (email, role, teams) => save({ action: 'setStaffAccess', email, role, teams }),
     preview: previewKey ? previewData ?? null : null,
+    previewSummary: previewKey ? previewSummary : null,
+    previewRosterState: previewKey ? previewRosterState : 'none',
     previewLoading: !!previewKey && previewLoading,
     previewError: previewFetchError instanceof Error ? previewFetchError.message : '',
     startPreview: async email => {
