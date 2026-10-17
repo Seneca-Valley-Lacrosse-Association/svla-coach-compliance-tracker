@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from 'react'
 import { useApp } from '@/lib/app-store'
-import type { ItemStatus, StaffStatusRow } from '@/lib/types'
+import { TEAMS, type ItemStatus, type StaffStatusRow } from '@/lib/types'
 import { ComplianceStatusPill, ItemStatusPill, PayBadge } from '@/components/status-pill'
 import { PageHeader } from '@/components/page-header'
+import { TeamPicker } from './team-picker'
 
 const EXPIRING_DAYS = 60
 
@@ -37,7 +38,8 @@ export function TeamComplianceView() {
   const staff = app.preview ? app.preview.staff : app.staff
   const access = app.preview ? app.preview.access : app.access
   const hasTeamView = app.preview ? !!(access.views.clearance_status || access.views.staff_roster) : app.hasTeamView
-  const [team, setTeam] = useState('all')
+  // null means every team is checked (the default), so it keeps following the list if the teams change.
+  const [chosen, setChosen] = useState<string[] | null>(null)
 
   const coaches = useMemo(() => {
     const byCoach = new Map<string, StaffStatusRow[]>()
@@ -54,8 +56,10 @@ export function TeamComplianceView() {
     return <PageHeader title="Team Compliance" description="Your account does not have access to this page." />
   }
 
-  const teams = [...new Set(coaches.map((c) => c.person.team))]
-  const visible = coaches.filter((c) => team === 'all' || c.person.team === team)
+  const order: readonly string[] = TEAMS
+  const teams: string[] = [...new Set<string>(coaches.map((c) => c.person.team))].sort((a, b) => order.indexOf(a) - order.indexOf(b))
+  const selected = chosen === null ? teams : chosen.filter((t) => teams.includes(t))
+  const visible = coaches.filter((c) => selected.includes(c.person.team))
   const showStatus = !!access.views.clearance_status
   const withStatus = visible.map((c) => ({ ...c, status: overall(c.rows) }))
   const count = (s: ReturnType<typeof overall>) => withStatus.filter((c) => c.rows.length > 0 && c.status === s).length
@@ -66,13 +70,7 @@ export function TeamComplianceView() {
         title="Team Compliance"
         description={`${access.roleLabel ?? 'Your role'} view for ${(access.teams ?? []).join(', ') || 'your teams'}. Status and expiration dates only. Documents and certificate details stay with the board.`}
         actions={teams.length > 1 ? (
-          <label className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Team</span>
-            <select value={team} onChange={(e) => setTeam(e.target.value)} className="h-10 rounded-lg border border-input bg-card px-3 text-base">
-              <option value="all">All my teams</option>
-              {teams.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </label>
+          <TeamPicker teams={teams} selected={selected} onChange={(next) => setChosen(next.length === teams.length ? null : next)} />
         ) : undefined}
       />
 
@@ -88,7 +86,9 @@ export function TeamComplianceView() {
       )}
 
       {withStatus.length === 0 && (
-        <p className="rounded-xl border bg-card p-5 text-muted-foreground">No coaches are assigned to your teams yet.</p>
+        <p className="rounded-xl border bg-card p-5 text-muted-foreground">
+          {coaches.length > 0 ? 'No teams are selected. Choose at least one team to see its coaches.' : 'No coaches are assigned to your teams yet.'}
+        </p>
       )}
 
       <ul className="flex flex-col gap-3">
