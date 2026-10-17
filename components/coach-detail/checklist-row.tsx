@@ -34,11 +34,14 @@ export function ChecklistRow({
   coach,
   mode,
   stepLabel,
+  readOnly = false,
 }: {
   item: ChecklistItem
   coach: Coach
   mode: 'board' | 'coach'
   stepLabel?: React.ReactNode
+  /** Preview mode: show everything the person sees, but offer no actions. */
+  readOnly?: boolean
 }) {
   const { requirement: req, status, latest, approved } = item
   const shown = latest?.status === 'pending' ? latest : approved ?? latest
@@ -50,7 +53,7 @@ export function ChecklistRow({
   const showProgress = !!progress && latest?.status !== 'pending' && status !== 'approved' && status !== 'invalid'
   const { openHelp, enabled: helpEnabled } = useHelp()
   // Offer help where people most often get stuck: something missing, pending, rejected, expired or not valid.
-  const needsHelpLink = mode === 'coach' && helpEnabled && ['not-started', 'in-progress', 'pending', 'rejected', 'expired', 'invalid'].includes(status)
+  const needsHelpLink = !readOnly && mode === 'coach' && helpEnabled && ['not-started', 'in-progress', 'pending', 'rejected', 'expired', 'invalid'].includes(status)
 
   return (
     <li className="flex flex-col gap-4 p-4 sm:p-5">
@@ -105,16 +108,16 @@ export function ChecklistRow({
             />
           ) : latest?.status === 'pending' ? (
             <span className="text-sm text-muted-foreground">Waiting for board review</span>
-          ) : (
+          ) : readOnly ? null : (
             <UploadButton
               coach={coach}
               requirement={req}
               variant={item.satisfied && status !== 'expiring' ? 'outline' : 'default'}
             />
           )}
-          {canMarkStarted && <InProgressButton key={`${progress?.startedOn}-${progress?.followUpOn}-${progress?.note}`} coach={coach} requirement={req} progress={progress} />}
+          {!readOnly && canMarkStarted && <InProgressButton key={`${progress?.startedOn}-${progress?.followUpOn}-${progress?.note}`} coach={coach} requirement={req} progress={progress} />}
           {mode === 'board' && shown && <EditDatesDialog key={`${shown.id}-${shown.completedOn}-${shown.expiresOn}`} submission={shown} requirement={req} />}
-          {shown && <RemoveEntryDialog submission={shown} requirementName={req.name} mode={mode} />}
+          {!readOnly && shown && <RemoveEntryDialog submission={shown} requirementName={req.name} mode={mode} />}
           {needsHelpLink && (
             <button
               type="button"
