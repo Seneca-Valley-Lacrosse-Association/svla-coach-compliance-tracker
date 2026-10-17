@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import useSWR from 'swr'
 import { summarizeCoach, type CoachSummary } from './compliance'
@@ -12,12 +12,13 @@ import { ConfirmLinkPanel } from '@/components/confirm-link-panel'
 import { CompleteProfilePanel } from '@/components/complete-profile-panel'
 import { WaitingApprovalPanel } from '@/components/waiting-approval-panel'
 import { ArchivedPanel } from '@/components/archived-panel'
-import type { Coach, LoginInfo, Progress, Requirement, Submission } from './types'
+import { NO_ACCESS, type AccessConfig, type AccessInfo, type Coach, type LoginInfo, type Progress, type Requirement, type StaffData, type Submission, type Team } from './types'
 
 export type ViewMode = 'board' | 'coach'
 export type UploadInput = Pick<Submission, 'coachId' | 'requirementId' | 'completedOn' | 'fileName' | 'obtainedAs' | 'fbiMethod' | 'membershipNumber' | 'signedName'> & { membershipExpiry?: string; agreed?: boolean; file?: File }
 type ResourceInput = Pick<Requirement, 'help' | 'helpUrl' | 'helpLinkLabel'> & Partial<Pick<Requirement, 'level' | 'why' | 'source' | 'sourceUrl' | 'appliesToRoles' | 'appliesToPay' | 'appliesToTeams'>>
-interface Snapshot { user: { id: string; email: string; role: ViewMode } | null; coaches: Coach[]; requirements: Requirement[]; submissions: Submission[]; progress?: Progress[]; boardMembers?: { email: string; lastSignInAt?: string | null }[]; pendingAccounts?: { email: string; created_at: string }[]; loginStatus?: LoginInfo[] }
+export interface PreviewData { email: string; name: string | null; access: AccessInfo; staff: StaffData }
+interface Snapshot { user: { id: string; email: string; role: ViewMode } | null; coaches: Coach[]; requirements: Requirement[]; submissions: Submission[]; progress?: Progress[]; boardMembers?: { email: string; lastSignInAt?: string | null }[]; pendingAccounts?: { email: string; created_at: string }[]; loginStatus?: LoginInfo[]; access?: AccessInfo; staff?: StaffData; accessConfig?: AccessConfig }
 interface AppState {
   viewMode: ViewMode
   setViewMode: (mode: ViewMode) => void
@@ -65,6 +66,22 @@ interface AppState {
   addBoardMember: (email: string) => Promise<void>
   removeBoardMember: (email: string) => Promise<void>
   inviteBoardMember: (email: string, deliver: 'email' | 'link') => Promise<{ emailSent?: boolean; link?: string }>
+  /** What the signed-in person may see beyond their own record (view-only roles). */
+  access: AccessInfo
+  /** True when a limited role can open the team compliance page. */
+  hasTeamView: boolean
+  /** Status-only rows for a limited role, already filtered to their teams by the database. */
+  staff: StaffData
+  /** Board only: roles, views, the permission matrix and who holds which role. */
+  accessConfig: AccessConfig | null
+  setViewAccess: (role: string, view: string, level: 'none' | 'view' | 'manage') => Promise<void>
+  setStaffAccess: (email: string, role: string | null, teams: Team[]) => Promise<void>
+  /** Board only. What another person would see; null unless a preview is running. Read-only: nothing here changes who you are signed in as. */
+  preview: PreviewData | null
+  previewLoading: boolean
+  previewError: string
+  startPreview: (email: string) => Promise<void>
+  stopPreview: () => void
 }
 const AppContext = createContext<AppState | null>(null)
 const empty: Snapshot = { user: null, coaches: [], requirements: [], submissions: [], boardMembers: [], pendingAccounts: [] }
@@ -82,6 +99,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [demoView, setDemoView] = useState<ViewMode>('board')
   const { data, error, isLoading, mutate } = useSWR<Snapshot>(isDemo ? null : '/api/app', loadSnapshot, { refreshInterval: 60000, shouldRetryOnError: false })
   const snapshot = isDemo ? demoSnapshot : data ?? empty
+  // Preview-as: remembered for this tab only, and only honoured for board members (the server refuses everyone else).
+  const [previewEmail, setPreviewEmail] = useState('')
+  useEffect(() => { try { setPreviewEmail(sessionStorage.getItem('svla-preview') ?? '') } catch { /* storage unavailable */ } }, [])
+  const canPreview = !isDemo && data?.user?.role === 'board'
+  const previewKey = canPreview && previewEmail ? `/api/app/preview?email=${encodeURIComponent(previewEmail)}` : null
+  const { data: previewData, error: previewFetchError, isLoading: previewLoading } = useSWR<PreviewData>(previewKey, loadSnapshot as unknown as (url: string) => Promise<PreviewData>, { refreshInterval: 60000, shouldRetryOnError: false })
   const { requirements, submissions, user } = snapshot
   const progress = useMemo(() => snapshot.progress ?? [], [snapshot.progress])
   const allCoaches = snapshot.coaches
@@ -137,6 +160,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     markInProgress: input => save({ action: 'markInProgress', input }),
     clearInProgress: (coachId, requirementId) => save({ action: 'clearInProgress', coachId, requirementId }),
     reviewSubmission: (id, decision, comment) => save({ action: 'reviewSubmission', id, decision, comment }),
+    access: isDemo ? NO_ACCESS : snapshot.access ?? NO_ACCESS,
+    hasTeamView: !isDemo && !!(snapshot.access?.views.clearance_status || snapshot.access?.views.staff_roster),
+    staff: snapshot.staff ?? { roster: [], status: [] },
+    accessConfig: isDemo ? null : snapshot.accessConfig ?? null,
+    setViewAccess: (role, view, level) => save({ action: 'setViewAccess', role, view, level }),
+    setStaffAccess: (email, role, teams) => save({ action: 'setStaffAccess', email, role, teams }),
+    preview: previewKey ? previewData ?? null : null,
+    previewLoading: !!previewKey && previewLoading,
+    previewError: previewFetchError instanceof Error ? previewFetchError.message : '',
+    startPreview: async email => {
+      const value = email.trim().toLowerCase()
+      await save({ action: 'startPreview', email: value })
+      try { sessionStorage.setItem('svla-preview', value) } catch { /* storage unavailable */ }
+      setPreviewEmail(value)
+    },
+    stopPreview: () => {
+      try { sessionStorage.removeItem('svla-preview') } catch { /* storage unavailable */ }
+      setPreviewEmail('')
+    },
     submitUpload: async ({ file, ...input }) => {
       if (isDemo) throw new Error('The board demo is read-only.')
       let filePath: string | undefined
