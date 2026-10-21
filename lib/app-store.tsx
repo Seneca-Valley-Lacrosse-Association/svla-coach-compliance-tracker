@@ -16,7 +16,7 @@ import { NO_ACCESS, type AccessConfig, type AccessInfo, type Coach, type LoginIn
 
 export type ViewMode = 'board' | 'coach'
 export type UploadInput = Pick<Submission, 'coachId' | 'requirementId' | 'completedOn' | 'fileName' | 'obtainedAs' | 'fbiMethod' | 'membershipNumber' | 'signedName'> & { membershipExpiry?: string; agreed?: boolean; file?: File }
-type ResourceInput = Pick<Requirement, 'help' | 'helpUrl' | 'helpLinkLabel'> & Partial<Pick<Requirement, 'level' | 'why' | 'source' | 'sourceUrl' | 'appliesToRoles' | 'appliesToPay' | 'appliesToTeams'>>
+type ResourceInput = Pick<Requirement, 'help' | 'helpUrl' | 'helpLinkLabel'> & Partial<Pick<Requirement, 'name' | 'level' | 'why' | 'source' | 'sourceUrl' | 'appliesToRoles' | 'appliesToPay' | 'appliesToTeams'>>
 export interface PreviewData { email: string; name: string | null; access: AccessInfo; staff: StaffData }
 interface Snapshot { user: { id: string; email: string; role: ViewMode } | null; coaches: Coach[]; requirements: Requirement[]; submissions: Submission[]; progress?: Progress[]; boardMembers?: { email: string; lastSignInAt?: string | null }[]; pendingAccounts?: { email: string; created_at: string }[]; loginStatus?: LoginInfo[]; access?: AccessInfo; staff?: StaffData; accessConfig?: AccessConfig }
 interface AppState {

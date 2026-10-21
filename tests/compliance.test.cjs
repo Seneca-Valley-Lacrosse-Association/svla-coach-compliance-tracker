@@ -71,6 +71,21 @@ test('teams limit where a requirement applies', () => {
   assert.deepEqual(applicableRequirements([{ ...base, appliesToTeams: [] }], coachOn('14U')).length, 1)
 })
 
+test('an explicit team list overrides the program level', () => {
+  const base = requirements.find(r => r.id === 'handbook')
+  const coachOn = team => ({ ...coaches[0], team, role: 'Head Coach', pay: 'Volunteer' })
+  const hsPlusBoard = { ...base, id: 'hs-board', level: 'high-school', appliesToTeams: ['HS-JV', 'HS-Varsity', 'Board'] }
+  const ids = team => applicableRequirements([hsPlusBoard], coachOn(team)).map(r => r.id)
+  assert.deepEqual(ids('Board'), ['hs-board'])
+  assert.deepEqual(ids('HS-JV'), ['hs-board'])
+  assert.deepEqual(ids('10U'), [])
+})
+test('a requirement can be renamed through updateResource', () => {
+  const input = { help: 'Read this', helpUrl: '', helpLinkLabel: '', name: 'New name' }
+  assert.equal(mutationSchema.safeParse({ action: 'updateResource', id: 'handbook', input }).success, true)
+  assert.equal(mutationSchema.safeParse({ action: 'updateResource', id: 'handbook', input: { ...input, name: '  ' } }).success, false)
+})
+
 test('a started requirement shows as in progress but never counts toward clearance', () => {
   const { progress } = require('../lib/demo-data.ts')
   const withProgress = summarizeCoach(coaches.find(c => c.id === 'c3'), requirements, submissions, progress)

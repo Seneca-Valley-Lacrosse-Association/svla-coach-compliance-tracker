@@ -14,6 +14,7 @@ export function ResourceEditor({ requirement }: { requirement: Requirement }) {
   const { updateResource, isDemo } = useApp()
   const id = useId()
   const [open, setOpen] = useState(false)
+  const [name, setName] = useState(requirement.name)
   const [help, setHelp] = useState(requirement.help)
   const [helpUrl, setHelpUrl] = useState(requirement.helpUrl)
   const [helpLinkLabel, setHelpLinkLabel] = useState(requirement.helpLinkLabel)
@@ -30,9 +31,10 @@ export function ResourceEditor({ requirement }: { requirement: Requirement }) {
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (busy) return
+    if (!name.trim()) return setError('Enter a requirement name.')
     if (roles.length === 0 || pay.length === 0 || teams.length === 0) return setError('Pick at least one role, one pay status and one team.')
     setBusy(true); setError('')
-    try { await updateResource(requirement.id, { help, helpUrl, helpLinkLabel, level, why, source, sourceUrl, appliesToRoles: roles, appliesToPay: pay, appliesToTeams: teams.length === TEAMS.length ? [] : teams }); setOpen(false) }
+    try { await updateResource(requirement.id, { name: name.trim(), help, helpUrl, helpLinkLabel, level, why, source, sourceUrl, appliesToRoles: roles, appliesToPay: pay, appliesToTeams: teams.length === TEAMS.length ? [] : teams }); setOpen(false) }
     catch (error) { setError(error instanceof Error ? error.message : 'Could not save resource.') }
     finally { setBusy(false) }
   }
@@ -41,8 +43,9 @@ export function ResourceEditor({ requirement }: { requirement: Requirement }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-lg">
         <form onSubmit={submit} className="flex flex-col gap-5">
-          <DialogHeader><DialogTitle>Edit resource</DialogTitle><DialogDescription>{requirement.name}. Use the current approved document or provider link.</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>Edit requirement</DialogTitle><DialogDescription>Rename it, update the instructions, or change who it applies to. Renaming keeps every coach's existing uploads and progress.</DialogDescription></DialogHeader>
           <FieldGroup>
+            <Field><FieldLabel htmlFor={`${id}-name`}>Requirement name</FieldLabel><Input id={`${id}-name`} value={name} onChange={e => setName(e.target.value)} required maxLength={200} /></Field>
             <Field><FieldLabel htmlFor={`${id}-help`}>Instructions</FieldLabel><Textarea id={`${id}-help`} value={help} onChange={e => setHelp(e.target.value)} required maxLength={3000} /></Field>
             <Field><FieldLabel htmlFor={`${id}-url`}>HTTPS document or help URL</FieldLabel><Input id={`${id}-url`} type="url" value={helpUrl} onChange={e => setHelpUrl(e.target.value)} placeholder="https://" /></Field>
             <Field><FieldLabel htmlFor={`${id}-label`}>Link label</FieldLabel><Input id={`${id}-label`} value={helpLinkLabel} onChange={e => setHelpLinkLabel(e.target.value)} maxLength={150} /></Field>
@@ -63,7 +66,7 @@ export function ResourceEditor({ requirement }: { requirement: Requirement }) {
               <div className="grid grid-cols-3 gap-2 text-sm">
                 {TEAMS.map(t => <label key={t} className="flex items-center gap-2"><input type="checkbox" checked={teams.includes(t)} onChange={() => setTeams(teams.includes(t) ? teams.filter(x => x !== t) : [...teams, t])} className="size-4 accent-brand" />{t}</label>)}
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">All teams checked means every team.</p>
+              <p className="mt-1 text-sm text-muted-foreground">All teams checked means every team. When only some teams are checked, the team list decides who gets it and the Program setting below is ignored.</p>
             </fieldset>
             <Field>
               <FieldLabel htmlFor={`${id}-level`}>Program (youth, high school or both)</FieldLabel>

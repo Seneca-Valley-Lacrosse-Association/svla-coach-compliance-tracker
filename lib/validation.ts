@@ -40,7 +40,7 @@ export const mutationSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('addRequirement'), input: requirementSchema }),
   z.object({ action: z.literal('setRequirementActive'), id: z.string().max(100), active: z.boolean() }),
   z.object({ action: z.literal('setRequirementReview'), id: z.string().max(100), requiresReview: z.boolean() }),
-  z.object({ action: z.literal('updateResource'), id: z.string().max(100), input: resourceSchema.extend(reasonSchema.partial().shape).extend({ appliesToRoles: z.array(z.enum(ROLES)).min(1).max(4).optional(), appliesToPay: z.array(z.enum(PAY_STATUSES)).min(1).max(2).optional() }) }),
+  z.object({ action: z.literal('updateResource'), id: z.string().max(100), input: resourceSchema.extend(reasonSchema.partial().shape).extend({ name: z.string().trim().min(1).max(200).optional(), appliesToRoles: z.array(z.enum(ROLES)).min(1).max(4).optional(), appliesToPay: z.array(z.enum(PAY_STATUSES)).min(1).max(2).optional() }) }),
   z.object({ action: z.literal('submitUpload'), input: uploadSchema }),
   z.object({ action: z.literal('markInProgress'), input: progressSchema }),
   z.object({ action: z.literal('clearInProgress'), coachId: z.uuid(), requirementId: z.string().min(1).max(100) }),

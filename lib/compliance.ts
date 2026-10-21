@@ -90,12 +90,17 @@ export function appliesToTeam(req: Requirement, coach: Coach) {
   return !req.appliesToTeams?.length || req.appliesToTeams.includes(coach.team)
 }
 
+/**
+ * An explicit team list is the more specific setting, so it decides on its own. Program (level) is only the
+ * broad default for requirements with no team list. Applying both made a requirement tagged "high school"
+ * skip Board and Volunteer coaches even when those teams were ticked.
+ */
 export function appliesTo(req: Requirement, coach: Coach) {
+  const hasTeamList = !!req.appliesToTeams?.length
   return (
     req.appliesToRoles.includes(coach.role) &&
     req.appliesToPay.includes(coach.pay) &&
-    appliesToLevel(req, coach) &&
-    appliesToTeam(req, coach)
+    (hasTeamList ? appliesToTeam(req, coach) : appliesToLevel(req, coach))
   )
 }
 
