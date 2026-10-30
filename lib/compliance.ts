@@ -117,11 +117,12 @@ export function applicableRequirements(requirements: Requirement[], coach: Coach
 }
 
 /**
- * Paid coaches and coaches on the high school teams (Seneca Valley treats them as employees under
+ * Paid coaches and anyone assigned to the high school program, including Board and the
+ * Youth/HS Volunteer team, which must meet both sides (Seneca Valley treats them as employees under
  * the Public School Code) need clearances obtained for employment, plus the FBI fingerprint check.
  */
 export function needsEmploymentClearances(coach: Coach) {
-  return coach.pay === 'Paid' || coach.team === 'HS-JV' || coach.team === 'HS-Varsity' || coach.team === 'HS Volunteer'
+  return coach.pay === 'Paid' || isAssignedTo(coach, 'high-school')
 }
 
 /** Returns a reason the submission cannot count for this coach, or null if it is acceptable. */
