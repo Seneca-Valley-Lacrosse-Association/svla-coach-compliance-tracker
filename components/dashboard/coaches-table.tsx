@@ -6,7 +6,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight } from 'lucide-react'
 import type { CoachSummary } from '@/lib/compliance'
 import { useApp } from '@/lib/app-store'
-import { loginStateOf } from '@/lib/types'
+import { loginStateOf, PROGRAM_LABELS, TEAMS } from '@/lib/types'
 import { ComplianceStatusPill, PayBadge } from '@/components/status-pill'
 import { RequirementProgress } from '@/components/requirement-progress'
 import { LoginCell } from '@/components/coaches/login-status'
@@ -17,7 +17,20 @@ type SortState = { key: SortKey; dir: 'asc' | 'desc' } | null
 // Worst first when ascending, so the people who need attention rise to the top.
 const STATUS_RANK: Record<string, number> = { expired: 0, incomplete: 1, expiring: 2, cleared: 3 }
 const LOGIN_RANK = { none: 0, invited: 1, active: 2 }
-const TEAM_ORDER = ['8U', '10U', '12U', '14U', 'HS-JV', 'HS-Varsity', 'Board', 'Volunteer']
+const TEAM_ORDER: readonly string[] = TEAMS
+
+/** Youth and High School chips. Unassigned programs read as muted "not assigned", never as compliant. */
+function ProgramChips({ s }: { s: CoachSummary }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {s.programs.map((p) => {
+        const label = PROGRAM_LABELS[p.program]
+        const tone = !p.assigned ? 'border-slate-300 text-slate-500' : p.cleared ? 'border-emerald-600 bg-emerald-50 text-emerald-800' : 'border-red-600 bg-red-50 text-red-800'
+        return <span key={p.program} className={`rounded-full border px-2 py-0.5 text-xs font-medium ${tone}`}>{label}: {!p.assigned ? 'not assigned' : p.cleared ? 'YES' : `NO (${p.missing.length} missing)`}</span>
+      })}
+    </div>
+  )
+}
 
 function SortHeader({ label, sortKey, sort, onSort }: { label: string; sortKey: SortKey; sort: SortState; onSort: (k: SortKey) => void }) {
   const active = sort?.key === sortKey
@@ -111,6 +124,7 @@ export function CoachesTable({ summaries, showLogin = false }: { summaries: Coac
               {showLogin && <td className="px-4 py-3"><LoginCell coach={s.coach} /></td>}
               <td className="px-4 py-3">
                 <ComplianceStatusPill status={s.status} />
+                <div className="mt-1.5"><ProgramChips s={s} /></div>
               </td>
               <td className="px-4 py-3">
                 <RequirementProgress done={s.satisfiedCount} total={s.total} />
@@ -136,6 +150,7 @@ export function CoachesTable({ summaries, showLogin = false }: { summaries: Coac
                 <p className="text-sm text-muted-foreground">
                   {s.coach.team} · {s.coach.role} · {s.coach.pay}
                 </p>
+                <ProgramChips s={s} />
                 <RequirementProgress done={s.satisfiedCount} total={s.total} />
               </div>
               <ChevronRight className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />

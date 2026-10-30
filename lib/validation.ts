@@ -4,9 +4,9 @@ import { LEVELS, PAY_STATUSES, ROLES, TEAMS } from './types'
 export const coachSchema = z.object({
   name: z.string().trim().min(1).max(120), email: z.string().trim().toLowerCase().email().max(254),
   phone: z.string().trim().max(40), team: z.enum(TEAMS), role: z.enum(ROLES), pay: z.enum(PAY_STATUSES),
-  paResident10Years: z.boolean(),
+  paResident10Years: z.boolean(), alsoCoachesYouth: z.boolean().optional(),
 })
-export const selfRegisterSchema = coachSchema.omit({ email: true, pay: true })
+export const selfRegisterSchema = coachSchema.omit({ email: true, pay: true, alsoCoachesYouth: true })
 export const resourceSchema = z.object({
   help: z.string().trim().min(1).max(3000),
   helpUrl: z.string().trim().max(2000).refine(v => !v || /^https:\/\//.test(v) && URL.canParse(v), 'Use a valid HTTPS link.'),
@@ -14,7 +14,7 @@ export const resourceSchema = z.object({
 })
 const httpsUrl = z.string().trim().max(2000).refine(v => !v || /^https:\/\//.test(v) && URL.canParse(v), 'Use a valid HTTPS link.')
 export const reasonSchema = z.object({
-  level: z.enum(LEVELS), appliesToTeams: z.array(z.enum(TEAMS)).max(TEAMS.length), why: z.string().trim().max(1500),
+  level: z.enum(LEVELS), why: z.string().trim().max(1500),
   source: z.string().trim().max(300), sourceUrl: httpsUrl,
 })
 export const requirementSchema = resourceSchema.extend(reasonSchema.partial().shape).extend({

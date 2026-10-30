@@ -3,11 +3,12 @@
 import { useId, useState, type FormEvent } from 'react'
 import { Pencil } from 'lucide-react'
 import { useApp } from '@/lib/app-store'
-import { PAY_STATUSES, ROLES, TEAMS, type Coach } from '@/lib/types'
+import { PAY_STATUSES, ROLES, TEAMS, TEAM_PROGRAMS, type Coach } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { CoachProgramsField } from '@/components/coach-programs-field'
 
 const selectClass = 'h-10 w-full rounded-lg border border-input bg-background px-3 text-base text-foreground focus-visible:outline-2 focus-visible:outline-brand'
 
@@ -18,11 +19,11 @@ export function EditCoachDialog({ coach }: { coach: Coach }) {
   const [busy, setBusy] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [nameError, setNameError] = useState('')
-  const [draft, setDraft] = useState({ name: coach.name, phone: coach.phone, team: coach.team, role: coach.role, pay: coach.pay, paResident10Years: coach.paResident10Years })
+  const [draft, setDraft] = useState({ name: coach.name, phone: coach.phone, team: coach.team, role: coach.role, pay: coach.pay, paResident10Years: coach.paResident10Years, alsoCoachesYouth: !!coach.alsoCoachesYouth })
 
   function changeOpen(next: boolean) {
     setOpen(next)
-    if (next) setDraft({ name: coach.name, phone: coach.phone, team: coach.team, role: coach.role, pay: coach.pay, paResident10Years: coach.paResident10Years })
+    if (next) setDraft({ name: coach.name, phone: coach.phone, team: coach.team, role: coach.role, pay: coach.pay, paResident10Years: coach.paResident10Years, alsoCoachesYouth: !!coach.alsoCoachesYouth })
     setSaveError(''); setNameError('')
   }
 
@@ -47,7 +48,7 @@ export function EditCoachDialog({ coach }: { coach: Coach }) {
         <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
           <DialogHeader>
             <DialogTitle>Edit {coach.name}</DialogTitle>
-            <DialogDescription>Changing the team, role, or pay status updates which requirements apply to this coach. Email ({coach.email}) cannot be changed here because it links the coach to their account.</DialogDescription>
+            <DialogDescription>Changing the team, program, role, or pay status updates which requirements apply to this coach. Email ({coach.email}) cannot be changed here because it links the coach to their account.</DialogDescription>
           </DialogHeader>
           <FieldGroup>
             <Field data-invalid={!!nameError}>
@@ -62,7 +63,7 @@ export function EditCoachDialog({ coach }: { coach: Coach }) {
             <FieldGroup className="sm:flex-row">
               <Field>
                 <FieldLabel htmlFor={`${id}-team`}>Team</FieldLabel>
-                <select id={`${id}-team`} className={selectClass} value={draft.team} onChange={(e) => setDraft({ ...draft, team: e.target.value as Coach['team'] })}>
+                <select id={`${id}-team`} className={selectClass} value={draft.team} onChange={(e) => { const team = e.target.value as Coach['team']; setDraft({ ...draft, team, alsoCoachesYouth: TEAM_PROGRAMS[team].includes('youth') ? false : draft.alsoCoachesYouth }) }}>
                   {TEAMS.map((t) => <option key={t}>{t}</option>)}
                 </select>
               </Field>
@@ -73,6 +74,7 @@ export function EditCoachDialog({ coach }: { coach: Coach }) {
                 </select>
               </Field>
             </FieldGroup>
+            <CoachProgramsField team={draft.team} alsoCoachesYouth={draft.alsoCoachesYouth} onChange={(alsoCoachesYouth) => setDraft({ ...draft, alsoCoachesYouth })} />
             <Field>
               <FieldLabel htmlFor={`${id}-pay`}>Pay status</FieldLabel>
               <select id={`${id}-pay`} className={selectClass} value={draft.pay} onChange={(e) => { const pay = e.target.value as Coach['pay']; setDraft({ ...draft, pay, paResident10Years: pay === 'Paid' ? false : draft.paResident10Years }) }}>

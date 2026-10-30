@@ -3,16 +3,17 @@
 import { useId, useState, type FormEvent } from 'react'
 import { Plus } from 'lucide-react'
 import { useApp } from '@/lib/app-store'
-import { PAY_STATUSES, ROLES, TEAMS, type Coach } from '@/lib/types'
+import { PAY_STATUSES, ROLES, TEAMS, TEAM_PROGRAMS, type Coach } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { CoachProgramsField } from '@/components/coach-programs-field'
 
 const selectClass = 'h-10 w-full rounded-lg border border-input bg-background px-3 text-base text-foreground focus-visible:outline-2 focus-visible:outline-brand'
 const emptyCoach: Omit<Coach, 'id'> = {
   name: '', email: '', phone: '', team: '8U', role: 'Assistant Coach',
-  pay: 'Volunteer', paResident10Years: false,
+  pay: 'Volunteer', paResident10Years: false, alsoCoachesYouth: false,
 }
 
 export function AddCoachDialog({ onAdded, initialEmail = '', label = 'Add Coach', variant = 'default' }: { onAdded: (name: string) => void; initialEmail?: string; label?: string; variant?: 'default' | 'outline' }) {
@@ -86,7 +87,7 @@ export function AddCoachDialog({ onAdded, initialEmail = '', label = 'Add Coach'
             <FieldGroup className="sm:flex-row">
               <Field>
                 <FieldLabel htmlFor={`${id}-team`}>Team</FieldLabel>
-                <select id={`${id}-team`} className={selectClass} value={draft.team} onChange={(event) => setDraft({ ...draft, team: event.target.value as Coach['team'] })}>
+                <select id={`${id}-team`} className={selectClass} value={draft.team} onChange={(event) => { const team = event.target.value as Coach['team']; setDraft({ ...draft, team, alsoCoachesYouth: TEAM_PROGRAMS[team].includes('youth') ? false : draft.alsoCoachesYouth }) }}>
                   {TEAMS.map((team) => <option key={team}>{team}</option>)}
                 </select>
               </Field>
@@ -97,6 +98,7 @@ export function AddCoachDialog({ onAdded, initialEmail = '', label = 'Add Coach'
                 </select>
               </Field>
             </FieldGroup>
+            <CoachProgramsField team={draft.team} alsoCoachesYouth={!!draft.alsoCoachesYouth} onChange={(alsoCoachesYouth) => setDraft({ ...draft, alsoCoachesYouth })} />
             <Field>
               <FieldLabel htmlFor={`${id}-pay`}>Pay status</FieldLabel>
               <select id={`${id}-pay`} className={selectClass} value={draft.pay} onChange={(event) => { const pay = event.target.value as Coach['pay']; setDraft({ ...draft, pay, paResident10Years: pay === 'Paid' ? false : draft.paResident10Years }) }}>

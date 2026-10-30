@@ -1,5 +1,18 @@
-export const TEAMS = ['8U', '10U', '12U', '14U', 'HS-JV', 'HS-Varsity', 'Board', 'Volunteer'] as const
+export const TEAMS = ['8U', '10U', '12U', '14U', 'HS-JV', 'HS-Varsity', 'Board', 'Youth Volunteer', 'HS Volunteer', 'Youth/HS Volunteer'] as const
 export type Team = (typeof TEAMS)[number]
+
+/** The two requirement tracks. Every team rolls up to one or both of them. */
+export const PROGRAMS = ['youth', 'high-school'] as const
+export type Program = (typeof PROGRAMS)[number]
+export const PROGRAM_LABELS: Record<Program, string> = { youth: 'Youth', 'high-school': 'High School' }
+
+/** Which program(s) a team belongs to. Board and the combined volunteer team are in both. */
+export const TEAM_PROGRAMS: Record<Team, readonly Program[]> = {
+  '8U': ['youth'], '10U': ['youth'], '12U': ['youth'], '14U': ['youth'],
+  'HS-JV': ['high-school'], 'HS-Varsity': ['high-school'],
+  Board: ['youth', 'high-school'],
+  'Youth Volunteer': ['youth'], 'HS Volunteer': ['high-school'], 'Youth/HS Volunteer': ['youth', 'high-school'],
+}
 
 export const ROLES = [
   'Head Coach',
@@ -24,9 +37,9 @@ export type Validity =
 export const LEVELS = ['youth', 'high-school', 'both'] as const
 export type Level = (typeof LEVELS)[number]
 export const LEVEL_LABELS: Record<Level, string> = {
-  youth: 'Youth programs',
-  'high-school': 'High school programs',
-  both: 'Youth and high school',
+  youth: 'Youth',
+  'high-school': 'High School',
+  both: 'Youth and High School',
 }
 
 export interface Requirement {
@@ -44,10 +57,8 @@ export interface Requirement {
   help: string
   helpUrl: string
   helpLinkLabel: string
-  /** Youth, high school or both. Missing means both. */
+  /** Youth, high school or both. Missing means both. This alone decides which coaches get the requirement. */
   level?: Level
-  /** Limit the requirement to specific teams. Missing or empty means every team. */
-  appliesToTeams?: Team[]
   /** Plain-language reason shown in the "Why we require this" dropdown. */
   why?: string
   /** Where the requirement comes from, for example "PA law" or "PIAA". */
@@ -74,6 +85,8 @@ export interface Coach {
   email: string
   /** Has lived in Pennsylvania for the last 10 consecutive years. */
   paResident10Years: boolean
+  /** High school coach who is also assigned to the youth program, so the youth requirements apply to them too. */
+  alsoCoachesYouth?: boolean
   /** Board approval state. Missing means approved (demo data). */
   status?: CoachStatus
   /** Set when the board archived the record. Archived coaches keep all history but are inactive. */
