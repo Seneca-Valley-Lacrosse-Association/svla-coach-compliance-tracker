@@ -3,7 +3,7 @@
 import { useId, useState } from 'react'
 import { AlertTriangle, Upload } from 'lucide-react'
 import { useApp } from '@/lib/app-store'
-import { canUseAffidavit, needsEmploymentClearances, TODAY } from '@/lib/compliance'
+import { canUseAffidavit, TODAY } from '@/lib/compliance'
 import type { Coach, FbiMethod, ObtainedAs, Requirement } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import {
@@ -105,7 +105,7 @@ function UploadDialog({
   const [file, setFile] = useState<File | undefined>()
   const [busy, setBusy] = useState(false)
   const [completedOn, setCompletedOn] = useState(req.type === 'Signature' ? TODAY : '')
-  const [obtainedAs, setObtainedAs] = useState<ObtainedAs>(needsEmploymentClearances(coach) ? 'Employment' : 'Volunteer')
+  const [obtainedAs, setObtainedAs] = useState<ObtainedAs>(coach.pay === 'Paid' ? 'Employment' : 'Volunteer')
   const [fbiMethod, setFbiMethod] = useState<FbiMethod>('fingerprint')
   const [membershipNumber, setMembershipNumber] = useState('')
   const [membershipExpiry, setMembershipExpiry] = useState('')
@@ -203,10 +203,10 @@ function UploadDialog({
                   />
                 ))}
               </div>
-              {needsEmploymentClearances(coach) && obtainedAs === 'Volunteer' ? (
+              {coach.pay === 'Paid' && obtainedAs === 'Volunteer' ? (
                 <p className="flex gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
                   <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                  Clearances obtained as a volunteer do not transfer to paid or high school roles. This will not count for{' '}
+                  Clearances obtained as a volunteer do not transfer to paid roles. This will not count for{' '}
                   {coach.name}.
                 </p>
               ) : (

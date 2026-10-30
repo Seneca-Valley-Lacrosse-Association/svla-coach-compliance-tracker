@@ -127,10 +127,9 @@ export function needsEmploymentClearances(coach: Coach) {
 
 /** Returns a reason the submission cannot count for this coach, or null if it is acceptable. */
 export function eligibilityIssue(coach: Coach, req: Requirement, sub: Submission) {
-  if (req.tracksObtainedAs && needsEmploymentClearances(coach) && sub.obtainedAs === 'Volunteer') {
-    return coach.pay === 'Paid'
-      ? 'Obtained as a volunteer. Paid coaches need a clearance obtained for employment.'
-      : 'Obtained as a volunteer. High school coaches need clearances obtained for employment (Seneca Valley employee application).'
+  // Only paid coaches need clearances obtained for employment. High school coaches may use clearances obtained as a volunteer.
+  if (req.tracksObtainedAs && coach.pay === 'Paid' && sub.obtainedAs === 'Volunteer') {
+    return 'Obtained as a volunteer. Paid coaches need a clearance obtained for employment.'
   }
   if (req.allowsVolunteerAffidavit && sub.fbiMethod === 'affidavit') {
     if (needsEmploymentClearances(coach)) {
