@@ -121,7 +121,7 @@ export function applicableRequirements(requirements: Requirement[], coach: Coach
  * the Public School Code) need clearances obtained for employment, plus the FBI fingerprint check.
  */
 export function needsEmploymentClearances(coach: Coach) {
-  return coach.pay === 'Paid' || coach.team === 'HS-JV' || coach.team === 'HS-Varsity'
+  return coach.pay === 'Paid' || coach.team === 'HS-JV' || coach.team === 'HS-Varsity' || coach.team === 'HS Volunteer'
 }
 
 /** Returns a reason the submission cannot count for this coach, or null if it is acceptable. */

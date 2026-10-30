@@ -147,6 +147,7 @@ test('employment clearances apply to paid coaches and the HS teams, not Board or
   const on = team => ({ ...coaches[0], team, pay: 'Volunteer' })
   assert.equal(needsEmploymentClearances(on('HS-JV')), true)
   assert.equal(needsEmploymentClearances(on('HS-Varsity')), true)
+  assert.equal(needsEmploymentClearances(on('HS Volunteer')), true)
   assert.equal(needsEmploymentClearances(on('Board')), false)
   assert.equal(needsEmploymentClearances(on('Youth/HS Volunteer')), false)
   assert.equal(needsEmploymentClearances({ ...on('10U'), pay: 'Paid' }), true)
