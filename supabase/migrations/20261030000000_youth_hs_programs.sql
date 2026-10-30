@@ -28,7 +28,6 @@ set definition = (r.definition - 'appliesToTeams') || jsonb_build_object('level'
     when 'concussion' then 'high-school'
     when 'sudden-cardiac' then 'high-school'
     when 'piaa-rules-meeting' then 'high-school'
-    when 'usal-bronze' then 'youth'
     else coalesce(nullif(r.definition->>'level', ''), 'both')
   end);
 
