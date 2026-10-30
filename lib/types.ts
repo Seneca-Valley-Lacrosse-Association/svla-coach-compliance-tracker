@@ -1,4 +1,4 @@
-export const TEAMS = ['8U', '10U', '12U', '14U', 'HS-JV', 'HS-Varsity', 'Board', 'Youth Volunteer', 'HS Volunteer', 'Youth/HS Volunteer'] as const
+export const TEAMS = ['8U', '10U', '12U', '14U', 'HS-JV', 'HS-Varsity', 'Board-Youth', 'Board-HS', 'Board-Youth/HS', 'Volunteer-Youth', 'Volunteer-HS', 'Volunteer-Youth/HS'] as const
 export type Team = (typeof TEAMS)[number]
 
 /** The two requirement tracks. Every team rolls up to one or both of them. */
@@ -6,12 +6,12 @@ export const PROGRAMS = ['youth', 'high-school'] as const
 export type Program = (typeof PROGRAMS)[number]
 export const PROGRAM_LABELS: Record<Program, string> = { youth: 'Youth', 'high-school': 'High School' }
 
-/** Which program(s) a team belongs to. Board and the combined volunteer team are in both. */
+/** Which program(s) a team belongs to. The Youth/HS Board and Volunteer teams are in both. */
 export const TEAM_PROGRAMS: Record<Team, readonly Program[]> = {
   '8U': ['youth'], '10U': ['youth'], '12U': ['youth'], '14U': ['youth'],
   'HS-JV': ['high-school'], 'HS-Varsity': ['high-school'],
-  Board: ['youth', 'high-school'],
-  'Youth Volunteer': ['youth'], 'HS Volunteer': ['high-school'], 'Youth/HS Volunteer': ['youth', 'high-school'],
+  'Board-Youth': ['youth'], 'Board-HS': ['high-school'], 'Board-Youth/HS': ['youth', 'high-school'],
+  'Volunteer-Youth': ['youth'], 'Volunteer-HS': ['high-school'], 'Volunteer-Youth/HS': ['youth', 'high-school'],
 }
 
 export const ROLES = [
