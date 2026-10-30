@@ -27,11 +27,11 @@ export async function GET() {
       }
     }
     const [coachRows, requirementRows, submissionRows] = await Promise.all([
-      allRows('coaches', 'id,name,email,phone,team,role,pay,pa_resident_10_years,status,archived_at', 'id'),
+      allRows('coaches', 'id,name,email,phone,team,role,pay,pa_resident_10_years,also_coaches_youth,status,archived_at', 'id'),
       allRows('requirements', 'id,sort_order,definition', 'sort_order'),
       allRows('submissions', 'id,coach_id,requirement_id,status,uploaded_at,completed_on,expires_on,file_path,file_name,details,review_comment,reviewed_on,edit_log', 'id'),
     ])
-    const coaches = coachRows.map(r => ({ id: r.id, name: r.name, email: r.email, phone: r.phone, team: r.team, role: r.role, pay: r.pay, paResident10Years: r.pa_resident_10_years, status: r.status, archivedAt: r.archived_at })) as Coach[]
+    const coaches = coachRows.map(r => ({ id: r.id, name: r.name, email: r.email, phone: r.phone, team: r.team, role: r.role, pay: r.pay, paResident10Years: r.pa_resident_10_years, alsoCoachesYouth: r.also_coaches_youth ?? false, status: r.status, archivedAt: r.archived_at })) as Coach[]
     const requirements = requirementRows.map(r => ({ ...r.definition, id: r.id, order: r.sort_order })) as Requirement[]
     const submissions = submissionRows.map(r => ({ ...r.details, id: r.id, coachId: r.coach_id, requirementId: r.requirement_id, status: r.status, uploadedOn: r.uploaded_at, completedOn: r.completed_on, expiresOn: r.expires_on, filePath: r.file_path ?? undefined, fileName: r.file_name ?? undefined, reviewComment: r.review_comment ?? undefined, reviewedOn: r.reviewed_on ?? undefined, editLog: Array.isArray(r.edit_log) && r.edit_log.length ? r.edit_log : undefined })) as Submission[]
     // "In progress" markers are a nice-to-have: if the lookup fails, the rest of the app still loads.
@@ -103,8 +103,8 @@ export async function POST(request: Request) {
     let extra: Record<string, unknown> = {}
     switch (command.action) {
       case 'addCoach': {
-        const { paResident10Years, ...coach } = command.input
-        result = await db.from('coaches').insert({ ...coach, pa_resident_10_years: paResident10Years }).select('id').single()
+        const { paResident10Years, alsoCoachesYouth, ...coach } = command.input
+        result = await db.from('coaches').insert({ ...coach, pa_resident_10_years: paResident10Years, also_coaches_youth: alsoCoachesYouth ?? false }).select('id').single()
         break
       }
       case 'deleteCoach': {
@@ -201,8 +201,8 @@ export async function POST(request: Request) {
         break
       }
       case 'editCoach': {
-        const { paResident10Years, ...coach } = command.input
-        result = await db.from('coaches').update({ ...coach, pa_resident_10_years: paResident10Years }).eq('id', command.id).select('id').single()
+        const { paResident10Years, alsoCoachesYouth, ...coach } = command.input
+        result = await db.from('coaches').update({ ...coach, pa_resident_10_years: paResident10Years, also_coaches_youth: alsoCoachesYouth ?? false }).eq('id', command.id).select('id').single()
         break
       }
       case 'addRequirement':
@@ -214,7 +214,9 @@ export async function POST(request: Request) {
         const existing = await db.from('requirements').select('definition').eq('id', command.id).single()
         if (existing.error) return respond({ error: 'Requirement not found.' }, 404)
         const changes = command.action === 'setRequirementActive' ? { active: command.active } : command.action === 'setRequirementReview' ? { requiresReview: command.requiresReview } : command.input
-        result = await db.from('requirements').update({ definition: { ...existing.data.definition, ...changes } }).eq('id', command.id).eq('definition', JSON.stringify(existing.data.definition)).select('id').single()
+        // Who a requirement applies to is decided by its level alone, so drop any leftover per-team list.
+        const { appliesToTeams: _legacyTeams, ...kept } = existing.data.definition as Record<string, unknown>
+        result = await db.from('requirements').update({ definition: { ...kept, ...changes } }).eq('id', command.id).eq('definition', JSON.stringify(existing.data.definition)).select('id').single()
         break
       }
       case 'submitUpload': {

@@ -60,26 +60,42 @@ test('high school coaches need employment clearances and cannot use the voluntee
   assert.equal(eligibilityIssue(youthVolunteer, req, { obtainedAs: 'Volunteer', fbiMethod: 'fingerprint' }), null)
   assert.equal(eligibilityIssue(hsVolunteer, req, { obtainedAs: 'Employment', fbiMethod: 'fingerprint' }), null)
 })
-test('teams limit where a requirement applies', () => {
+test('teams roll up to youth, high school or both', () => {
+  const { coachPrograms } = require('../lib/compliance.ts')
+  const on = (team, extra = {}) => ({ ...coaches[0], team, ...extra })
+  assert.deepEqual(coachPrograms(on('12U')), ['youth'])
+  assert.deepEqual(coachPrograms(on('HS-JV')), ['high-school'])
+  assert.deepEqual(coachPrograms(on('Board')), ['youth', 'high-school'])
+  assert.deepEqual(coachPrograms(on('Youth/HS Volunteer')), ['youth', 'high-school'])
+  assert.deepEqual(coachPrograms(on('Youth Volunteer')), ['youth'])
+  assert.deepEqual(coachPrograms(on('HS Volunteer')), ['high-school'])
+  assert.deepEqual(coachPrograms(on('HS-Varsity', { alsoCoachesYouth: true })), ['youth', 'high-school'])
+})
+test('a program level decides which coaches get a requirement', () => {
   const base = requirements.find(r => r.id === 'handbook')
-  const coachOn = team => ({ ...coaches[0], team, role: 'Head Coach', pay: 'Volunteer' })
-  const only8u10u = { ...base, id: 'small-teams', appliesToTeams: ['8U', '10U'] }
-  const ids = team => applicableRequirements([only8u10u], coachOn(team)).map(r => r.id)
-  assert.deepEqual(ids('10U'), ['small-teams'])
-  assert.deepEqual(ids('14U'), [])
-  assert.deepEqual(ids('HS-Varsity'), [])
-  assert.deepEqual(applicableRequirements([{ ...base, appliesToTeams: [] }], coachOn('14U')).length, 1)
+  const hsOnly = { ...base, id: 'hs-only', level: 'high-school' }
+  const coachOn = (team, extra = {}) => ({ ...coaches[0], team, role: 'Head Coach', pay: 'Volunteer', ...extra })
+  const ids = c => applicableRequirements([hsOnly], c).map(r => r.id)
+  assert.deepEqual(ids(coachOn('Board')), ['hs-only'])
+  assert.deepEqual(ids(coachOn('HS Volunteer')), ['hs-only'])
+  assert.deepEqual(ids(coachOn('10U')), [])
+  assert.deepEqual(ids(coachOn('10U', { alsoCoachesYouth: true })), [])
+})
+test('each coach gets a YES/NO box per program and unassigned programs are never cleared', () => {
+  const { scopeSummary, readyToFloat } = require('../lib/compliance.ts')
+  const youthCoach = { ...coaches[0], team: '10U' }
+  const s = summarizeCoach(youthCoach, requirements, submissions)
+  assert.deepEqual(s.programs.map(p => p.program), ['youth', 'high-school'])
+  assert.equal(s.programs[1].assigned, false)
+  assert.equal(s.programs[1].cleared, false)
+  assert.equal(scopeSummary(s, 'high-school'), null)
+  assert.ok(scopeSummary(s, 'youth'))
+  assert.equal(s.programs[0].cleared, s.programs[0].assigned && s.programs[0].meetsRequirements)
+  const hs = summarizeCoach({ ...coaches[0], team: 'HS-JV' }, requirements, submissions)
+  const youth = hs.programs[0]
+  assert.equal(readyToFloat([hs]).length, youth.meetsRequirements ? 1 : 0)
 })
 
-test('an explicit team list overrides the program level', () => {
-  const base = requirements.find(r => r.id === 'handbook')
-  const coachOn = team => ({ ...coaches[0], team, role: 'Head Coach', pay: 'Volunteer' })
-  const hsPlusBoard = { ...base, id: 'hs-board', level: 'high-school', appliesToTeams: ['HS-JV', 'HS-Varsity', 'Board'] }
-  const ids = team => applicableRequirements([hsPlusBoard], coachOn(team)).map(r => r.id)
-  assert.deepEqual(ids('Board'), ['hs-board'])
-  assert.deepEqual(ids('HS-JV'), ['hs-board'])
-  assert.deepEqual(ids('10U'), [])
-})
 test('a requirement can be renamed through updateResource', () => {
   const input = { help: 'Read this', helpUrl: '', helpLinkLabel: '', name: 'New name' }
   assert.equal(mutationSchema.safeParse({ action: 'updateResource', id: 'handbook', input }).success, true)

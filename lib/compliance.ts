@@ -1,7 +1,9 @@
+import { PROGRAMS, TEAM_PROGRAMS } from './types'
 import type {
   Coach,
   ComplianceStatus,
   ItemStatus,
+  Program,
   Progress,
   Requirement,
   Submission,
@@ -74,34 +76,38 @@ export function validityLabel(validity: Validity) {
   }
 }
 
-/** HS-JV and HS-Varsity are high school programs. Every other team, including Board and Volunteer, counts as youth (SVLA is a youth organization). */
-export function coachLevel(coach: Coach): 'youth' | 'high-school' {
-  return coach.team.startsWith('HS-') ? 'high-school' : 'youth'
-}
-
-/** A requirement with no level set applies to both youth and high school. */
-export function appliesToLevel(req: Requirement, coach: Coach) {
-  const level = req.level ?? 'both'
-  return level === 'both' || level === coachLevel(coach)
-}
-
-/** A requirement with no teams listed applies to every team. */
-export function appliesToTeam(req: Requirement, coach: Coach) {
-  return !req.appliesToTeams?.length || req.appliesToTeams.includes(coach.team)
-}
-
 /**
- * An explicit team list is the more specific setting, so it decides on its own. Program (level) is only the
- * broad default for requirements with no team list. Applying both made a requirement tagged "high school"
- * skip Board and Volunteer coaches even when those teams were ticked.
+ * The program(s) a coach is assigned to, derived from their team. Board and the combined volunteer team are in both.
+ * A high school coach flagged "also coaches youth" is in both as well.
  */
+export function coachPrograms(coach: Coach): Program[] {
+  const assigned = new Set<Program>(TEAM_PROGRAMS[coach.team] ?? ['youth'])
+  if (coach.alsoCoachesYouth) assigned.add('youth')
+  return PROGRAMS.filter((p) => assigned.has(p))
+}
+
+export function isAssignedTo(coach: Coach, program: Program) {
+  return coachPrograms(coach).includes(program)
+}
+
+/** A requirement with no level set applies to both programs. */
+export function requirementInProgram(req: Requirement, program: Program) {
+  const level = req.level ?? 'both'
+  return level === 'both' || level === program
+}
+
+function matchesPeople(req: Requirement, coach: Coach) {
+  return req.appliesToRoles.includes(coach.role) && req.appliesToPay.includes(coach.pay)
+}
+
+/** Does this requirement apply to the coach for the given program? Ignores whether the coach is assigned to it. */
+export function appliesToInProgram(req: Requirement, coach: Coach, program: Program) {
+  return req.active && req.required && matchesPeople(req, coach) && requirementInProgram(req, program)
+}
+
+/** Applies to the coach through at least one program they are assigned to. */
 export function appliesTo(req: Requirement, coach: Coach) {
-  const hasTeamList = !!req.appliesToTeams?.length
-  return (
-    req.appliesToRoles.includes(coach.role) &&
-    req.appliesToPay.includes(coach.pay) &&
-    (hasTeamList ? appliesToTeam(req, coach) : appliesToLevel(req, coach))
-  )
+  return matchesPeople(req, coach) && coachPrograms(coach).some((p) => requirementInProgram(req, p))
 }
 
 export function applicableRequirements(requirements: Requirement[], coach: Coach) {
@@ -115,7 +121,7 @@ export function applicableRequirements(requirements: Requirement[], coach: Coach
  * the Public School Code) need clearances obtained for employment, plus the FBI fingerprint check.
  */
 export function needsEmploymentClearances(coach: Coach) {
-  return coach.pay === 'Paid' || coachLevel(coach) === 'high-school'
+  return coach.pay === 'Paid' || isAssignedTo(coach, 'high-school')
 }
 
 /** Returns a reason the submission cannot count for this coach, or null if it is acceptable. */
@@ -215,8 +221,31 @@ export function checklistItem(
   }
 }
 
+/**
+ * One program's view of a coach. Three states for the badge:
+ * - assigned and every requirement met: YES (cleared)
+ * - assigned with items missing: NO, with the missing list
+ * - not assigned: NO, labelled "not assigned". It is never tracked on the dashboard.
+ * `items` is always computed against that program's requirements, so an unassigned coach can see what they would still need.
+ */
+export interface ProgramSummary {
+  program: Program
+  assigned: boolean
+  items: ChecklistItem[]
+  satisfiedCount: number
+  total: number
+  /** Every requirement for this program is met, whether or not the coach is assigned to it. */
+  meetsRequirements: boolean
+  /** Assigned to the program and meets every requirement. This is the YES on the badge. */
+  cleared: boolean
+  missing: ChecklistItem[]
+  hasExpiring: boolean
+}
+
 export interface CoachSummary {
   coach: Coach
+  /** Youth and high school, always both, in that order. */
+  programs: ProgramSummary[]
   items: ChecklistItem[]
   satisfiedCount: number
   total: number
@@ -240,6 +269,27 @@ export function summarizeCoach(
   const items = applicableRequirements(requirements, coach).map((r) =>
     checklistItem(coach, r, submissions, progress),
   )
+  const byId = new Map(items.map((i) => [i.requirement.id, i]))
+  const programs: ProgramSummary[] = PROGRAMS.map((program) => {
+    const programItems = requirements
+      .filter((r) => appliesToInProgram(r, coach, program))
+      .sort((a, b) => a.order - b.order)
+      .map((r) => byId.get(r.id) ?? checklistItem(coach, r, submissions, progress))
+    const satisfied = programItems.filter((i) => i.satisfied).length
+    const meets = programItems.length > 0 && satisfied === programItems.length
+    const assigned = isAssignedTo(coach, program)
+    return {
+      program,
+      assigned,
+      items: programItems,
+      satisfiedCount: satisfied,
+      total: programItems.length,
+      meetsRequirements: meets,
+      cleared: assigned && meets,
+      missing: programItems.filter((i) => !i.satisfied),
+      hasExpiring: programItems.some((i) => i.satisfied && i.daysUntilExpiry !== null && i.daysUntilExpiry <= EXPIRING_WINDOW_DAYS),
+    }
+  })
   const satisfiedCount = items.filter((i) => i.satisfied).length
   const cleared = items.length > 0 && satisfiedCount === items.length
   const hasExpired = items.some(
@@ -256,6 +306,7 @@ export function summarizeCoach(
 
   return {
     coach,
+    programs,
     items,
     satisfiedCount,
     total: items.length,
@@ -268,4 +319,38 @@ export function summarizeCoach(
     hasInProgress: inProgress.length > 0,
     missing: items.filter((i) => !i.satisfied),
   }
+}
+
+/**
+ * View of a summary limited to one program, for the dashboard program filter.
+ * Returns null when the coach is not assigned to that program, so they are not tracked there.
+ */
+export function scopeSummary(s: CoachSummary, program: Program): CoachSummary | null {
+  const p = s.programs.find((x) => x.program === program)
+  if (!p || !p.assigned) return null
+  const hasExpired = p.items.some((i) => !i.satisfied && i.approved && i.approved.expiresOn && daysBetween(TODAY, i.approved.expiresOn) < 0)
+  const inProgress = p.items.filter((i) => i.progress && !i.satisfied && i.latest?.status !== 'pending')
+  const status: ComplianceStatus = hasExpired ? 'expired' : !p.meetsRequirements ? 'incomplete' : p.hasExpiring ? 'expiring' : 'cleared'
+  return {
+    ...s,
+    items: p.items,
+    satisfiedCount: p.satisfiedCount,
+    total: p.total,
+    cleared: p.meetsRequirements,
+    status,
+    hasExpiring: p.hasExpiring,
+    hasExpired,
+    hasPending: p.items.some((i) => i.latest?.status === 'pending'),
+    inProgress,
+    hasInProgress: inProgress.length > 0,
+    missing: p.missing,
+  }
+}
+
+/** High school coaches who are not assigned to youth but already meet every youth requirement. */
+export function readyToFloat(summaries: CoachSummary[]): CoachSummary[] {
+  return summaries.filter((s) => {
+    const youth = s.programs.find((p) => p.program === 'youth')
+    return !!youth && !youth.assigned && youth.meetsRequirements && isAssignedTo(s.coach, 'high-school')
+  })
 }
