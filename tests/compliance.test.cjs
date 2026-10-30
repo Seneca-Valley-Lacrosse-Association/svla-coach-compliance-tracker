@@ -141,3 +141,13 @@ test('in-progress mutations validate ids, dates and note length', () => {
   assert.equal(mutationSchema.safeParse({ ...ok, input: { ...ok.input, note: 'x'.repeat(301) } }).success, false)
   assert.equal(mutationSchema.safeParse({ action: 'clearInProgress', coachId: id, requirementId: 'pa-child-abuse' }).success, true)
 })
+
+test('employment clearances apply to paid coaches and the HS teams, not Board or combined volunteers', () => {
+  const { needsEmploymentClearances } = require('../lib/compliance.ts')
+  const on = team => ({ ...coaches[0], team, pay: 'Volunteer' })
+  assert.equal(needsEmploymentClearances(on('HS-JV')), true)
+  assert.equal(needsEmploymentClearances(on('HS-Varsity')), true)
+  assert.equal(needsEmploymentClearances(on('Board')), false)
+  assert.equal(needsEmploymentClearances(on('Youth/HS Volunteer')), false)
+  assert.equal(needsEmploymentClearances({ ...on('10U'), pay: 'Paid' }), true)
+})
