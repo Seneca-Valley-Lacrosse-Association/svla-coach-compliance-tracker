@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 // security scanners that pre-open links cannot use up the one-time token, and the link works in any browser.
 const TYPES = ['recovery', 'email', 'signup', 'invite'] as const
 type LinkType = (typeof TYPES)[number]
-const NEXT_BY_TYPE: Record<LinkType, string> = { recovery: '/auth/reset', email: '/', signup: '/', invite: '/auth/reset' }
+const NEXT_BY_TYPE: Record<LinkType, string> = { recovery: '/auth/reset', email: '/', signup: '/', invite: '/auth/reset?invite=1' }
 const COPY: Record<LinkType, { title: string; text: string; button: string }> = {
   recovery: { title: 'Reset your password', text: 'Select the button to continue and choose a new password.', button: 'Continue' },
   email: { title: 'Confirm your email', text: 'Select the button to confirm your email address and sign in.', button: 'Confirm email' },

@@ -298,6 +298,7 @@ function WorkspaceShell({ children }: { children: React.ReactNode }) {
         </main>
         <footer className="border-t px-4 py-4 text-sm text-muted-foreground lg:px-8">
           Still stuck? Email <a className="font-medium text-primary underline underline-offset-4" href={`mailto:${IT_EMAIL}`}>{IT_EMAIL}</a>
+          {' · '}<a className="font-medium text-primary underline underline-offset-4" href="https://www.svlacrosse.org/privacy-policy-svla-compliance-tracker/" target="_blank" rel="noopener">Privacy policy</a>
         </footer>
       </div>
     </div>
