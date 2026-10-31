@@ -16,6 +16,7 @@ const httpsUrl = z.string().trim().max(2000).refine(v => !v || /^https:\/\//.tes
 export const reasonSchema = z.object({
   level: z.enum(LEVELS), why: z.string().trim().max(1500),
   source: z.string().trim().max(300), sourceUrl: httpsUrl,
+  offSeason: z.boolean(),
   sources: z.array(z.object({ label: z.string().trim().max(150), url: httpsUrl.refine(v => !!v, 'Enter the link.') })).max(10),
 })
 export const requirementSchema = resourceSchema.extend(reasonSchema.partial().shape).extend({

@@ -8,17 +8,19 @@ import { SummaryTiles, tileFilters, tileLabels, type TileFilter } from './summar
 import { CoachesTable } from './coaches-table'
 import { TeamsOverview } from './teams-overview'
 import { InProgressList } from './in-progress-list'
-import { formatDate, readyToFloat, scopeSummary, TODAY } from '@/lib/compliance'
-import { PROGRAMS, PROGRAM_LABELS, type Program } from '@/lib/types'
+import { formatDate, readyToFloat, scopeOffSeason, scopeSummary, TODAY } from '@/lib/compliance'
+import { OFF_SEASON_SHORT, PROGRAMS, PROGRAM_LABELS, type ViewScope } from '@/lib/types'
 import Link from '@/components/app-link'
 
 const filterLabels: Record<TileFilter, string> = { all: 'All coaches', ...tileLabels }
 
 export function DashboardView() {
   const { summaries: allSummaries, awaitingCoaches, viewMode } = useApp()
-  const [program, setProgram] = useState<Program | 'all'>('all')
-  // A coach is only tracked in the program(s) they are assigned to.
-  const summaries = program === 'all' ? allSummaries : allSummaries.flatMap((s) => scopeSummary(s, program) ?? [])
+  const [program, setProgram] = useState<ViewScope>('all')
+  // A coach is only tracked in the program(s) they are assigned to. Camps and off-season covers every coach.
+  const summaries = program === 'all' ? allSummaries
+    : program === 'off-season' ? allSummaries.map(scopeOffSeason)
+    : allSummaries.flatMap((s) => scopeSummary(s, program) ?? [])
   const floaters = readyToFloat(allSummaries)
   const waiting = viewMode === 'board' ? awaitingCoaches.filter(c => c.status === 'pending').length : 0
   const [filter, setFilter] = useState<TileFilter>('all')
@@ -39,17 +41,17 @@ export function DashboardView() {
 
         <TabsContent value="coaches" className="flex flex-col gap-6">
           <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Program">
-            {(['all', ...PROGRAMS] as const).map((p) => (
+            {(['all', ...PROGRAMS, 'off-season'] as const).map((p) => (
               <button key={p} type="button" aria-pressed={program === p} onClick={() => { setProgram(p); setFilter('all') }}
                 className={`rounded-full border px-4 py-1.5 text-sm font-medium ${program === p ? 'border-brand bg-brand text-white' : 'bg-card hover:bg-secondary/60'}`}>
-                {p === 'all' ? 'All programs' : PROGRAM_LABELS[p]}
+                {p === 'all' ? 'All programs' : p === 'off-season' ? OFF_SEASON_SHORT : `${PROGRAM_LABELS[p]} Spring`}
               </button>
             ))}
-            <span className="text-sm text-muted-foreground">Coaches only count in the program(s) they are assigned to.</span>
+            <span className="text-sm text-muted-foreground">Coaches only count in the spring program(s) they are assigned to. Every coach counts for camps and off-season.</span>
           </div>
           <SummaryTiles summaries={summaries} active={filter} onChange={setFilter} program={program} />
           {(filter === 'all' || filter === 'in-progress') && <InProgressList summaries={summaries} />}
-          {floaters.length > 0 && (
+          {floaters.length > 0 && program !== 'off-season' && program !== 'high-school' && (
             <section className="rounded-xl border bg-card p-4" aria-label="Ready to float">
               <h2 className="text-lg font-semibold text-navy">Ready to float to youth ({floaters.length})</h2>
               <p className="text-sm text-muted-foreground">High school coaches who already meet every youth requirement.</p>

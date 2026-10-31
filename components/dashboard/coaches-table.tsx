@@ -6,7 +6,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight } from 'lucide-react'
 import type { CoachSummary } from '@/lib/compliance'
 import { useApp } from '@/lib/app-store'
-import { loginStateOf, PROGRAM_LABELS, TEAMS } from '@/lib/types'
+import { loginStateOf, OFF_SEASON_SHORT, PROGRAM_LABELS, TEAMS } from '@/lib/types'
 import { ComplianceStatusPill, PayBadge } from '@/components/status-pill'
 import { ProgramProgress } from '@/components/program-progress'
 import { LoginCell } from '@/components/coaches/login-status'
@@ -19,7 +19,7 @@ const STATUS_RANK: Record<string, number> = { expired: 0, incomplete: 1, expirin
 const LOGIN_RANK = { none: 0, invited: 1, active: 2 }
 const TEAM_ORDER: readonly string[] = TEAMS
 
-/** Youth and High School chips. Unassigned programs read as muted "not assigned", never as compliant. */
+/** Youth, High School and Camps & Off-Season chips. Unassigned programs read as muted "not assigned", never as compliant. */
 function ProgramChips({ s }: { s: CoachSummary }) {
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -28,6 +28,7 @@ function ProgramChips({ s }: { s: CoachSummary }) {
         const tone = !p.assigned ? 'border-slate-300 text-slate-500' : p.cleared ? 'border-emerald-600 bg-emerald-50 text-emerald-800' : 'border-red-600 bg-red-50 text-red-800'
         return <span key={p.program} className={`rounded-full border px-2 py-0.5 text-xs font-medium ${tone}`}>{label}: {!p.assigned ? 'not assigned' : p.cleared ? 'YES' : `NO (${p.missing.length} missing)`}</span>
       })}
+      <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${s.offSeason.cleared ? 'border-emerald-600 bg-emerald-50 text-emerald-800' : 'border-red-600 bg-red-50 text-red-800'}`}>{OFF_SEASON_SHORT}: {s.offSeason.cleared ? 'YES' : `NO (${s.offSeason.missing.length} missing)`}</span>
     </div>
   )
 }

@@ -24,7 +24,7 @@ export function CoachSelfView({ previewSummary }: { previewSummary?: CoachSummar
   const remaining = total - satisfiedCount
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
+    <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <SurveyPrompt />
       <section className="flex flex-col gap-5 rounded-xl border bg-card p-5 shadow-xs">
         <div>
@@ -42,7 +42,7 @@ export function CoachSelfView({ previewSummary }: { previewSummary?: CoachSummar
               ? "You're all set. Thank you!"
               : `${satisfiedCount} of ${total} done. ${remaining} ${remaining === 1 ? 'step' : 'steps'} left.`}
           </p>
-          <ProgramProgress summary={summary} />
+          <ProgramProgress summary={summary} includeOffSeason />
         </div>
         <ClearedBadge summary={summary} />
         {!readOnly && <div><PrintBadgeDialog summary={summary} label="Print my badge" /></div>}

@@ -1,4 +1,4 @@
-import { PROGRAMS, PROGRAM_LABELS, TEAM_PROGRAMS } from './types'
+import { OFF_SEASON_DEFAULT_IDS, PROGRAMS, PROGRAM_LABELS, TEAM_PROGRAMS } from './types'
 import type {
   Coach,
   ComplianceStatus,
@@ -208,6 +208,60 @@ export function canUseAffidavit(coach: Coach) {
   return { allowed: true, reason: null }
 }
 
+/**
+ * The FBI documents a coach is meant to get for one program, based on their profile. This is narrower than what
+ * the tracker accepts (a volunteer's stricter DHS employee check still counts), and drives the upload choices.
+ */
+export function intendedFbiChecks(coach: Coach, program: Program): FbiCheck[] {
+  if (program === 'high-school') return ['school-employee']
+  if (coach.pay === 'Paid') return ['dhs-employee']
+  return coach.paResident10Years ? ['dhs-volunteer', 'affidavit'] : ['dhs-volunteer']
+}
+
+export type FbiCodeState = 'on-file' | 'expiring' | 'pending' | 'needed'
+export interface FbiCodeLine {
+  program: Program
+  /** The service code to give IdentoGO for this program. */
+  code: string
+  /** The code's plain name, e.g. "PA DHS volunteer". */
+  codeName: string
+  /** A no-fingerprint alternative, when the coach qualifies. */
+  alternative: string | null
+  state: FbiCodeState
+  expiresOn: string | null
+}
+
+const FBI_CODE: Record<Exclude<FbiCheck, 'affidavit'>, { code: string; name: string }> = {
+  'dhs-volunteer': { code: '1KG6ZJ', name: 'PA DHS volunteer' },
+  'dhs-employee': { code: '1KG756', name: 'PA DHS employee' },
+  'school-employee': { code: '1KG6XN', name: 'Seneca Valley school employee' },
+}
+
+/**
+ * One line per program the coach is assigned to: the code they need and whether it is on file.
+ * Shown on the FBI checklist row so coaches know which code to register with before they go.
+ */
+export function fbiCodeLines(coach: Coach, req: Requirement, submissions: Submission[], progress: Progress[] = []): FbiCodeLine[] {
+  const subs = submissions.filter((s) => s.coachId === coach.id && s.requirementId === req.id)
+  return fbiPrograms(coach).map((program) => {
+    const intended = intendedFbiChecks(coach, program)
+    const fingerprint = intended.find((c) => c !== 'affidavit') as Exclude<FbiCheck, 'affidavit'>
+    const item = checklistItem(coach, req, submissions, progress, program)
+    const pending = subs.some((s) => s.status === 'pending' && !fbiIssue(coach, program, s))
+    const state: FbiCodeState = item.satisfied
+      ? item.status === 'expiring' ? 'expiring' : 'on-file'
+      : pending ? 'pending' : 'needed'
+    return {
+      program,
+      code: FBI_CODE[fingerprint].code,
+      codeName: FBI_CODE[fingerprint].name,
+      alternative: intended.includes('affidavit') ? 'or the Volunteer Disclosure Statement (no fingerprints)' : null,
+      state,
+      expiresOn: item.satisfied ? item.approved?.expiresOn ?? null : null,
+    }
+  })
+}
+
 /** The FBI documents a fully cleared coach would have on file: one per program, deduplicated. Used for demo data. */
 export function expectedFbiChecks(coach: Coach): FbiCheck[] {
   const picks = fbiPrograms(coach).map((p) => acceptedFbiChecks(coach, p)[0])
@@ -225,7 +279,7 @@ export function fbiNeeds(coach: Coach): { program: Program; text: string }[] {
           ? 'PA DHS volunteer fingerprint check (code 1KG6ZJ), or the Volunteer Disclosure Statement.'
           : 'PA DHS volunteer fingerprint check (code 1KG6ZJ).'
     } else {
-      text = 'Seneca Valley school employee fingerprint check (code 1KG6XN), paid or volunteer. No affidavit.'
+      text = 'Seneca Valley school employee fingerprint check (code 1KG6XN). Every high school coach uses this code, SVLA paid or volunteer. No affidavit.'
     }
     return { program, text }
   })
@@ -352,10 +406,31 @@ export interface ProgramSummary {
   hasExpiring: boolean
 }
 
+/**
+ * The third box: cleared for SVLA camps, clinics and off-season tournaments. Applies to every coach (nobody is
+ * "assigned" to it), uses only the requirements marked for it, and judges the FBI check by the state law that
+ * governs SVLA's own programs, the same rule as youth.
+ */
+export interface OffSeasonSummary {
+  items: ChecklistItem[]
+  satisfiedCount: number
+  total: number
+  cleared: boolean
+  missing: ChecklistItem[]
+  hasExpiring: boolean
+}
+
+/** Does this requirement count toward the camps, clinics and off-season box? */
+export function requirementInOffSeason(req: Requirement) {
+  return req.offSeason ?? OFF_SEASON_DEFAULT_IDS.includes(req.id)
+}
+
 export interface CoachSummary {
   coach: Coach
-  /** Youth and high school, always both, in that order. */
+  /** Youth and high school, always both, in that order. These are the spring-season boxes. */
   programs: ProgramSummary[]
+  /** Camps, clinics and off-season tournaments. */
+  offSeason: OffSeasonSummary
   items: ChecklistItem[]
   satisfiedCount: number
   total: number
@@ -402,6 +477,21 @@ export function summarizeCoach(
       hasExpiring: programItems.some((i) => i.satisfied && i.daysUntilExpiry !== null && i.daysUntilExpiry <= EXPIRING_WINDOW_DAYS),
     }
   })
+  const offItems = requirements
+    .filter((r) => r.active && matchesPeople(r, coach) && requirementInOffSeason(r))
+    .sort((a, b) => a.order - b.order)
+    .map((r) => isFbiRequirement(r)
+      ? checklistItem(coach, r, submissions, progress, 'youth')
+      : byId.get(r.id) ?? checklistItem(coach, r, submissions, progress))
+  const offSatisfied = offItems.filter((i) => i.satisfied).length
+  const offSeason: OffSeasonSummary = {
+    items: offItems,
+    satisfiedCount: offSatisfied,
+    total: offItems.length,
+    cleared: offItems.length > 0 && offSatisfied === offItems.length,
+    missing: offItems.filter((i) => !i.satisfied),
+    hasExpiring: offItems.some((i) => i.satisfied && i.daysUntilExpiry !== null && i.daysUntilExpiry <= EXPIRING_WINDOW_DAYS),
+  }
   const satisfiedCount = items.filter((i) => i.satisfied).length
   const cleared = items.length > 0 && satisfiedCount === items.length
   const hasExpired = items.some(
@@ -419,6 +509,7 @@ export function summarizeCoach(
   return {
     coach,
     programs,
+    offSeason,
     items,
     satisfiedCount,
     total: items.length,
@@ -459,6 +550,28 @@ export function scopeSummary(s: CoachSummary, program: Program): CoachSummary | 
   }
 }
 
+/** View of a summary limited to the camps, clinics and off-season box. Every coach is included. */
+export function scopeOffSeason(s: CoachSummary): CoachSummary {
+  const o = s.offSeason
+  const hasExpired = o.items.some((i) => !i.satisfied && i.approved && i.approved.expiresOn && daysBetween(TODAY, i.approved.expiresOn) < 0)
+  const inProgress = o.items.filter((i) => i.progress && !i.satisfied && i.latest?.status !== 'pending')
+  const status: ComplianceStatus = hasExpired ? 'expired' : !o.cleared ? 'incomplete' : o.hasExpiring ? 'expiring' : 'cleared'
+  return {
+    ...s,
+    items: o.items,
+    satisfiedCount: o.satisfiedCount,
+    total: o.total,
+    cleared: o.cleared,
+    status,
+    hasExpiring: o.hasExpiring,
+    hasExpired,
+    hasPending: o.items.some((i) => i.latest?.status === 'pending'),
+    inProgress,
+    hasInProgress: inProgress.length > 0,
+    missing: o.missing,
+  }
+}
+
 /** High school coaches who are not assigned to youth but already meet every youth requirement. */
 export function readyToFloat(summaries: CoachSummary[]): CoachSummary[] {
   return summaries.filter((s) => {
@@ -478,7 +591,8 @@ export function badgeRole(coach: Coach) {
  * Returns null when the coach is not cleared in any program (no badge can be printed).
  */
 export function badgeValidThrough(summary: CoachSummary): string | null {
-  const cleared = summary.programs.filter((p) => p.cleared)
+  const cleared: { items: ChecklistItem[] }[] = summary.programs.filter((p) => p.cleared)
+  if (summary.offSeason?.cleared) cleared.push(summary.offSeason)
   if (cleared.length === 0) return null
   const dates = cleared
     .flatMap((p) => p.items)
@@ -486,6 +600,11 @@ export function badgeValidThrough(summary: CoachSummary): string | null {
     .filter((d): d is string => !!d)
     .sort()
   return dates[0] ?? endOfSchoolYear(TODAY)
+}
+
+/** Text for the camps, clinics and off-season cell in exports. Every coach is eligible, so it is Yes or No. */
+export function offSeasonClearedLabel(s: CoachSummary): 'Yes' | 'No' {
+  return s.offSeason.cleared ? 'Yes' : 'No'
 }
 
 /** Text for a per-program "cleared to coach" cell in exports. Never blank: unassigned reads as an explicit NO. */

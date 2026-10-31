@@ -209,3 +209,37 @@ test('badge valid-through is the soonest expiry among cleared programs, and none
   assert.equal(badgeValidThrough(mk(['2027-06-30'], false)), null)
   assert.match(badgeValidThrough(mk([null])), /^\d{4}-06-30$/)
 })
+
+test('off-season box: three PA clearances plus USA Lacrosse membership, for every coach', () => {
+  const { requirementInOffSeason } = require('../lib/compliance.ts')
+  assert.deepEqual(requirements.filter(requirementInOffSeason).map(r => r.id).sort(), ['fbi-fingerprint', 'pa-child-abuse', 'pa-state-police', 'usal-membership'])
+  const coach = { ...coaches[0], id: 'x3', team: 'HS-JV', role: 'Assistant Coach', pay: 'Volunteer', paResident10Years: true }
+  const mk = (requirementId, extra = {}, id = requirementId) => ({ id, coachId: 'x3', requirementId, status: 'approved', uploadedOn: '2026-10-01', completedOn: '2026-10-01', expiresOn: '2031-10-01', ...extra })
+  const base = [mk('pa-child-abuse', { obtainedAs: 'Volunteer' }), mk('pa-state-police', { obtainedAs: 'Volunteer' }), mk('usal-membership', { membershipNumber: 'X' })]
+  // A high school coach with only the school FBI check is not cleared for SVLA camps: the state law for SVLA's own programs needs a DHS check.
+  assert.equal(summarizeCoach(coach, requirements, [...base, mk('fbi-fingerprint', { fbiCheck: 'school-employee' })]).offSeason.cleared, false)
+  const ok = summarizeCoach(coach, requirements, [...base, mk('fbi-fingerprint', { fbiCheck: 'affidavit' })])
+  assert.equal(ok.offSeason.cleared, true)
+  assert.equal(ok.programs.find(p => p.program === 'high-school').cleared, false)
+  // The board can opt a requirement out.
+  const noMembership = requirements.map(r => r.id === 'usal-membership' ? { ...r, offSeason: false } : r)
+  assert.equal(summarizeCoach(coach, noMembership, base.slice(0, 2).concat(mk('fbi-fingerprint', { fbiCheck: 'affidavit' }))).offSeason.cleared, true)
+})
+
+test('FBI code lines: one per program with the right code and what is on file', () => {
+  const { fbiCodeLines, intendedFbiChecks } = require('../lib/compliance.ts')
+  const req = requirements.find(r => r.id === 'fbi-fingerprint')
+  const paid = { ...coaches[0], id: 'x4', team: 'Board-Youth/HS', role: 'Coordinator', pay: 'Paid', paResident10Years: true }
+  const mk = (fbiCheck, status = 'approved', id = fbiCheck) => ({ id, coachId: 'x4', requirementId: 'fbi-fingerprint', status, uploadedOn: '2026-10-01', completedOn: '2026-10-01', expiresOn: '2031-10-01', fbiCheck })
+  const none = fbiCodeLines(paid, req, [])
+  assert.deepEqual(none.map(l => [l.program, l.code, l.state]), [['youth', '1KG756', 'needed'], ['high-school', '1KG6XN', 'needed']])
+  const oneOnFile = fbiCodeLines(paid, req, [mk('dhs-employee'), mk('school-employee', 'pending')])
+  assert.deepEqual(oneOnFile.map(l => l.state), ['on-file', 'pending'])
+  assert.equal(oneOnFile[0].expiresOn, '2031-10-01')
+  const vol = { ...paid, id: 'x5', pay: 'Volunteer', team: '12U' }
+  const [youth] = fbiCodeLines(vol, req, [])
+  assert.equal(youth.code, '1KG6ZJ')
+  assert.match(youth.alternative, /Disclosure Statement/)
+  // A volunteer is not offered the paid DHS employee code, even though it would be accepted.
+  assert.deepEqual(intendedFbiChecks(vol, 'youth'), ['dhs-volunteer', 'affidavit'])
+})
