@@ -182,7 +182,7 @@ function UploadDialog({
                     <li key={n.program}><span className="font-medium">{PROGRAM_LABELS[n.program]}:</span> {n.text}</li>
                   ))}
                 </ul>
-                {needs.length > 1 && coach.pay === 'Paid' && (
+                {needs.length > 1 && (
                   <p className="mt-2 text-muted-foreground">You coach both programs, so upload each check separately.</p>
                 )}
               </div>

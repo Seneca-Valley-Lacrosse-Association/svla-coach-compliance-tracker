@@ -139,8 +139,8 @@ export function fbiCheckOf(sub: Pick<Submission, 'fbiCheck' | 'fbiMethod' | 'obt
  * The FBI documents that count for a coach in one program.
  * Youth (PA Child Protective Services Law): volunteers need a PA DHS check, or the DHS disclosure statement
  * if they have lived in PA for 10 years; paid coaches need the DHS employee check.
- * High school (Seneca Valley School District): volunteers are fingerprinted under the DHS volunteer code with
- * no affidavit option; paid coaches go through the district's employee process.
+ * High school (Seneca Valley School District): every coach, paid or volunteer, files as an Employee Governed by
+ * the Public School Code and is fingerprinted under the district's code (athletic director's instructions, Oct 2026).
  * PA DHS does not accept an FBI check run for another department, so a school check never counts for youth.
  */
 export function acceptedFbiChecks(coach: Coach, program: Program): FbiCheck[] {
@@ -148,7 +148,7 @@ export function acceptedFbiChecks(coach: Coach, program: Program): FbiCheck[] {
     if (coach.pay === 'Paid') return ['dhs-employee']
     return coach.paResident10Years ? ['dhs-volunteer', 'dhs-employee', 'affidavit'] : ['dhs-volunteer', 'dhs-employee']
   }
-  return coach.pay === 'Paid' ? ['school-employee'] : ['dhs-volunteer', 'dhs-employee', 'school-employee']
+  return ['school-employee']
 }
 
 /** Why an FBI document does not count for this coach in this program, or null if it does. */
@@ -162,8 +162,8 @@ export function fbiIssue(coach: Coach, program: Program, sub: Submission): strin
     if (check === 'affidavit') return 'The disclosure statement is only for volunteers who have lived in PA for the past 10 years.'
     return 'Paid coaches need the PA DHS employee fingerprint check (code 1KG756).'
   }
-  if (check === 'affidavit') return 'High school does not accept the disclosure statement. Seneca Valley requires a fingerprint check.'
-  return 'Paid high school coaches need the Seneca Valley school employee fingerprint check (code 1KG6XN).'
+  if (check === 'affidavit') return 'High school does not accept the disclosure statement. Seneca Valley requires the school employee fingerprint check (code 1KG6XN).'
+  return 'Seneca Valley requires every high school coach, paid or volunteer, to use the school employee fingerprint check (code 1KG6XN). A PA DHS check does not count for high school.'
 }
 
 /** Programs an FBI document is judged against: the coach's assigned programs, or both if none. */
@@ -225,9 +225,7 @@ export function fbiNeeds(coach: Coach): { program: Program; text: string }[] {
           ? 'PA DHS volunteer fingerprint check (code 1KG6ZJ), or the Volunteer Disclosure Statement.'
           : 'PA DHS volunteer fingerprint check (code 1KG6ZJ).'
     } else {
-      text = coach.pay === 'Paid'
-        ? 'Seneca Valley school employee fingerprint check (code 1KG6XN).'
-        : 'PA DHS volunteer fingerprint check (code 1KG6ZJ). No affidavit.'
+      text = 'Seneca Valley school employee fingerprint check (code 1KG6XN), paid or volunteer. No affidavit.'
     }
     return { program, text }
   })

@@ -60,9 +60,11 @@ test('FBI: the affidavit is youth-only for 10-year resident volunteers', () => {
   assert.equal(canUseAffidavit({ ...youthVolunteer, pay: 'Paid' }).allowed, false)
   assert.equal(eligibilityIssue(youthVolunteer, req, { fbiCheck: 'affidavit' }), null)
   assert.ok(eligibilityIssue(hsVolunteer, req, { fbiCheck: 'affidavit' }))
+  // High school accepts only the district check, paid or volunteer.
+  assert.equal(eligibilityIssue(hsVolunteer, req, { fbiCheck: 'school-employee' }), null)
+  assert.ok(eligibilityIssue(hsVolunteer, req, { fbiCheck: 'dhs-volunteer' }))
   // Older uploads without a check type: a volunteer fingerprint is read as the DHS volunteer check.
-  assert.equal(eligibilityIssue(hsVolunteer, req, { obtainedAs: 'Volunteer', fbiMethod: 'fingerprint' }), null)
-  assert.ok(eligibilityIssue({ ...hsVolunteer, pay: 'Paid' }, req, { obtainedAs: 'Volunteer', fbiMethod: 'fingerprint' }))
+  assert.equal(eligibilityIssue(youthVolunteer, req, { obtainedAs: 'Volunteer', fbiMethod: 'fingerprint' }), null)
 })
 test('FBI: which check counts for each pay status and program', () => {
   const { acceptedFbiChecks } = require('../lib/compliance.ts')
@@ -70,21 +72,21 @@ test('FBI: which check counts for each pay status and program', () => {
   const p = { ...v, pay: 'Paid' }
   assert.deepEqual(acceptedFbiChecks(v, 'youth'), ['dhs-volunteer', 'dhs-employee'])
   assert.deepEqual(acceptedFbiChecks({ ...v, paResident10Years: true }, 'youth'), ['dhs-volunteer', 'dhs-employee', 'affidavit'])
-  assert.deepEqual(acceptedFbiChecks(v, 'high-school'), ['dhs-volunteer', 'dhs-employee', 'school-employee'])
+  assert.deepEqual(acceptedFbiChecks(v, 'high-school'), ['school-employee'])
   assert.deepEqual(acceptedFbiChecks(p, 'youth'), ['dhs-employee'])
   assert.deepEqual(acceptedFbiChecks(p, 'high-school'), ['school-employee'])
 })
-test('FBI: a volunteer in both programs is cleared by one DHS volunteer check; the affidavit only clears youth', () => {
+test('FBI: a volunteer in both programs needs the school check plus a youth DHS check or the affidavit', () => {
   const req = requirements.filter(r => r.id === 'fbi-fingerprint')
   const coach = { ...coaches[0], id: 'x1', team: 'Volunteer-Youth/HS', role: 'Volunteer Assistant', pay: 'Volunteer', paResident10Years: true }
   const mk = (fbiCheck, id = 'f1') => ({ id, coachId: 'x1', requirementId: 'fbi-fingerprint', status: 'approved', uploadedOn: '2026-10-01', completedOn: '2026-10-01', expiresOn: '2031-10-01', fbiCheck })
-  const one = summarizeCoach(coach, req, [mk('dhs-volunteer')])
-  assert.deepEqual(one.programs.map(p => p.cleared), [true, true])
-  assert.equal(one.cleared, true)
-  const aff = summarizeCoach(coach, req, [mk('affidavit')])
-  assert.deepEqual(aff.programs.map(p => p.cleared), [true, false])
-  assert.equal(aff.cleared, false)
-  assert.match(aff.items[0].issue, /^High School: /)
+  assert.deepEqual(summarizeCoach(coach, req, [mk('dhs-volunteer')]).programs.map(p => p.cleared), [true, false])
+  const school = summarizeCoach(coach, req, [mk('school-employee')])
+  assert.deepEqual(school.programs.map(p => p.cleared), [false, true])
+  assert.match(school.items[0].issue, /^Youth: /)
+  const both = summarizeCoach(coach, req, [mk('affidavit', 'a'), mk('school-employee', 'b')])
+  assert.deepEqual(both.programs.map(p => p.cleared), [true, true])
+  assert.equal(both.cleared, true)
 })
 test('FBI: a paid coach in both programs needs both the DHS employee and the school employee checks', () => {
   const req = requirements.filter(r => r.id === 'fbi-fingerprint')

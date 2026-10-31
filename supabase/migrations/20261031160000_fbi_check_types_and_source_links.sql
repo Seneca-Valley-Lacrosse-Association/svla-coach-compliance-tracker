@@ -8,9 +8,9 @@
 --    Pay status is SVLA-wide. Which check counts where is decided in the app (lib/compliance.ts):
 --      youth volunteer:  1KG6ZJ, 1KG756, or the affidavit if a 10-year PA resident
 --      youth paid:       1KG756
---      HS volunteer:     1KG6ZJ (also 1KG756 or 1KG6XN), no affidavit
---      HS paid:          1KG6XN
---    PA DHS does not accept an FBI check run for another department, so a paid coach in both programs uploads two.
+--      high school:      1KG6XN for every coach, paid or volunteer (Seneca Valley athletic director, Oct 13 2026)
+--    PA DHS does not accept an FBI check run for another department, so a coach in both programs uploads two
+--    (a 10-year PA resident volunteer can cover youth with the disclosure statement instead).
 --    The upload trigger validates the value and keeps the older fbiMethod field in step, and the affidavit is now
 --    refused unless the coach is a youth volunteer who has lived in PA for 10 years (high school does not accept it).
 -- 2. The public badge page receives fbiCheck so it judges the FBI item the same way.
@@ -120,8 +120,8 @@ grant execute on function public.verify_badge(text) to anon, authenticated;
 
 update public.requirements
    set definition = definition || $json${
-  "help": "Register at uenroll.identogo.com, then get fingerprinted at a local IdentoGO site. Use the service code that matches your role.\n\nVOLUNTEERS (youth or high school)\nCode 1KG6ZJ: PA DHS volunteer.\nOne check covers both youth and high school.\n\nPAID YOUTH COACHES\nCode 1KG756: PA DHS employee.\n\nPAID HIGH SCHOOL COACHES\nCode 1KG6XN: Seneca Valley school employee.\nFollow the Seneca Valley athletic office's instructions.\n\nPAID COACHES IN BOTH PROGRAMS\nGet both checks (1KG756 and 1KG6XN) and upload each one separately. A school check does not count for youth, and a youth check does not count for high school.\n\nNO FINGERPRINTS (youth volunteers only)\nIf you have lived in Pennsylvania for the past 10 years, you may sign the Volunteer Disclosure Statement instead. It does not count for high school. The form is linked under \"Why we require this.\"\n\nWhen you upload, choose which check you are uploading.",
-  "why": "The FBI check covers criminal records from outside Pennsylvania, which the state police check does not.\n\nPA DHS does not accept an FBI check run for another department, so the youth (DHS) and high school (school district) checks are not interchangeable for paid coaches. Volunteers use the DHS volunteer check for both.",
+  "help": "Register at uenroll.identogo.com, then get fingerprinted at a local IdentoGO site. Use the service code that matches your role.\n\nHIGH SCHOOL COACHES (paid or volunteer)\nCode 1KG6XN: Seneca Valley school employee.\nFollow the Seneca Valley employee clearance directions (linked under \"Why we require this\") and submit all three clearances to Seneca Valley HR together.\n\nYOUTH VOLUNTEERS\nCode 1KG6ZJ: PA DHS volunteer.\n\nPAID YOUTH COACHES\nCode 1KG756: PA DHS employee.\n\nCOACHES IN BOTH PROGRAMS\nYou need the high school check (1KG6XN) and a youth check (1KG6ZJ for volunteers, 1KG756 for paid coaches). Upload each one separately. A school check does not count for youth, and a youth check does not count for high school.\n\nNO FINGERPRINTS FOR YOUTH (youth volunteers only)\nIf you have lived in Pennsylvania for the past 10 years, you may sign the Volunteer Disclosure Statement for youth instead of the 1KG6ZJ check. It does not count for high school.\n\nWhen you upload, choose which check you are uploading.",
+  "why": "The FBI check covers criminal records from outside Pennsylvania, which the state police check does not.\n\nPA DHS does not accept an FBI check run for another department, so the youth (DHS) and high school (school district) checks are not interchangeable. Coaches in both programs need one of each.",
   "source": "Youth: PA Child Protective Services Law (23 Pa.C.S. §§ 6344, 6344.2).\nHigh school: PA School Code, Section 111 (Act 114), and Seneca Valley School District Policy 916.",
   "sourceUrl": "",
   "sources": [
@@ -134,11 +134,7 @@ update public.requirements
       "url": "https://www.dhs.pa.gov/KeepKidsSafe/Resources/Documents/Disclosure%20Statement%20for%20Volunteers.pdf"
     },
     {
-      "label": "Seneca Valley: Volunteer clearance directions",
-      "url": "https://resources.finalsite.net/images/v1754011446/svsdnet/vccppkfjmxecarczktru/VolunteerClearanceDirections2024.pdf"
-    },
-    {
-      "label": "Seneca Valley: Employee clearance renewal form",
+      "label": "Seneca Valley: Employee clearance directions (all high school coaches)",
       "url": "https://resources.finalsite.net/images/v1726576746/svsdnet/cl1fenbixiwe8zigwcyc/EmployeeClearanceApplicationRenewal2024.pdf"
     }
   ]

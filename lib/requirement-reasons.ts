@@ -26,7 +26,7 @@ export const DEFAULT_REASONS: Record<string, Reason> = {
   },
   'fbi-fingerprint': {
     level: 'both',
-    why: 'The FBI check covers criminal records from outside Pennsylvania, which the state police check does not. PA DHS does not accept an FBI check run for another department, so paid coaches in both programs need a youth (DHS) and a high school (school district) check.',
+    why: 'The FBI check covers criminal records from outside Pennsylvania, which the state police check does not. PA DHS does not accept an FBI check run for another department, so coaches in both programs need a youth (DHS) check and the high school (school district) check.',
     source: 'Youth: PA Child Protective Services Law (23 Pa.C.S. §§ 6344, 6344.2). High school: PA School Code, Section 111 (Act 114), and Seneca Valley School District Policy 916.',
   },
   'usal-membership': {
