@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 interface Payload {
   coach: Omit<Coach, 'id' | 'email' | 'phone'>
   requirements: Requirement[]
-  submissions: (Omit<Submission, 'id' | 'coachId' | 'uploadedOn'> & { uploadedOn?: string; obtainedAs?: 'Volunteer' | 'Employment' | null; fbiMethod?: 'fingerprint' | 'affidavit' | null; membershipNumber?: string | null })[]
+  submissions: (Omit<Submission, 'id' | 'coachId' | 'uploadedOn'> & { uploadedOn?: string; obtainedAs?: 'Volunteer' | 'Employment' | null; fbiMethod?: 'fingerprint' | 'affidavit' | null; fbiCheck?: Submission['fbiCheck'] | null; membershipNumber?: string | null })[]
 }
 
 const checkedAt = () => new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/New_York' }).format(new Date())

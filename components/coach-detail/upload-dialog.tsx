@@ -3,8 +3,8 @@
 import { useId, useState } from 'react'
 import { AlertTriangle, Upload } from 'lucide-react'
 import { useApp } from '@/lib/app-store'
-import { canUseAffidavit, TODAY } from '@/lib/compliance'
-import type { Coach, FbiMethod, ObtainedAs, Requirement } from '@/lib/types'
+import { acceptedFbiChecks, canUseAffidavit, coachPrograms, fbiNeeds, isFbiRequirement, TODAY } from '@/lib/compliance'
+import { FBI_CHECK_LABELS, FBI_CHECKS, PROGRAM_LABELS, type Coach, type FbiCheck, type ObtainedAs, type Requirement } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -101,12 +101,18 @@ function UploadDialog({
   const { submitUpload } = useApp()
   const id = useId()
   const affidavit = canUseAffidavit(coach)
+  const isFbi = isFbiRequirement(req)
+  const programs = coachPrograms(coach)
+  const needs = isFbi ? fbiNeeds(coach) : []
+  /** Programs where an FBI document type counts for this coach. Empty means it would not count anywhere. */
+  const countsFor = (check: FbiCheck) => programs.filter((p) => acceptedFbiChecks(coach, p).includes(check))
 
   const [file, setFile] = useState<File | undefined>()
   const [busy, setBusy] = useState(false)
   const [completedOn, setCompletedOn] = useState(req.type === 'Signature' ? TODAY : '')
   const [obtainedAs, setObtainedAs] = useState<ObtainedAs>(coach.pay === 'Paid' ? 'Employment' : 'Volunteer')
-  const [fbiMethod, setFbiMethod] = useState<FbiMethod>('fingerprint')
+  const firstNeeded = isFbi ? acceptedFbiChecks(coach, programs[0] ?? 'youth').find((c) => c !== 'affidavit') ?? 'dhs-volunteer' : 'dhs-volunteer'
+  const [fbiCheck, setFbiCheck] = useState<FbiCheck>(firstNeeded)
   const [membershipNumber, setMembershipNumber] = useState('')
   const [membershipExpiry, setMembershipExpiry] = useState('')
   const [signedName, setSignedName] = useState('')
@@ -130,15 +136,19 @@ function UploadDialog({
     if (isMembership && membershipExpiry <= TODAY) return setError('That membership has already expired.')
     if (isSignature && (!agreed || signedName.trim().toLowerCase() !== coach.name.toLowerCase()))
       return setError(`Check the box and type your full name exactly: ${coach.name}`)
-    if (req.allowsVolunteerAffidavit && fbiMethod === 'affidavit' && !affidavit.allowed)
+    if (isFbi && fbiCheck === 'affidavit' && !affidavit.allowed)
       return setError(affidavit.reason)
+    if (isFbi && countsFor(fbiCheck).length === 0)
+      return setError('That check does not count for your role. Choose the check that matches your fingerprint results.')
 
     setBusy(true)
     try {
       await submitUpload({
         coachId: coach.id, requirementId: req.id, completedOn, file,
-        obtainedAs: req.tracksObtainedAs ? obtainedAs : undefined,
-        fbiMethod: req.allowsVolunteerAffidavit ? fbiMethod : undefined,
+        // For the FBI check the document type decides everything; volunteer vs employment follows from it.
+        obtainedAs: isFbi ? (fbiCheck === 'dhs-volunteer' || fbiCheck === 'affidavit' ? 'Volunteer' : 'Employment') : req.tracksObtainedAs ? obtainedAs : undefined,
+        fbiMethod: isFbi ? (fbiCheck === 'affidavit' ? 'affidavit' : 'fingerprint') : undefined,
+        fbiCheck: isFbi ? fbiCheck : undefined,
         membershipNumber: isMembership ? membershipNumber.trim() : undefined,
         membershipExpiry: isMembership ? membershipExpiry : undefined,
         signedName: isSignature ? signedName.trim() : undefined,
@@ -162,33 +172,45 @@ function UploadDialog({
             </DialogDescription>
           </DialogHeader>
 
-          {req.allowsVolunteerAffidavit && (
+          {isFbi && (
             <fieldset className="flex flex-col gap-2">
-              <legend className="mb-2 font-medium">What are you submitting?</legend>
-              <RadioOption
-                name={`${id}-method`}
-                value="fingerprint"
-                checked={fbiMethod === 'fingerprint'}
-                onChange={(v) => setFbiMethod(v as FbiMethod)}
-                label="FBI fingerprint check results"
-              />
-              <RadioOption
-                name={`${id}-method`}
-                value="affidavit"
-                checked={fbiMethod === 'affidavit'}
-                disabled={!affidavit.allowed}
-                onChange={(v) => setFbiMethod(v as FbiMethod)}
-                label="Volunteer Disclosure Statement (affidavit)"
-                hint={
-                  affidavit.allowed
-                    ? 'For volunteers who have lived in PA for the past 10 years.'
-                    : affidavit.reason
-                }
-              />
+              <legend className="mb-2 font-medium">Which check are you uploading?</legend>
+              <div className="mb-1 rounded-lg bg-secondary/60 p-3 text-sm">
+                <p className="font-medium text-navy">What you need ({coach.pay.toLowerCase()} coach)</p>
+                <ul className="mt-1 flex flex-col gap-1">
+                  {needs.map((n) => (
+                    <li key={n.program}><span className="font-medium">{PROGRAM_LABELS[n.program]}:</span> {n.text}</li>
+                  ))}
+                </ul>
+                {needs.length > 1 && coach.pay === 'Paid' && (
+                  <p className="mt-2 text-muted-foreground">You coach both programs, so upload each check separately.</p>
+                )}
+              </div>
+              {FBI_CHECKS.map((check) => {
+                const where = countsFor(check)
+                const disabled = check === 'affidavit' ? !affidavit.allowed : where.length === 0
+                const hint = check === 'affidavit' && !affidavit.allowed
+                  ? affidavit.reason
+                  : where.length === 0
+                    ? 'Does not count for your role.'
+                    : `Counts for: ${where.map((p) => PROGRAM_LABELS[p]).join(' and ')}`
+                return (
+                  <RadioOption
+                    key={check}
+                    name={`${id}-check`}
+                    value={check}
+                    checked={fbiCheck === check}
+                    disabled={disabled}
+                    onChange={(v) => setFbiCheck(v as FbiCheck)}
+                    label={FBI_CHECK_LABELS[check]}
+                    hint={hint}
+                  />
+                )
+              })}
             </fieldset>
           )}
 
-          {req.tracksObtainedAs && (
+          {req.tracksObtainedAs && !isFbi && (
             <fieldset className="flex flex-col gap-2">
               <legend className="mb-2 font-medium">Obtained as</legend>
               <div className="grid grid-cols-2 gap-2">
@@ -286,7 +308,7 @@ function UploadDialog({
           {!isSignature && !isMembership && (
             <div className="flex flex-col gap-2">
               <Label htmlFor={`${id}-file`}>
-                {fbiMethod === 'affidavit' && req.allowsVolunteerAffidavit
+                {isFbi && fbiCheck === 'affidavit'
                   ? 'Signed Volunteer Disclosure Statement'
                   : 'Certificate or document'}
                 {req.dateOnlyAllowed && <span className="font-normal text-muted-foreground"> (optional)</span>}

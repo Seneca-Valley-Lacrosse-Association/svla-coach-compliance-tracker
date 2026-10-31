@@ -49,17 +49,58 @@ test('level tags hide requirements that do not apply to a coach\'s program', () 
   assert.deepEqual(ids(youthCoach).sort(), ['both-level', 'handbook', 'youth-only'])
   assert.deepEqual(ids(hsCoach).sort(), ['both-level', 'handbook', 'hs-only'])
 })
-test('high school coaches need employment clearances and cannot use the volunteer affidavit', () => {
+test('FBI: the affidavit is youth-only for 10-year resident volunteers', () => {
   const { eligibilityIssue } = require('../lib/compliance.ts')
   const hsVolunteer = { ...coaches[0], team: 'HS-JV', role: 'Assistant Coach', pay: 'Volunteer', paResident10Years: true }
   const youthVolunteer = { ...hsVolunteer, team: '12U' }
   const req = requirements.find(r => r.id === 'fbi-fingerprint')
   assert.equal(canUseAffidavit(hsVolunteer).allowed, false)
   assert.equal(canUseAffidavit(youthVolunteer).allowed, true)
+  assert.equal(canUseAffidavit({ ...youthVolunteer, paResident10Years: false }).allowed, false)
+  assert.equal(canUseAffidavit({ ...youthVolunteer, pay: 'Paid' }).allowed, false)
+  assert.equal(eligibilityIssue(youthVolunteer, req, { fbiCheck: 'affidavit' }), null)
+  assert.ok(eligibilityIssue(hsVolunteer, req, { fbiCheck: 'affidavit' }))
+  // Older uploads without a check type: a volunteer fingerprint is read as the DHS volunteer check.
   assert.equal(eligibilityIssue(hsVolunteer, req, { obtainedAs: 'Volunteer', fbiMethod: 'fingerprint' }), null)
   assert.ok(eligibilityIssue({ ...hsVolunteer, pay: 'Paid' }, req, { obtainedAs: 'Volunteer', fbiMethod: 'fingerprint' }))
-  assert.equal(eligibilityIssue(youthVolunteer, req, { obtainedAs: 'Volunteer', fbiMethod: 'fingerprint' }), null)
-  assert.equal(eligibilityIssue(hsVolunteer, req, { obtainedAs: 'Employment', fbiMethod: 'fingerprint' }), null)
+})
+test('FBI: which check counts for each pay status and program', () => {
+  const { acceptedFbiChecks } = require('../lib/compliance.ts')
+  const v = { ...coaches[0], pay: 'Volunteer', paResident10Years: false }
+  const p = { ...v, pay: 'Paid' }
+  assert.deepEqual(acceptedFbiChecks(v, 'youth'), ['dhs-volunteer', 'dhs-employee'])
+  assert.deepEqual(acceptedFbiChecks({ ...v, paResident10Years: true }, 'youth'), ['dhs-volunteer', 'dhs-employee', 'affidavit'])
+  assert.deepEqual(acceptedFbiChecks(v, 'high-school'), ['dhs-volunteer', 'dhs-employee', 'school-employee'])
+  assert.deepEqual(acceptedFbiChecks(p, 'youth'), ['dhs-employee'])
+  assert.deepEqual(acceptedFbiChecks(p, 'high-school'), ['school-employee'])
+})
+test('FBI: a volunteer in both programs is cleared by one DHS volunteer check; the affidavit only clears youth', () => {
+  const req = requirements.filter(r => r.id === 'fbi-fingerprint')
+  const coach = { ...coaches[0], id: 'x1', team: 'Volunteer-Youth/HS', role: 'Volunteer Assistant', pay: 'Volunteer', paResident10Years: true }
+  const mk = (fbiCheck, id = 'f1') => ({ id, coachId: 'x1', requirementId: 'fbi-fingerprint', status: 'approved', uploadedOn: '2026-10-01', completedOn: '2026-10-01', expiresOn: '2031-10-01', fbiCheck })
+  const one = summarizeCoach(coach, req, [mk('dhs-volunteer')])
+  assert.deepEqual(one.programs.map(p => p.cleared), [true, true])
+  assert.equal(one.cleared, true)
+  const aff = summarizeCoach(coach, req, [mk('affidavit')])
+  assert.deepEqual(aff.programs.map(p => p.cleared), [true, false])
+  assert.equal(aff.cleared, false)
+  assert.match(aff.items[0].issue, /^High School: /)
+})
+test('FBI: a paid coach in both programs needs both the DHS employee and the school employee checks', () => {
+  const req = requirements.filter(r => r.id === 'fbi-fingerprint')
+  const coach = { ...coaches[0], id: 'x2', team: 'Board-Youth/HS', role: 'Coordinator', pay: 'Paid', paResident10Years: true }
+  const mk = (fbiCheck, id) => ({ id, coachId: 'x2', requirementId: 'fbi-fingerprint', status: 'approved', uploadedOn: '2026-10-01', completedOn: '2026-10-01', expiresOn: '2031-10-01', fbiCheck })
+  const youthOnly = summarizeCoach(coach, req, [mk('dhs-employee', 'a')])
+  assert.deepEqual(youthOnly.programs.map(p => p.cleared), [true, false])
+  assert.equal(youthOnly.items[0].status, 'invalid')
+  const schoolOnly = summarizeCoach(coach, req, [mk('school-employee', 'b')])
+  assert.deepEqual(schoolOnly.programs.map(p => p.cleared), [false, true])
+  assert.match(schoolOnly.items[0].issue, /^Youth: /)
+  const both = summarizeCoach(coach, req, [mk('dhs-employee', 'a'), mk('school-employee', 'b')])
+  assert.deepEqual(both.programs.map(p => p.cleared), [true, true])
+  assert.equal(both.items[0].satisfied, true)
+  // A DHS volunteer check never counts for a paid coach.
+  assert.deepEqual(summarizeCoach(coach, req, [mk('dhs-volunteer', 'c')]).programs.map(p => p.cleared), [false, false])
 })
 test('teams roll up to youth, high school or both', () => {
   const { coachPrograms } = require('../lib/compliance.ts')
@@ -145,18 +186,13 @@ test('in-progress mutations validate ids, dates and note length', () => {
   assert.equal(mutationSchema.safeParse({ action: 'clearInProgress', coachId: id, requirementId: 'pa-child-abuse' }).success, true)
 })
 
-test('employment clearances apply to paid coaches and the HS teams, and anyone in the HS program, including Board and combined volunteers', () => {
+test('employment clearances follow SVLA-wide pay only: Seneca Valley treats high school volunteers as volunteers', () => {
   const { needsEmploymentClearances } = require('../lib/compliance.ts')
   const on = team => ({ ...coaches[0], team, pay: 'Volunteer' })
-  assert.equal(needsEmploymentClearances(on('HS-JV')), true)
-  assert.equal(needsEmploymentClearances(on('HS-Varsity')), true)
-  assert.equal(needsEmploymentClearances(on('Volunteer-HS')), true)
-  assert.equal(needsEmploymentClearances(on('Board-HS')), true)
-  assert.equal(needsEmploymentClearances(on('Board-Youth/HS')), true)
-  assert.equal(needsEmploymentClearances(on('Board-Youth')), false)
-  assert.equal(needsEmploymentClearances(on('Volunteer-Youth/HS')), true)
-  assert.equal(needsEmploymentClearances(on('Volunteer-Youth')), false)
+  for (const team of ['HS-JV', 'HS-Varsity', 'Volunteer-HS', 'Board-HS', 'Board-Youth/HS', 'Volunteer-Youth/HS', 'Volunteer-Youth', '10U'])
+    assert.equal(needsEmploymentClearances(on(team)), false)
   assert.equal(needsEmploymentClearances({ ...on('10U'), pay: 'Paid' }), true)
+  assert.equal(needsEmploymentClearances({ ...on('HS-JV'), pay: 'Paid' }), true)
 })
 
 test('badge role shows only Head Coach or Coach', () => {

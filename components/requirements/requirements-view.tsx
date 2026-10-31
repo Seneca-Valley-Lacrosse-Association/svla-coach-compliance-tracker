@@ -88,11 +88,11 @@ export function RequirementsView() {
                 <td className="px-4 py-3">
                   <p className="font-medium text-foreground">{r.name}</p>
                   <ResourceEditor requirement={r} />
-                  {r.tracksObtainedAs && (
+                  {r.tracksObtainedAs && !r.allowsVolunteerAffidavit && (
                     <p className="text-sm text-muted-foreground">Tracks volunteer vs. employment</p>
                   )}
                   {r.allowsVolunteerAffidavit && (
-                    <p className="text-sm text-muted-foreground">Affidavit allowed for eligible volunteers</p>
+                    <p className="text-sm text-muted-foreground">Tracks FBI check type (DHS volunteer, DHS employee, school employee, affidavit)</p>
                   )}
                 </td>
                 <td className="max-w-sm px-4 py-3 text-sm">
@@ -101,7 +101,8 @@ export function RequirementsView() {
                     if (!reason) return <span className="text-muted-foreground">Not written yet. Use Edit instructions / why.</span>
                     return (
                       <>
-                        {reason.source && <p className="font-medium text-foreground">{reason.source}</p>}
+                        {reason.source && <p className="whitespace-pre-line font-medium text-foreground">{reason.source}</p>}
+                        {reason.sources.length > 0 && <p className="mt-1 text-muted-foreground">{reason.sources.length === 1 ? '1 source link' : `${reason.sources.length} source links`}</p>}
                         <p className="mt-1 leading-relaxed">{reason.why}</p>
                       </>
                     )

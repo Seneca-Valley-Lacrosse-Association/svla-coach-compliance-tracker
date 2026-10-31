@@ -1,5 +1,5 @@
 import { coaches as examples, requirements } from './mock-data'
-import { applicableRequirements, computeExpiry, TODAY } from './compliance'
+import { applicableRequirements, computeExpiry, expectedFbiChecks, TODAY } from './compliance'
 import type { Progress, Submission } from './types'
 
 export { requirements }
@@ -11,17 +11,19 @@ export const submissions: Submission[] = coaches.flatMap(coach => applicableRequ
   const expiresOn = coach.id === 'c4' && req.id === 'usal-membership' ? shiftDays(30)
     : coach.id === 'c6' && req.id === 'usal-membership' ? shiftDays(-5)
     : computeExpiry(req.validity, TODAY, shiftDays(365))
-  return [{
-    id: `demo-${coach.id}-${req.id}`, coachId: coach.id, requirementId: req.id,
+  const fbiChecks = req.allowsVolunteerAffidavit ? expectedFbiChecks(coach) : [undefined]
+  return fbiChecks.map((fbiCheck, i) => ({
+    id: `demo-${coach.id}-${req.id}${i ? `-${i}` : ''}`, coachId: coach.id, requirementId: req.id,
     completedOn: req.id === 'usal-membership' ? shiftDays(-30) : TODAY,
     uploadedOn: TODAY, expiresOn, status: pending ? 'pending' : 'approved',
     reviewedOn: pending ? undefined : TODAY,
     obtainedAs: req.tracksObtainedAs ? coach.pay === 'Paid' ? 'Employment' : 'Volunteer' : undefined,
     fbiMethod: req.allowsVolunteerAffidavit ? 'fingerprint' : undefined,
+    fbiCheck,
     signedName: req.type === 'Signature' ? coach.name : undefined,
     membershipNumber: req.type === 'Membership' ? `DEMO-${coach.id}` : undefined,
     fileName: req.type === 'File' || req.type === 'Training' ? 'Sample record — no real certificate' : undefined,
-  } satisfies Submission]
+  } satisfies Submission))
 }))
 
 /** Demo: the incomplete coach (c3) has applied for the FBI check and is waiting on results. */

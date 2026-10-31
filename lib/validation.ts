@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { LEVELS, PAY_STATUSES, ROLES, TEAMS } from './types'
+import { FBI_CHECKS, LEVELS, PAY_STATUSES, ROLES, TEAMS } from './types'
 
 export const coachSchema = z.object({
   name: z.string().trim().min(1).max(120), email: z.string().trim().toLowerCase().email().max(254),
@@ -16,6 +16,7 @@ const httpsUrl = z.string().trim().max(2000).refine(v => !v || /^https:\/\//.tes
 export const reasonSchema = z.object({
   level: z.enum(LEVELS), why: z.string().trim().max(1500),
   source: z.string().trim().max(300), sourceUrl: httpsUrl,
+  sources: z.array(z.object({ label: z.string().trim().max(150), url: httpsUrl.refine(v => !!v, 'Enter the link.') })).max(10),
 })
 export const requirementSchema = resourceSchema.extend(reasonSchema.partial().shape).extend({
   name: z.string().trim().min(1).max(200), type: z.enum(['File', 'Training', 'Membership', 'Signature']),
@@ -28,6 +29,7 @@ export const uploadSchema = z.object({
   coachId: z.uuid(), requirementId: z.string().min(1).max(100), completedOn: z.iso.date(),
   filePath: z.string().max(400).optional(), fileName: z.string().max(255).optional(),
   obtainedAs: z.enum(['Volunteer', 'Employment']).optional(), fbiMethod: z.enum(['fingerprint', 'affidavit']).optional(),
+  fbiCheck: z.enum(FBI_CHECKS).optional(),
   membershipNumber: z.string().trim().max(150).optional(), membershipExpiry: z.iso.date().optional(),
   signedName: z.string().trim().max(120).optional(), agreed: z.boolean().optional(),
 })

@@ -63,8 +63,10 @@ export interface Requirement {
   why?: string
   /** Where the requirement comes from, for example "PA law" or "PIAA". */
   source?: string
-  /** Optional link to the rule or policy behind the requirement. */
+  /** Optional link to the rule or policy behind the requirement. Kept for older records; new links go in `sources`. */
   sourceUrl?: string
+  /** Extra source links. The board adds as many as it needs with the + button. */
+  sources?: SourceLink[]
   /** PA clearances record whether they were obtained for volunteer or employment purposes. */
   tracksObtainedAs?: boolean
   /** FBI check: eligible volunteers may submit a Volunteer Disclosure Statement instead. */
@@ -72,6 +74,9 @@ export interface Requirement {
   /** Accepts either a file upload or just a completion date. */
   dateOnlyAllowed?: boolean
 }
+
+/** One labelled link to a rule, law or policy behind a requirement. */
+export interface SourceLink { label: string; url: string }
 
 export type CoachStatus = 'pending' | 'approved' | 'declined'
 
@@ -107,6 +112,26 @@ export type SubmissionStatus = 'pending' | 'approved' | 'rejected'
 export type ObtainedAs = 'Volunteer' | 'Employment'
 export type FbiMethod = 'fingerprint' | 'affidavit'
 
+/**
+ * Which FBI document a coach uploaded. The agency that ran the check decides where it counts:
+ * PA DHS will not accept an FBI check run for another department, so a school-district check does not
+ * count for youth, and the DHS disclosure statement does not count for high school.
+ */
+export const FBI_CHECKS = ['dhs-volunteer', 'dhs-employee', 'school-employee', 'affidavit'] as const
+export type FbiCheck = (typeof FBI_CHECKS)[number]
+export const FBI_CHECK_LABELS: Record<FbiCheck, string> = {
+  'dhs-volunteer': 'FBI fingerprint check, PA DHS volunteer (code 1KG6ZJ)',
+  'dhs-employee': 'FBI fingerprint check, PA DHS employee (code 1KG756)',
+  'school-employee': 'FBI fingerprint check, Seneca Valley school employee (code 1KG6XN)',
+  affidavit: 'Volunteer Disclosure Statement (PA DHS affidavit)',
+}
+export const FBI_CHECK_SHORT: Record<FbiCheck, string> = {
+  'dhs-volunteer': 'DHS volunteer fingerprint (1KG6ZJ)',
+  'dhs-employee': 'DHS employee fingerprint (1KG756)',
+  'school-employee': 'School employee fingerprint (1KG6XN)',
+  affidavit: 'DHS Volunteer Disclosure Statement',
+}
+
 export interface Submission {
   id: string
   coachId: string
@@ -119,6 +144,8 @@ export interface Submission {
   filePath?: string
   obtainedAs?: ObtainedAs
   fbiMethod?: FbiMethod
+  /** FBI requirement only: which check this document is. Older uploads may not have it. */
+  fbiCheck?: FbiCheck
   membershipNumber?: string
   signedName?: string
   reviewComment?: string

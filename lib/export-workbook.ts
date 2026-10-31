@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs'
 import { appliesTo, programClearedLabel, summarizeCoach, TODAY } from './compliance'
 import type { Coach, ItemStatus, Requirement, Submission } from './types'
+import { FBI_CHECK_SHORT } from './types'
 
 const ITEM_LABEL: Record<ItemStatus, string> = {
   'not-started': 'Not started',
@@ -129,7 +130,7 @@ export async function buildWorkbook({ coaches, requirements, submissions, origin
     { header: 'Status', key: 'status', width: 12 }, { header: 'Completed on', key: 'completed', width: 14 },
     { header: 'Expires on', key: 'expires', width: 14 }, { header: 'Uploaded on', key: 'uploaded', width: 14 },
     { header: 'Reviewed on', key: 'reviewed', width: 14 }, { header: 'Review comment', key: 'comment', width: 40 },
-    { header: 'Obtained as', key: 'obtained', width: 14 }, { header: 'FBI method', key: 'fbi', width: 14 },
+    { header: 'Obtained as', key: 'obtained', width: 14 }, { header: 'FBI check', key: 'fbi', width: 34 },
     { header: 'Membership number', key: 'member', width: 20 }, { header: 'Signed name', key: 'signed', width: 22 },
     { header: 'File name', key: 'file', width: 34 }, { header: 'Document link', key: 'link', width: 22 }, { header: 'Date edit history', key: 'edits', width: 60 },
   ]
@@ -140,7 +141,7 @@ export async function buildWorkbook({ coaches, requirements, submissions, origin
       coach: text(coachName.get(s.coachId)), req: text(reqName.get(s.requirementId)) || s.requirementId,
       status: s.status[0].toUpperCase() + s.status.slice(1), completed: s.completedOn, expires: s.expiresOn ?? '',
       uploaded: s.uploadedOn, reviewed: text(s.reviewedOn), comment: text(s.reviewComment),
-      obtained: text(s.obtainedAs), fbi: text(s.fbiMethod), member: text(s.membershipNumber),
+      obtained: text(s.obtainedAs), fbi: s.fbiCheck ? FBI_CHECK_SHORT[s.fbiCheck] : text(s.fbiMethod), member: text(s.membershipNumber),
       signed: text(s.signedName), file: text(s.fileName), link: '',
       edits: (s.editLog ?? []).map((e) => `${e.at.slice(0, 10)} by ${e.by}: completed ${e.fromCompletedOn ?? '—'} → ${e.toCompletedOn}, expires ${e.fromExpiresOn ?? '—'} → ${e.toExpiresOn ?? 'never'}${e.note ? ` (${e.note})` : ''}`).join('\n'),
     })

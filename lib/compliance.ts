@@ -1,7 +1,8 @@
-import { PROGRAMS, TEAM_PROGRAMS } from './types'
+import { PROGRAMS, PROGRAM_LABELS, TEAM_PROGRAMS } from './types'
 import type {
   Coach,
   ComplianceStatus,
+  FbiCheck,
   ItemStatus,
   Program,
   Progress,
@@ -116,35 +117,87 @@ export function applicableRequirements(requirements: Requirement[], coach: Coach
     .sort((a, b) => a.order - b.order)
 }
 
-/**
- * Paid coaches and anyone assigned to the high school program, including Board-HS, Board-Youth/HS and
- * the Volunteer-HS and Volunteer-Youth/HS teams, which must meet both sides (Seneca Valley treats them as employees under
- * the Public School Code) need clearances obtained for employment, plus the FBI fingerprint check.
- */
+/** Pay status is SVLA-wide: a paid coach is paid on every program they coach. */
 export function needsEmploymentClearances(coach: Coach) {
-  return coach.pay === 'Paid' || isAssignedTo(coach, 'high-school')
+  return coach.pay === 'Paid'
 }
 
-/** Returns a reason the submission cannot count for this coach, or null if it is acceptable. */
-export function eligibilityIssue(coach: Coach, req: Requirement, sub: Submission) {
-  // Only paid coaches need clearances obtained for employment. High school coaches may use clearances obtained as a volunteer.
+/** The FBI requirement is the one that offers the volunteer disclosure statement. */
+export function isFbiRequirement(req: Requirement) {
+  return !!req.allowsVolunteerAffidavit
+}
+
+/** Which FBI document a submission is. Uploads from before the check type existed are inferred where possible. */
+export function fbiCheckOf(sub: Pick<Submission, 'fbiCheck' | 'fbiMethod' | 'obtainedAs'>): FbiCheck | null {
+  if (sub.fbiCheck) return sub.fbiCheck
+  if (sub.fbiMethod === 'affidavit') return 'affidavit'
+  if (sub.obtainedAs === 'Volunteer') return 'dhs-volunteer'
+  return null
+}
+
+/**
+ * The FBI documents that count for a coach in one program.
+ * Youth (PA Child Protective Services Law): volunteers need a PA DHS check, or the DHS disclosure statement
+ * if they have lived in PA for 10 years; paid coaches need the DHS employee check.
+ * High school (Seneca Valley School District): volunteers are fingerprinted under the DHS volunteer code with
+ * no affidavit option; paid coaches go through the district's employee process.
+ * PA DHS does not accept an FBI check run for another department, so a school check never counts for youth.
+ */
+export function acceptedFbiChecks(coach: Coach, program: Program): FbiCheck[] {
+  if (program === 'youth') {
+    if (coach.pay === 'Paid') return ['dhs-employee']
+    return coach.paResident10Years ? ['dhs-volunteer', 'dhs-employee', 'affidavit'] : ['dhs-volunteer', 'dhs-employee']
+  }
+  return coach.pay === 'Paid' ? ['school-employee'] : ['dhs-volunteer', 'dhs-employee', 'school-employee']
+}
+
+/** Why an FBI document does not count for this coach in this program, or null if it does. */
+export function fbiIssue(coach: Coach, program: Program, sub: Submission): string | null {
+  const check = fbiCheckOf(sub)
+  if (!check) return 'We cannot tell which FBI check this is. Upload it again and choose the check type.'
+  if (acceptedFbiChecks(coach, program).includes(check)) return null
+  if (program === 'youth') {
+    if (check === 'school-employee') return 'A school district fingerprint check does not count for youth coaching. Youth needs a PA DHS check.'
+    if (check === 'affidavit' && coach.pay === 'Paid') return 'Paid coaches must be fingerprinted. The disclosure statement is for volunteers only.'
+    if (check === 'affidavit') return 'The disclosure statement is only for volunteers who have lived in PA for the past 10 years.'
+    return 'Paid coaches need the PA DHS employee fingerprint check (code 1KG756).'
+  }
+  if (check === 'affidavit') return 'High school does not accept the disclosure statement. Seneca Valley requires a fingerprint check.'
+  return 'Paid high school coaches need the Seneca Valley school employee fingerprint check (code 1KG6XN).'
+}
+
+/** Programs an FBI document is judged against: the coach's assigned programs, or both if none. */
+function fbiPrograms(coach: Coach): Program[] {
+  const assigned = coachPrograms(coach)
+  return assigned.length ? assigned : [...PROGRAMS]
+}
+
+/**
+ * Returns a reason the submission cannot count for this coach, or null if it is acceptable.
+ * With a program, the FBI check is judged for that program only. Without one, an FBI document is acceptable
+ * when it counts for at least one program the coach is assigned to (a paid coach in both programs uploads two).
+ */
+export function eligibilityIssue(coach: Coach, req: Requirement, sub: Submission, program?: Program) {
+  if (isFbiRequirement(req)) {
+    const programs = program ? [program] : fbiPrograms(coach)
+    const issues = programs.map((p) => fbiIssue(coach, p, sub))
+    if (issues.some((i) => i === null)) return null
+    return issues[0]
+  }
+  // Only paid coaches need clearances obtained for employment. High school volunteers use volunteer clearances.
   if (req.tracksObtainedAs && coach.pay === 'Paid' && sub.obtainedAs === 'Volunteer') {
     return 'Obtained as a volunteer. Paid coaches need a clearance obtained for employment.'
-  }
-  if (req.allowsVolunteerAffidavit && sub.fbiMethod === 'affidavit') {
-    if (needsEmploymentClearances(coach)) {
-      return 'Paid and high school coaches must submit an FBI fingerprint check. The affidavit is for youth volunteers only.'
-    }
-    if (!coach.paResident10Years) {
-      return 'The affidavit is only for volunteers who have lived in PA for the past 10 years.'
-    }
   }
   return null
 }
 
+/** The disclosure statement only counts for youth, and only for volunteers who have lived in PA for 10 years. */
 export function canUseAffidavit(coach: Coach) {
-  if (needsEmploymentClearances(coach)) {
-    return { allowed: false, reason: 'Not available for paid or high school coaches.' }
+  if (coach.pay === 'Paid') {
+    return { allowed: false, reason: 'Not available for paid coaches. Paid coaches must be fingerprinted.' }
+  }
+  if (!isAssignedTo(coach, 'youth')) {
+    return { allowed: false, reason: 'Youth only. High school does not accept the disclosure statement.' }
   }
   if (!coach.paResident10Years) {
     return {
@@ -153,6 +206,31 @@ export function canUseAffidavit(coach: Coach) {
     }
   }
   return { allowed: true, reason: null }
+}
+
+/** The FBI documents a fully cleared coach would have on file: one per program, deduplicated. Used for demo data. */
+export function expectedFbiChecks(coach: Coach): FbiCheck[] {
+  const picks = fbiPrograms(coach).map((p) => acceptedFbiChecks(coach, p)[0])
+  return picks.filter((c, i) => picks.indexOf(c) === i)
+}
+
+/** Plain-language list of what FBI document each assigned program needs, for the upload dialog and checklist. */
+export function fbiNeeds(coach: Coach): { program: Program; text: string }[] {
+  return fbiPrograms(coach).map((program) => {
+    let text: string
+    if (program === 'youth') {
+      text = coach.pay === 'Paid'
+        ? 'PA DHS employee fingerprint check (code 1KG756).'
+        : coach.paResident10Years
+          ? 'PA DHS volunteer fingerprint check (code 1KG6ZJ), or the Volunteer Disclosure Statement.'
+          : 'PA DHS volunteer fingerprint check (code 1KG6ZJ).'
+    } else {
+      text = coach.pay === 'Paid'
+        ? 'Seneca Valley school employee fingerprint check (code 1KG6XN).'
+        : 'PA DHS volunteer fingerprint check (code 1KG6ZJ). No affidavit.'
+    }
+    return { program, text }
+  })
 }
 
 export interface ChecklistItem {
@@ -177,8 +255,8 @@ export function followUpOverdue(progress: Progress) {
   return !!progress.followUpOn && progress.followUpOn < TODAY
 }
 
-function approvedState(coach: Coach, req: Requirement, sub: Submission) {
-  const issue = eligibilityIssue(coach, req, sub)
+function approvedState(coach: Coach, req: Requirement, sub: Submission, program?: Program) {
+  const issue = eligibilityIssue(coach, req, sub, program)
   if (issue) return { status: 'invalid' as const, satisfied: false, issue, days: null }
   if (!sub.expiresOn) return { status: 'approved' as const, satisfied: true, issue: null, days: null }
   const days = daysBetween(TODAY, sub.expiresOn)
@@ -188,19 +266,21 @@ function approvedState(coach: Coach, req: Requirement, sub: Submission) {
   return { status: 'approved' as const, satisfied: true, issue: null, days }
 }
 
-export function checklistItem(
+function buildItem(
   coach: Coach,
   req: Requirement,
-  submissions: Submission[],
-  progressRows: Progress[] = [],
+  subs: Submission[],
+  progress: Progress | null,
+  program?: Program,
 ): ChecklistItem {
-  const progress = progressRows.find((p) => p.coachId === coach.id && p.requirementId === req.id) ?? null
-  const subs = submissions
-    .filter((s) => s.coachId === coach.id && s.requirementId === req.id)
-    .sort((a, b) => (a.uploadedOn === b.uploadedOn ? b.id.localeCompare(a.id) : b.uploadedOn.localeCompare(a.uploadedOn)))
   const latest = subs[0] ?? null
-  const approved = subs.find((s) => s.status === 'approved') ?? null
-  const approvedResult = approved ? approvedState(coach, req, approved) : null
+  const approvedSubs = subs.filter((s) => s.status === 'approved')
+  // With a program, prefer the newest approved document that counts there (a paid coach in both programs has two FBI checks).
+  const approved = (program && approvedSubs.find((s) => approvedState(coach, req, s, program).satisfied))
+    ?? (program && approvedSubs.find((s) => !eligibilityIssue(coach, req, s, program)))
+    ?? approvedSubs[0]
+    ?? null
+  const approvedResult = approved ? approvedState(coach, req, approved, program) : null
 
   let status: ItemStatus = 'not-started'
   if (latest?.status === 'pending') status = 'pending'
@@ -219,6 +299,38 @@ export function checklistItem(
     daysUntilExpiry: approvedResult?.days ?? null,
     progress,
   }
+}
+
+/**
+ * One requirement for one coach. Pass a program to judge it for that program only.
+ * Without a program, the FBI requirement is met only when it is met for every program the coach is assigned to;
+ * the first program still missing decides the status and its issue is labelled with the program name.
+ */
+export function checklistItem(
+  coach: Coach,
+  req: Requirement,
+  submissions: Submission[],
+  progressRows: Progress[] = [],
+  program?: Program,
+): ChecklistItem {
+  const progress = progressRows.find((p) => p.coachId === coach.id && p.requirementId === req.id) ?? null
+  const subs = submissions
+    .filter((s) => s.coachId === coach.id && s.requirementId === req.id)
+    .sort((a, b) => (a.uploadedOn === b.uploadedOn ? b.id.localeCompare(a.id) : b.uploadedOn.localeCompare(a.uploadedOn)))
+  if (program || !isFbiRequirement(req)) return buildItem(coach, req, subs, progress, program)
+
+  const programs = fbiPrograms(coach)
+  const perProgram = programs.map((p) => ({ program: p, item: buildItem(coach, req, subs, progress, p) }))
+  const unmet = perProgram.find((x) => !x.item.satisfied)
+  if (unmet) {
+    // Label the issue with the program when the coach is in both, so a paid coach sees which of the two checks is missing.
+    const label = programs.length > 1 ? `${PROGRAM_LABELS[unmet.program]}: ` : ''
+    return { ...unmet.item, issue: unmet.item.issue ? `${label}${unmet.item.issue}` : null }
+  }
+  // Every program is met: show the document that expires first.
+  return perProgram
+    .map((x) => x.item)
+    .sort((a, b) => (a.daysUntilExpiry ?? Infinity) - (b.daysUntilExpiry ?? Infinity))[0]
 }
 
 /**
@@ -274,7 +386,9 @@ export function summarizeCoach(
     const programItems = requirements
       .filter((r) => appliesToInProgram(r, coach, program))
       .sort((a, b) => a.order - b.order)
-      .map((r) => byId.get(r.id) ?? checklistItem(coach, r, submissions, progress))
+      .map((r) => isFbiRequirement(r)
+        ? checklistItem(coach, r, submissions, progress, program)
+        : byId.get(r.id) ?? checklistItem(coach, r, submissions, progress))
     const satisfied = programItems.filter((i) => i.satisfied).length
     const meets = programItems.length > 0 && satisfied === programItems.length
     const assigned = isAssignedTo(coach, program)

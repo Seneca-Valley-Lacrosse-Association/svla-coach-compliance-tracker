@@ -2,7 +2,7 @@
  * FAKE DATA ONLY. Every person, phone number, email, and document here is invented.
  * Swap these exports for database queries when wiring up a real backend.
  */
-import { computeExpiry } from './compliance'
+import { computeExpiry, expectedFbiChecks } from './compliance'
 import { ROLES, type Coach, type Requirement, type Submission } from './types'
 
 const ALL_ROLES = [...ROLES]
@@ -220,7 +220,7 @@ function fullyCleared(
   const defaults: Record<string, () => Submission[]> = {
     'pa-child-abuse': () => [sub(coach.id, 'pa-child-abuse', '2024-03-12', { obtainedAs })],
     'pa-state-police': () => [sub(coach.id, 'pa-state-police', '2024-03-14', { obtainedAs })],
-    'fbi-fingerprint': () => [sub(coach.id, 'fbi-fingerprint', '2024-04-02', { obtainedAs, fbiMethod: 'fingerprint' })],
+    'fbi-fingerprint': () => expectedFbiChecks(coach).map((fbiCheck) => sub(coach.id, 'fbi-fingerprint', '2024-04-02', { obtainedAs, fbiMethod: 'fingerprint', fbiCheck })),
     'usal-membership': () => [sub(coach.id, 'usal-membership', '2026-08-15', { membershipNumber: `US-${coach.id.toUpperCase()}-4471`, membershipExpiry: '2027-08-31' })],
     'usal-background': () => [sub(coach.id, 'usal-background', '2025-09-05')],
     'usal-bronze': () => [sub(coach.id, 'usal-bronze', '2025-09-05')],
@@ -241,7 +241,7 @@ export const submissions: Submission[] = [
   // Fully cleared
   ...fullyCleared(byId('c1')),
   ...fullyCleared(byId('c2'), {
-    'fbi-fingerprint': [sub('c2', 'fbi-fingerprint', '2024-04-10', { obtainedAs: 'Volunteer', fbiMethod: 'affidavit' })],
+    'fbi-fingerprint': [sub('c2', 'fbi-fingerprint', '2024-04-10', { obtainedAs: 'Volunteer', fbiMethod: 'affidavit', fbiCheck: 'affidavit' })],
   }),
   ...fullyCleared(byId('c11')),
   ...fullyCleared(byId('c12')),
@@ -268,7 +268,7 @@ export const submissions: Submission[] = [
   }),
   ...fullyCleared(byId('c8'), {
     'pa-child-abuse': [sub('c8', 'pa-child-abuse', '2024-02-01', { obtainedAs: 'Volunteer' })],
-    'fbi-fingerprint': [sub('c8', 'fbi-fingerprint', '2026-10-06', { status: 'pending', uploadedOn: '2026-10-06', obtainedAs: 'Employment', fbiMethod: 'fingerprint' })],
+    'fbi-fingerprint': [sub('c8', 'fbi-fingerprint', '2026-10-06', { status: 'pending', uploadedOn: '2026-10-06', obtainedAs: 'Employment', fbiMethod: 'fingerprint', fbiCheck: 'dhs-employee' })],
   }),
   ...fullyCleared(byId('c9'), {
     concussion: [sub('c9', 'concussion', '2026-10-09', { status: 'pending', uploadedOn: '2026-10-09' })],

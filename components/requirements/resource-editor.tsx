@@ -2,7 +2,8 @@
 
 import { useId, useState, type FormEvent } from 'react'
 import { useApp } from '@/lib/app-store'
-import { LEVELS, LEVEL_LABELS, PAY_STATUSES, ROLES, type Level, type PayStatus, type Requirement, type Role } from '@/lib/types'
+import { Plus, Trash2 } from 'lucide-react'
+import { LEVELS, LEVEL_LABELS, PAY_STATUSES, ROLES, type Level, type PayStatus, type Requirement, type Role, type SourceLink } from '@/lib/types'
 import { reasonFor } from '@/lib/requirement-reasons'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
@@ -22,7 +23,10 @@ export function ResourceEditor({ requirement }: { requirement: Requirement }) {
   const [level, setLevel] = useState<Level>(current?.level ?? 'both')
   const [why, setWhy] = useState(current?.why ?? '')
   const [source, setSource] = useState(current?.source ?? '')
-  const [sourceUrl, setSourceUrl] = useState(current?.sourceUrl ?? '')
+  // Start from the saved list, or the old single link turned into the first block.
+  const [links, setLinks] = useState<SourceLink[]>(current?.sources.length ? current.sources : [{ label: '', url: '' }])
+  const MAX_LINKS = 10
+  const setLink = (i: number, patch: Partial<SourceLink>) => setLinks(links.map((l, j) => (j === i ? { ...l, ...patch } : l)))
   const [roles, setRoles] = useState<Role[]>(requirement.appliesToRoles)
   const [pay, setPay] = useState<PayStatus[]>(requirement.appliesToPay)
   const [busy, setBusy] = useState(false)
@@ -32,8 +36,10 @@ export function ResourceEditor({ requirement }: { requirement: Requirement }) {
     if (busy) return
     if (!name.trim()) return setError('Enter a requirement name.')
     if (roles.length === 0 || pay.length === 0) return setError('Pick at least one role and one pay status.')
+    const sources = links.map((l) => ({ label: l.label.trim(), url: l.url.trim() })).filter((l) => l.url || l.label)
+    if (sources.some((l) => !/^https:\/\//.test(l.url))) return setError('Each source link needs an address starting with https://, or remove the empty block.')
     setBusy(true); setError('')
-    try { await updateResource(requirement.id, { name: name.trim(), help, helpUrl, helpLinkLabel, level, why, source, sourceUrl, appliesToRoles: roles, appliesToPay: pay }); setOpen(false) }
+    try { await updateResource(requirement.id, { name: name.trim(), help, helpUrl, helpLinkLabel, level, why, source, sourceUrl: '', sources, appliesToRoles: roles, appliesToPay: pay }); setOpen(false) }
     catch (error) { setError(error instanceof Error ? error.message : 'Could not save resource.') }
     finally { setBusy(false) }
   }
@@ -45,7 +51,7 @@ export function ResourceEditor({ requirement }: { requirement: Requirement }) {
           <DialogHeader><DialogTitle>Edit requirement</DialogTitle><DialogDescription>Rename it, update the instructions, or change who it applies to. Renaming keeps every coach's existing uploads and progress.</DialogDescription></DialogHeader>
           <FieldGroup>
             <Field><FieldLabel htmlFor={`${id}-name`}>Requirement name</FieldLabel><Input id={`${id}-name`} value={name} onChange={e => setName(e.target.value)} required maxLength={200} /></Field>
-            <Field><FieldLabel htmlFor={`${id}-help`}>Instructions</FieldLabel><Textarea id={`${id}-help`} value={help} onChange={e => setHelp(e.target.value)} required maxLength={3000} /></Field>
+            <Field><FieldLabel htmlFor={`${id}-help`}>How to get this (instructions)</FieldLabel><Textarea id={`${id}-help`} rows={8} value={help} onChange={e => setHelp(e.target.value)} required maxLength={3000} /><FieldDescription>Line breaks and blank lines are kept when coaches see this.</FieldDescription></Field>
             <Field><FieldLabel htmlFor={`${id}-url`}>HTTPS document or help URL</FieldLabel><Input id={`${id}-url`} type="url" value={helpUrl} onChange={e => setHelpUrl(e.target.value)} placeholder="https://" /></Field>
             <Field><FieldLabel htmlFor={`${id}-label`}>Link label</FieldLabel><Input id={`${id}-label`} value={helpLinkLabel} onChange={e => setHelpLinkLabel(e.target.value)} maxLength={150} /></Field>
             <fieldset>
@@ -67,9 +73,29 @@ export function ResourceEditor({ requirement }: { requirement: Requirement }) {
               </select>
               <FieldDescription>Youth teams and youth volunteers get the youth requirements. High school teams and high school volunteers get the high school ones. Board and coaches assigned to both get both.</FieldDescription>
             </Field>
-            <Field><FieldLabel htmlFor={`${id}-why`}>Why we require this</FieldLabel><Textarea id={`${id}-why`} value={why} onChange={e => setWhy(e.target.value)} maxLength={1500} /></Field>
-            <Field><FieldLabel htmlFor={`${id}-source`}>Where it comes from</FieldLabel><Input id={`${id}-source`} value={source} onChange={e => setSource(e.target.value)} maxLength={300} placeholder="For example: PIAA, PA law, SVLA policy" /></Field>
-            <Field><FieldLabel htmlFor={`${id}-source-url`}>Source link (optional)</FieldLabel><Input id={`${id}-source-url`} type="url" value={sourceUrl} onChange={e => setSourceUrl(e.target.value)} placeholder="https://" /></Field>
+            <Field><FieldLabel htmlFor={`${id}-why`}>Why we require this</FieldLabel><Textarea id={`${id}-why`} rows={4} value={why} onChange={e => setWhy(e.target.value)} maxLength={1500} /></Field>
+            <Field><FieldLabel htmlFor={`${id}-source`}>Where it comes from</FieldLabel><Textarea id={`${id}-source`} value={source} onChange={e => setSource(e.target.value)} maxLength={300} placeholder="For example: PIAA, PA law, SVLA policy" /><FieldDescription>Line breaks are kept when coaches see this.</FieldDescription></Field>
+            <fieldset className="flex flex-col gap-3">
+              <legend className="mb-1 text-sm font-medium">Source links (optional)</legend>
+              {links.map((link, i) => (
+                <div key={i} className="flex flex-col gap-2 rounded-lg border p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-muted-foreground">Link {i + 1}</span>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setLinks(links.length > 1 ? links.filter((_, j) => j !== i) : [{ label: '', url: '' }])} aria-label={`Remove link ${i + 1}`}>
+                      <Trash2 aria-hidden="true" />
+                      Remove
+                    </Button>
+                  </div>
+                  <Field><FieldLabel htmlFor={`${id}-source-label-${i}`}>Link label</FieldLabel><Input id={`${id}-source-label-${i}`} value={link.label} onChange={e => setLink(i, { label: e.target.value })} maxLength={150} placeholder="For example: PA DHS Keep Kids Safe" /></Field>
+                  <Field><FieldLabel htmlFor={`${id}-source-url-${i}`}>Link address</FieldLabel><Input id={`${id}-source-url-${i}`} type="url" value={link.url} onChange={e => setLink(i, { url: e.target.value })} placeholder="https://" /></Field>
+                </div>
+              ))}
+              <Button type="button" variant="outline" size="sm" className="self-start" disabled={links.length >= MAX_LINKS} onClick={() => setLinks([...links, { label: '', url: '' }])}>
+                <Plus aria-hidden="true" />
+                Add source link
+              </Button>
+              {links.length >= MAX_LINKS && <FieldDescription>Up to {MAX_LINKS} links.</FieldDescription>}
+            </fieldset>
           </FieldGroup>
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <DialogFooter><Button variant="outline" type="button" onClick={() => setOpen(false)}>Cancel</Button><Button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save resource'}</Button></DialogFooter>

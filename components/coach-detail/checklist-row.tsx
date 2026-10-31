@@ -2,7 +2,7 @@
 
 import { AlertTriangle, ExternalLink, FileText, Hourglass, LifeBuoy, MessageSquareWarning } from 'lucide-react'
 import { daysBetween, daysInProgress, eligibilityIssue, followUpOverdue, formatDate, TODAY, type ChecklistItem } from '@/lib/compliance'
-import { LEVEL_LABELS, type Coach, type Submission } from '@/lib/types'
+import { FBI_CHECK_SHORT, LEVEL_LABELS, type Coach, type Submission } from '@/lib/types'
 import { reasonFor } from '@/lib/requirement-reasons'
 import { ItemStatusPill } from '@/components/status-pill'
 import { UploadButton } from './upload-dialog'
@@ -21,8 +21,9 @@ function relative(date: string) {
 
 function SubmissionMeta({ sub }: { sub: Submission }) {
   const parts: string[] = []
-  if (sub.fbiMethod) parts.push(sub.fbiMethod === 'affidavit' ? 'Volunteer Disclosure Statement' : 'FBI fingerprint results')
-  if (sub.obtainedAs) parts.push(`Obtained as: ${sub.obtainedAs}`)
+  if (sub.fbiCheck) parts.push(FBI_CHECK_SHORT[sub.fbiCheck])
+  else if (sub.fbiMethod) parts.push(sub.fbiMethod === 'affidavit' ? 'Volunteer Disclosure Statement' : 'FBI fingerprint results')
+  if (sub.obtainedAs && !sub.fbiCheck) parts.push(`Obtained as: ${sub.obtainedAs}`)
   if (sub.membershipNumber) parts.push(`Member #${sub.membershipNumber}`)
   if (sub.signedName) parts.push(`Signed by ${sub.signedName}`)
   if (parts.length === 0) return null
@@ -181,7 +182,7 @@ export function ChecklistRow({
 
       <details className="group rounded-lg bg-secondary/60 px-3 py-2 text-sm" open={helpOpenByDefault}>
         <summary className="cursor-pointer font-medium text-brand">How to get this</summary>
-        <p className="mt-2 leading-relaxed text-foreground">{req.help}</p>
+        <p className="mt-2 whitespace-pre-line leading-relaxed text-foreground">{req.help}</p>
         {req.helpUrl && <a
           href={req.helpUrl}
           target="_blank"
@@ -198,23 +199,29 @@ export function ChecklistRow({
         <details className="group rounded-lg bg-secondary/60 px-3 py-2 text-sm">
           <summary className="cursor-pointer font-medium text-brand">Why we require this</summary>
           <p className="mt-2 font-medium text-navy">{LEVEL_LABELS[reason.level]}</p>
-          <p className="mt-1 leading-relaxed text-foreground">{reason.why}</p>
+          <p className="mt-1 whitespace-pre-line leading-relaxed text-foreground">{reason.why}</p>
           {reason.source && (
             <p className="mt-2 leading-relaxed text-muted-foreground">
-              <span className="font-medium text-foreground">Where it comes from:</span> {reason.source}
+              <span className="font-medium text-foreground">Where it comes from:</span> <span className="whitespace-pre-line">{reason.source}</span>
             </p>
           )}
-          {reason.sourceUrl && (
-            <a
-              href={reason.sourceUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-2 inline-flex items-center gap-1 font-medium text-brand underline underline-offset-4"
-            >
-              Read the source
-              <ExternalLink className="size-3.5" aria-hidden="true" />
-              <span className="sr-only">(opens in a new tab)</span>
-            </a>
+          {reason.sources.length > 0 && (
+            <ul className="mt-2 flex flex-col gap-1">
+              {reason.sources.map((link) => (
+                <li key={link.url}>
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 font-medium text-brand underline underline-offset-4"
+                  >
+                    {link.label || 'Read the source'}
+                    <ExternalLink className="size-3.5" aria-hidden="true" />
+                    <span className="sr-only">(opens in a new tab)</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
           )}
         </details>
       )}
