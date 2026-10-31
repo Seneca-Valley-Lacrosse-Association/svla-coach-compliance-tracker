@@ -38,8 +38,9 @@ export function CoachDetail({ id }: { id: string }) {
 
       <section
         aria-labelledby="coach-name"
-        className="flex flex-col gap-6 rounded-xl border bg-card p-5 shadow-xs lg:flex-row lg:items-start lg:justify-between"
+        className="flex flex-col gap-6 rounded-xl border bg-card p-5 shadow-xs"
       >
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex flex-col gap-3">
           <h1 id="coach-name" className="text-2xl font-semibold text-navy lg:text-3xl">
             {coach.name}
@@ -61,16 +62,15 @@ export function CoachDetail({ id }: { id: string }) {
           </div>
           <ProgramProgress summary={summary} includeOffSeason className="max-w-sm" />
         </div>
-        <div className="flex flex-col items-start gap-3 lg:items-end">
-          <ClearedBadge summary={summary} />
-          {viewMode === 'board' && (
-            <>
-              <EditCoachDialog key={`${coach.id}-${coach.team}-${coach.role}-${coach.pay}-${coach.name}`} coach={coach} />
-              {!coach.archivedAt && <PrintBadgeDialog summary={summary} />}
-              <RemoveCoachDialog coach={coach} />
-            </>
-          )}
+        {viewMode === 'board' && (
+          <div className="flex flex-wrap items-start gap-3 lg:flex-col lg:items-end">
+            <EditCoachDialog key={`${coach.id}-${coach.team}-${coach.role}-${coach.pay}-${coach.name}`} coach={coach} />
+            {!coach.archivedAt && <PrintBadgeDialog summary={summary} />}
+            <RemoveCoachDialog coach={coach} />
+          </div>
+        )}
         </div>
+        <ClearedBadge summary={summary} />
       </section>
 
       {coach.archivedAt && <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">This coach record is archived ({coach.archivedAt.slice(0, 10)}). It is hidden from the roster and dashboard, and the coach cannot use their login. Use “Restore or delete” to change that.</p>}

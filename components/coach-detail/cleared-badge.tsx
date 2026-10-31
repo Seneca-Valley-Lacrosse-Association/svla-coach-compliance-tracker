@@ -22,7 +22,7 @@ function ProgramBox({ summary }: { summary: ProgramSummary }) {
   const Icon = cleared ? CheckCircle2 : assigned ? XCircle : MinusCircle
 
   return (
-    <section aria-label={`Cleared to coach ${label}`} className={cn('flex flex-col gap-3 rounded-xl border-2 p-4', tone.box)}>
+    <section aria-label={`Cleared to coach ${label}`} className={cn('flex min-w-0 flex-col gap-3 rounded-xl border-2 p-4', tone.box)}>
       <div className="flex items-center gap-3">
         <Icon className={cn('size-10 shrink-0', tone.icon)} aria-hidden="true" />
         <div>
@@ -81,7 +81,7 @@ function OffSeasonBox({ summary }: { summary: OffSeasonSummary }) {
     : { box: 'border-red-600 bg-red-50', icon: 'text-red-700', word: 'text-red-800' }
   const Icon = cleared ? CheckCircle2 : XCircle
   return (
-    <section aria-label={`Cleared for ${OFF_SEASON_LABEL}`} className={cn('flex flex-col gap-3 rounded-xl border-2 p-4', tone.box)}>
+    <section aria-label={`Cleared for ${OFF_SEASON_LABEL}`} className={cn('flex min-w-0 flex-col gap-3 rounded-xl border-2 p-4', tone.box)}>
       <div className="flex items-center gap-3">
         <Icon className={cn('size-10 shrink-0', tone.icon)} aria-hidden="true" />
         <div>
@@ -114,7 +114,7 @@ function OffSeasonBox({ summary }: { summary: OffSeasonSummary }) {
 
 export function ClearedBadge({ summary }: { summary: CoachSummary }) {
   return (
-    <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-[54rem] lg:grid-cols-3">
+    <div className="grid w-full gap-3 md:grid-cols-3">
       {summary.programs.map((p) => (
         <ProgramBox key={p.program} summary={p} />
       ))}
