@@ -12,13 +12,14 @@ export const metadata: Metadata = {
   description:
     'Track coach clearances, trainings, and certifications for the SVLA youth lacrosse association.',
   generator: 'v0.app',
+  appleWebApp: { title: 'SVLA Compliance' },
   icons: {
     icon: [
       { url: '/icon-light-32x32.png', media: '(prefers-color-scheme: light)' },
       { url: '/icon-dark-32x32.png', media: '(prefers-color-scheme: dark)' },
       { url: '/icon.svg', type: 'image/svg+xml' },
     ],
-    apple: '/apple-icon.png',
+    apple: { url: '/apple-icon.png', sizes: '180x180' },
   },
 }
 
