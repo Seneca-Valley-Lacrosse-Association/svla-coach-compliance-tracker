@@ -70,11 +70,19 @@ async function syncTestAssignments(db: SupabaseClient, cycle: SurveyCycle, today
   if (coaches.error) throw coaches.error
   const byEmail = new Map((coaches.data ?? []).map(c => [c.email.toLowerCase(), c]))
   const certs = await certificationByCoach(db, (coaches.data ?? []).map(c => c.id), today)
+  // Addresses that are not on the roster get "Jane Doe" placeholder details, so the prefilled parts of the form
+  // can still be tested. Nothing about them is written back to the roster.
+  let dummies = 0
   const rows = fresh.map(email => {
     const c = byEmail.get(email)
+    if (c) return {
+      cycle_id: cycle.id, coach_id: c.id, coach_name: c.name, coach_email: email, team: c.team,
+      profile: { role: c.role, pay: c.pay, ...(certs.get(c.id) ?? {}) },
+    }
+    dummies++
     return {
-      cycle_id: cycle.id, coach_id: c?.id ?? null, coach_name: c?.name ?? email.split('@')[0], coach_email: email, team: c?.team ?? '',
-      profile: c ? { role: c.role, pay: c.pay, ...(certs.get(c.id) ?? {}) } : {},
+      cycle_id: cycle.id, coach_id: null, coach_name: dummies === 1 ? 'Jane Doe' : `Jane Doe ${dummies}`, coach_email: email, team: '12U',
+      profile: { role: 'Head Coach', pay: 'Volunteer', certification: 'Bronze (test data)', certificationVerified: false, testDummy: true },
     }
   })
   const { error } = await db.from('survey_assignments').upsert(rows, { onConflict: 'cycle_id,coach_email', ignoreDuplicates: true })

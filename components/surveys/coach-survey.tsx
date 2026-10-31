@@ -35,7 +35,7 @@ function Notice({ title, children }: { title: string; children: React.ReactNode 
 }
 
 function SurveyForm({ survey, onSaved }: { survey: MySurvey; onSaved: () => void }) {
-  const { getSummary, currentCoachId } = useApp()
+  const { getSummary, currentCoachId, email } = useApp()
   const me = getSummary(currentCoachId)?.coach
   const questions = survey.questions
   const [answers, setAnswers] = useState<Answers>(() => initialAnswers(questions, survey.answers, survey.team))
@@ -123,10 +123,10 @@ function SurveyForm({ survey, onSaved }: { survey: MySurvey; onSaved: () => void
 
       <section aria-labelledby={`details-${survey.assignmentId}`} className="rounded-xl border bg-secondary/40 p-5">
         <h2 id={`details-${survey.assignmentId}`} className="font-semibold text-navy">Your details from the tracker</h2>
-        <p className="mb-3 text-sm text-muted-foreground">These come from your profile and checklist, so you don&apos;t need to enter them.</p>
+        <p className="mb-3 text-sm text-muted-foreground">{survey.profile.testDummy ? 'Test run: this address is not on the coach roster, so placeholder details (Jane Doe) are shown.' : <>These come from your profile and checklist, so you don&apos;t need to enter them.</>}</p>
         <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
           <Detail label="Name" value={survey.coachName} />
-          <Detail label="Email" value={me?.email ?? '—'} />
+          <Detail label="Email" value={me?.email ?? email ?? '—'} />
           <Detail label="Team" value={teamLabel(survey.team) || '—'} />
           <Detail label="Role" value={survey.profile.role ?? me?.role ?? '—'} />
           <Detail label="USA Lacrosse certification" value={survey.profile.certification ? `${survey.profile.certification}${survey.profile.certificationVerified ? ' (verified)' : ''}` : '—'} />

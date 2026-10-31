@@ -60,7 +60,7 @@ export interface SurveyCycle extends ReminderSettings {
 }
 export type Answer = string | number | string[]
 export type Answers = Record<string, Answer>
-export interface SurveyProfile { role?: string; pay?: string; certification?: string; certificationVerified?: boolean }
+export interface SurveyProfile { role?: string; pay?: string; certification?: string; certificationVerified?: boolean; testDummy?: boolean }
 export interface SurveyAssignment {
   id: string
   cycleId: string
