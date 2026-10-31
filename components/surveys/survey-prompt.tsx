@@ -2,12 +2,16 @@
 
 import Link from '@/components/app-link'
 import { ClipboardList } from 'lucide-react'
-import { useSurveys } from '@/lib/use-surveys'
+import { useApp } from '@/lib/app-store'
+import { useSurveyPreview, useSurveys } from '@/lib/use-surveys'
 import { longDate, todayET } from '@/lib/surveys'
 
 /** A banner on the coach's checklist when a coaching survey is waiting for them. */
 export function SurveyPrompt() {
-  const { data } = useSurveys()
+  const { preview } = useApp()
+  const own = useSurveys()
+  const previewed = useSurveyPreview(preview ? preview.email : null)
+  const data = preview ? previewed.data : own.data
   const waiting = (data?.mine ?? []).find((s) => !s.submittedAt)
   if (!waiting) return null
   const overdue = todayET() > waiting.dueOn

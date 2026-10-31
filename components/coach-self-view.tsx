@@ -25,7 +25,7 @@ export function CoachSelfView({ previewSummary }: { previewSummary?: CoachSummar
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
-      {!readOnly && <SurveyPrompt />}
+      <SurveyPrompt />
       <section className="flex flex-col gap-5 rounded-xl border bg-card p-5 shadow-xs">
         <div>
           <h1 className="text-2xl font-semibold text-navy text-balance lg:text-3xl">Hi {firstName}, here&apos;s your checklist</h1>
