@@ -14,5 +14,7 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) return NextResponse.redirect(new URL(next, url.origin))
   }
-  return NextResponse.redirect(new URL('/?authError=1', url.origin))
+  // Google sign-in returns here too; tell the sign-in page which flow failed so it shows the right message.
+  const failed = url.searchParams.get('provider') === 'google' ? 'google' : '1'
+  return NextResponse.redirect(new URL(`/?authError=${failed}`, url.origin))
 }
