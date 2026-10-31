@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { useState, type FormEvent } from 'react'
-import { ShieldCheck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -97,7 +96,8 @@ export function AuthPanel({ onSignedIn }: { onSignedIn: () => Promise<unknown> }
     <main className="flex min-h-dvh items-center justify-center bg-background px-4 py-12 text-foreground">
       <section className="flex w-full max-w-md flex-col gap-6 rounded-xl border bg-card p-6 text-card-foreground shadow-sm">
         <header className="flex flex-col gap-2">
-          <ShieldCheck className="size-9 text-primary" aria-hidden="true" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/svla-logo.jpg" alt="Seneca Valley Raiders Lacrosse" width={900} height={172} className="mb-2 h-auto w-full max-w-xs" />
           <h1 className="text-balance text-2xl font-semibold">SVLA Compliance</h1>
           <p className="leading-relaxed text-muted-foreground">{forgot ? 'Enter your account email and we will send you a link to choose a new password.' : signUp ? 'Create an account with the email address on your coach or board roster.' : 'Sign in to securely manage your clearances and certifications.'}</p>
         </header>
