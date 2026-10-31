@@ -167,6 +167,10 @@ export interface StaffStatusRow {
   coach_id: string; coach_name: string; team: Team; coach_role: Role
   requirement_id: string; requirement_name: string; state: StaffState
   expires_on: string | null; days_to_expiry: number | null; follow_up_on: string | null
+  /** youth | high-school | both. Absent on databases from before the per-program migration. */
+  requirement_level?: Level | null
+  /** Programs the coach is assigned to. Absent on databases from before the per-program migration. */
+  coach_programs?: Program[] | null
 }
 export interface StaffData { roster: StaffRosterRow[]; status: StaffStatusRow[] }
 
