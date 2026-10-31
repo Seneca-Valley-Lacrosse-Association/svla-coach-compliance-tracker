@@ -1,3 +1,6 @@
 {
-  "crons": [{ "path": "/api/keepalive", "schedule": "0 15 */5 * *" }]
+  "crons": [
+    { "path": "/api/keepalive", "schedule": "0 15 */5 * *" },
+    { "path": "/api/cron/surveys", "schedule": "20 13 * * *" }
+  ]
 }

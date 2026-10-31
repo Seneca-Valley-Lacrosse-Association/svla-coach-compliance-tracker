@@ -121,3 +121,30 @@ export async function sendBugAlertEmail(
   const html = `<p><strong>${escapeHtml(t.ticket_code)}</strong> flagged as Bug / Issue &mdash; ${escapeHtml(label)}</p><p><strong>Flagged by:</strong> ${escapeHtml(t.flagged_by_email ?? 'a board member')}</p>${t.admin_notes ? `<p><strong>Admin note:</strong> ${escapeHtml(t.admin_notes)}</p>` : ''}<p style="white-space:pre-wrap"><strong>Description</strong><br>${escapeHtml(t.description)}</p>${ctx.length ? `<p><strong>Context</strong><br>${ctx.map(([k, v]) => `${escapeHtml(k)}: ${escapeHtml(v)}`).join('<br>')}</p>` : ''}<p><a href="${escapeHtml(link)}">Open ticket</a></p>`
   return sendMail(to, `[SVLA BUG] ${t.ticket_code}: ${label}`, text, html)
 }
+
+/** Coaching survey invitation or reminder. Returns true when Resend accepted it. Never throws. */
+export async function sendSurveyEmail(
+  kind: 'invite' | 'reminder' | 'due_tomorrow' | 'overdue',
+  to: string,
+  name: string,
+  survey: { title: string; dueOn: string; dueLabel: string; intro: string },
+): Promise<boolean> {
+  const first = name.trim().split(/\s+/)[0] || 'Coach'
+  const link = `${SITE_URL}/survey`
+  const subjects = {
+    invite: `${survey.title}: please respond by ${survey.dueLabel}`,
+    reminder: `Reminder: ${survey.title} is due ${survey.dueLabel}`,
+    due_tomorrow: `Due tomorrow: ${survey.title}`,
+    overdue: `Still time to respond: ${survey.title}`,
+  }
+  const openers = {
+    invite: 'The SVLA Board of Directors is asking every coach for feedback on the season. Your answers help us improve the experience for players, families and coaches.',
+    reminder: `This is a friendly reminder that the ${survey.title} is due ${survey.dueLabel}. We have not received your response yet.`,
+    due_tomorrow: `The ${survey.title} is due tomorrow, ${survey.dueLabel}. We have not received your response yet.`,
+    overdue: `The ${survey.title} was due ${survey.dueLabel}, and we would still very much like to hear from you.`,
+  }
+  const intro = kind === 'invite' && survey.intro.trim() ? survey.intro.trim() : ''
+  const text = `Hi ${first},\n\n${openers[kind]}\n\n${intro ? `${intro}\n\n` : ''}Take the survey here (about 10 minutes; you can save and finish later):\n${link}\n\nSign in with your SVLA Compliance account (${to}). If you have not set a password yet, use "Forgot password" on the sign-in page.\n\nThank you for coaching with Seneca Valley Lacrosse Association.`
+  const html = `<p>Hi ${escapeHtml(first)},</p><p>${escapeHtml(openers[kind])}</p>${intro ? `<p style="white-space:pre-wrap">${escapeHtml(intro)}</p>` : ''}<p><a href="${link}" style="display:inline-block;background:#17558a;color:#ffffff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">Take the survey</a></p><p>It takes about 10 minutes, and you can save and finish later. Please respond by <strong>${escapeHtml(survey.dueLabel)}</strong>.</p><p>Sign in with your SVLA Compliance account (${escapeHtml(to)}). If you have not set a password yet, use &ldquo;Forgot password&rdquo; on the sign-in page.</p><p>Thank you for coaching with Seneca Valley Lacrosse Association.</p>`
+  return sendMail(to, subjects[kind], text, html, process.env.EMAIL_REPLY_TO || IT)
+}

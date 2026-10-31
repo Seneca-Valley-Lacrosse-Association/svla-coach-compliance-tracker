@@ -12,6 +12,9 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // The PDF board report embeds these fonts, read from disk at runtime.
+  outputFileTracingIncludes: { '/api/surveys/[id]/export': ['./public/fonts/**'] },
+  serverExternalPackages: ['@react-pdf/renderer'],
 }
 
 export default nextConfig
