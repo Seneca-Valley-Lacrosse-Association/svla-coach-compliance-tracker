@@ -2,6 +2,7 @@
 
 import { useId, useState, type FormEvent } from 'react'
 import { TEAMS, type Team } from '@/lib/types'
+import { useApp } from '@/lib/app-store'
 import { surveyCommand } from '@/lib/use-surveys'
 import { addDays, COACHING_TEAMS, DEFAULT_REMINDERS, emailDueToday, shortDate, todayET, type SurveyCycle } from '@/lib/surveys'
 import { Button } from '@/components/ui/button'
@@ -39,9 +40,13 @@ export function reminderPlan(d: Pick<Draft, 'sendOn' | 'dueOn' | 'reminderEveryD
 }
 const KIND_TEXT: Record<string, string> = { invite: 'Survey sent', reminder: 'Reminder', due_tomorrow: 'Due-tomorrow reminder', overdue: 'Past-due reminder' }
 
-export function CycleDialog({ open, onOpenChange, cycle, onSaved }: { open: boolean; onOpenChange: (open: boolean) => void; cycle?: SurveyCycle; onSaved: (id?: string) => void }) {
+export function CycleDialog({ open, onOpenChange, cycle, onSaved, test = false }: { open: boolean; onOpenChange: (open: boolean) => void; cycle?: SurveyCycle; onSaved: (id?: string) => void; test?: boolean }) {
   const id = useId()
-  const [draft, setDraft] = useState<Draft>(() => cycle ? { ...cycle, closeOn: cycle.closeOn ?? '' } : blank())
+  const { email } = useApp()
+  const isTest = cycle ? !!cycle.testEmails : test
+  const testBlank = (): Draft => ({ ...blank(), title: 'TEST - Coaching Survey', sendOn: todayET(), dueOn: addDays(todayET(), 7), closeOn: '' })
+  const [draft, setDraft] = useState<Draft>(() => cycle ? { ...cycle, closeOn: cycle.closeOn ?? '' } : isTest ? testBlank() : blank())
+  const [testText, setTestText] = useState(() => (cycle?.testEmails ?? [email]).filter(Boolean).join('\n'))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const sent = !!cycle && cycle.status !== 'scheduled'
@@ -49,7 +54,7 @@ export function CycleDialog({ open, onOpenChange, cycle, onSaved }: { open: bool
   const plan = draft.sendOn && draft.dueOn && draft.dueOn >= draft.sendOn ? reminderPlan(draft) : []
 
   function change(next: boolean) {
-    if (next) setDraft(cycle ? { ...cycle, closeOn: cycle.closeOn ?? '' } : blank())
+    if (next) { setDraft(cycle ? { ...cycle, closeOn: cycle.closeOn ?? '' } : isTest ? testBlank() : blank()); setTestText((cycle?.testEmails ?? [email]).filter(Boolean).join('\n')) }
     setError('')
     onOpenChange(next)
   }
@@ -61,10 +66,12 @@ export function CycleDialog({ open, onOpenChange, cycle, onSaved }: { open: bool
     if (!sent && draft.sendOn < todayET()) return setError('Choose a send date of today or later.')
     if (draft.dueOn < draft.sendOn) return setError('The due date must be on or after the send date.')
     if (draft.closeOn && draft.closeOn < draft.dueOn) return setError('The close date must be on or after the due date.')
-    if (!draft.audienceTeams.length) return setError('Choose at least one team.')
+    const testEmails = isTest ? [...new Set(testText.split(/[\s,;]+/).map((e) => e.trim().toLowerCase()).filter(Boolean))] : null
+    if (testEmails && (!testEmails.length || testEmails.length > 10 || testEmails.some((e) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)))) return setError('Enter one to ten valid email addresses for the test run.')
+    if (!testEmails && !draft.audienceTeams.length) return setError('Choose at least one team.')
     setBusy(true)
     try {
-      const input = { ...draft, closeOn: draft.closeOn || null }
+      const input = { ...draft, closeOn: draft.closeOn || null, testEmails }
       const result = await surveyCommand<{ id?: string }>(cycle ? { action: 'updateCycle', id: cycle.id, input } : { action: 'createCycle', input })
       onSaved(result.id)
       onOpenChange(false)
@@ -80,7 +87,7 @@ export function CycleDialog({ open, onOpenChange, cycle, onSaved }: { open: bool
       <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-2xl">
         <form onSubmit={submit} noValidate className="flex flex-col gap-6">
           <DialogHeader>
-            <DialogTitle>{cycle ? 'Survey settings' : 'Schedule a coaching survey'}</DialogTitle>
+            <DialogTitle>{cycle ? (isTest ? 'Test run settings' : 'Survey settings') : isTest ? 'Start a test run' : 'Schedule a coaching survey'}</DialogTitle>
             <DialogDescription>
               {sent ? 'This survey has already gone out, so its send date is fixed. You can still move the due and close dates, change who gets it, and adjust reminders.' : 'On the send date the tracker emails every coach in the chosen teams, then sends reminders to anyone who has not responded. It uses the current question bank at that moment.'}
             </DialogDescription>
@@ -129,6 +136,16 @@ export function CycleDialog({ open, onOpenChange, cycle, onSaved }: { open: bool
             <p className="text-sm text-muted-foreground">Emails go out around 9 a.m. Eastern on each date. Leave &ldquo;Stop accepting&rdquo; blank to keep the survey open until the board closes it.</p>
           </fieldset>
 
+          {isTest ? (
+            <fieldset className="flex flex-col gap-3 rounded-lg border-2 border-amber-400 bg-amber-50 p-4">
+              <legend className="px-1 text-base font-semibold text-amber-900">Test run: who gets it</legend>
+              <p className="text-sm text-amber-950">Only these addresses get the survey, with &ldquo;[TEST]&rdquo; in the subject. No coach is emailed. Each person must sign in to the tracker with that address to fill it out. Delete the test afterwards to remove it and its answers.</p>
+              <Field>
+                <FieldLabel htmlFor={`${id}-test`}>Email addresses (one per line, up to 10)</FieldLabel>
+                <Textarea id={`${id}-test`} rows={3} value={testText} onChange={(e) => setTestText(e.target.value)} />
+              </Field>
+            </fieldset>
+          ) : (
           <fieldset className="flex flex-col gap-3">
             <legend className="mb-1 text-base font-semibold text-navy">Who gets it</legend>
             <p className="text-sm text-muted-foreground">Every approved, active person on these teams, whatever their role or pay status. Coaches added later are included automatically while the survey is open.</p>
@@ -141,6 +158,7 @@ export function CycleDialog({ open, onOpenChange, cycle, onSaved }: { open: bool
               ))}
             </div>
           </fieldset>
+          )}
 
           <fieldset className="flex flex-col gap-3">
             <legend className="mb-1 text-base font-semibold text-navy">Reminders</legend>

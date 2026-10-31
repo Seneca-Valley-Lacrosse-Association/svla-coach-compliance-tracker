@@ -23,13 +23,15 @@ const cycleInput = z.object({
   sendOn: z.iso.date(),
   dueOn: z.iso.date(),
   closeOn: z.iso.date().nullable(),
-  audienceTeams: z.array(z.enum(TEAMS)).min(1, 'Choose at least one team.'),
+  audienceTeams: z.array(z.enum(TEAMS)),
+  testEmails: z.array(z.string().trim().toLowerCase().email('Enter valid email addresses for the test run.').max(254)).min(1).max(10).nullable().default(null),
   reminderEveryDays: z.number().int().min(0).max(30),
   remindDayBeforeDue: z.boolean(),
   remindAfterDue: z.boolean(),
   afterDueDays: z.number().int().min(0).max(60),
   maxReminders: z.number().int().min(0).max(20),
-}).refine(c => c.dueOn >= c.sendOn, { message: 'The due date must be on or after the send date.', path: ['dueOn'] })
+}).refine(c => c.testEmails || c.audienceTeams.length > 0, { message: 'Choose at least one team.', path: ['audienceTeams'] })
+  .refine(c => c.dueOn >= c.sendOn, { message: 'The due date must be on or after the send date.', path: ['dueOn'] })
   .refine(c => !c.closeOn || c.closeOn >= c.dueOn, { message: 'The close date must be on or after the due date.', path: ['closeOn'] })
 
 const commandSchema = z.discriminatedUnion('action', [
@@ -50,7 +52,7 @@ const commandSchema = z.discriminatedUnion('action', [
 function cycleRow(c: z.infer<typeof cycleInput>) {
   return {
     title: c.title, season_label: c.seasonLabel, next_season_label: c.nextSeasonLabel, intro: c.intro,
-    send_on: c.sendOn, due_on: c.dueOn, close_on: c.closeOn, audience_teams: c.audienceTeams,
+    send_on: c.sendOn, due_on: c.dueOn, close_on: c.closeOn, audience_teams: c.testEmails ? [] : c.audienceTeams, test_emails: c.testEmails,
     reminder_every_days: c.reminderEveryDays, remind_day_before_due: c.remindDayBeforeDue, remind_after_due: c.remindAfterDue,
     after_due_days: c.afterDueDays, max_reminders: c.maxReminders, updated_at: new Date().toISOString(),
   }

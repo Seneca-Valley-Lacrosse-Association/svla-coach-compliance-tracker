@@ -46,6 +46,8 @@ export interface SurveyCycle extends ReminderSettings {
   dueOn: string
   closeOn: string | null
   audienceTeams: Team[]
+  /** Test run: sent only to these addresses instead of the teams. Null for a real survey. */
+  testEmails: string[] | null
   status: CycleStatus
   questions: SurveyQuestion[] | null
   summaryThemes: string
@@ -294,7 +296,7 @@ export function questionToSnapshot(q: SurveyQuestion) {
 export function cycleFromRow(r: any): SurveyCycle {
   return {
     id: r.id, title: r.title, seasonLabel: r.season_label, nextSeasonLabel: r.next_season_label, intro: r.intro ?? '',
-    sendOn: r.send_on, dueOn: r.due_on, closeOn: r.close_on, audienceTeams: r.audience_teams ?? [], status: r.status,
+    sendOn: r.send_on, dueOn: r.due_on, closeOn: r.close_on, audienceTeams: r.audience_teams ?? [], testEmails: r.test_emails ?? null, status: r.status,
     reminderEveryDays: r.reminder_every_days, remindDayBeforeDue: r.remind_day_before_due, remindAfterDue: r.remind_after_due,
     afterDueDays: r.after_due_days, maxReminders: r.max_reminders, questions: r.questions ?? null,
     summaryThemes: r.summary_themes ?? '', summaryFollowUp: r.summary_follow_up ?? '', summaryUpdatedAt: r.summary_updated_at, summaryUpdatedBy: r.summary_updated_by,

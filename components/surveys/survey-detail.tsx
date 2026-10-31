@@ -79,8 +79,10 @@ function Detail({ cycle, assignments, refresh }: { cycle: SurveyCycle; assignmen
           {!cycle.isHistorical && cycle.status === 'closed' && <Button variant="outline" className="h-10 bg-card px-4" disabled={!!busy} onClick={() => void run('status', { action: 'setCycleStatus', id: cycle.id, status: 'open' }, () => 'Survey reopened. Reminders resume on the next daily run if the reminder window allows.')}><LockOpen aria-hidden="true" />Reopen</Button>}
           <Button variant="outline" className="h-10 bg-card px-4" disabled={scheduled} render={<a href={`/api/surveys/${cycle.id}/export?format=pdf`} download />}><FileText aria-hidden="true" />Board report (PDF)</Button>
           <Button variant="outline" className="h-10 bg-card px-4" disabled={scheduled} render={<a href={`/api/surveys/${cycle.id}/export?format=xlsx`} download />}><Download aria-hidden="true" />Excel</Button>
+          {cycle.testEmails && !scheduled && <Button variant="destructive" className="h-10 px-4" disabled={!!busy} onClick={() => { if (window.confirm('Delete this test survey and all of its answers? This cannot be undone.')) void run('delete', { action: 'deleteCycle', id: cycle.id }).then((r) => { if (r) router.push('/surveys') }) }}><Trash2 aria-hidden="true" />Delete test</Button>}
         </div>
       </div>
+      {cycle.testEmails && <p className="rounded-lg border-2 border-amber-400 bg-amber-50 p-3 text-amber-950"><strong>Test run.</strong> Sent only to {cycle.testEmails.join(', ')} with &ldquo;[TEST]&rdquo; in the subject. No coaches are emailed. Delete it when you are done to remove it and its answers.</p>}
       {notice && <p role="status" className="rounded-lg border border-emerald-300 bg-emerald-50 p-3 font-medium text-emerald-900">{notice}</p>}
       {failure && <p role="alert" className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 font-medium text-destructive">{failure}</p>}
 
@@ -121,7 +123,7 @@ function ScheduledView({ cycle, onDelete }: { cycle: SurveyCycle; onDelete: () =
   return (
     <section className="flex max-w-3xl flex-col gap-4 rounded-xl border bg-card p-5 shadow-xs">
       <h2 className="text-lg font-semibold text-navy">Waiting to send</h2>
-      <p className="leading-relaxed">On <strong>{longDate(cycle.sendOn)}</strong>, around 9 a.m. Eastern, every approved, active person on {cycle.audienceTeams.join(', ')} will get the survey by email, using the questions in the question bank at that moment. You can change the dates and settings until then, or use &ldquo;Send now&rdquo;.</p>
+      <p className="leading-relaxed">On <strong>{longDate(cycle.sendOn)}</strong>, around 9 a.m. Eastern, {cycle.testEmails ? `only ${cycle.testEmails.join(', ')}` : `every approved, active person on ${cycle.audienceTeams.join(', ')}`} will get the survey by email, using the questions in the question bank at that moment. You can change the dates and settings until then, or use &ldquo;Send now&rdquo;.</p>
       {cycle.intro && <p className="whitespace-pre-wrap rounded-lg bg-secondary/40 p-3 text-sm">{cycle.intro}</p>}
       <div><Button variant="destructive" className="h-10 px-4" onClick={() => { if (window.confirm('Delete this scheduled survey? Nothing has been sent yet.')) onDelete() }}><Trash2 aria-hidden="true" />Delete survey</Button></div>
     </section>

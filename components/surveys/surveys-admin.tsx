@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from '@/components/app-link'
-import { CalendarClock, Plus } from 'lucide-react'
+import { CalendarClock, FlaskConical, Plus } from 'lucide-react'
 import { useSurveys } from '@/lib/use-surveys'
 import { cycleCounts, shortDate, type SurveyCycle } from '@/lib/surveys'
 import { Button } from '@/components/ui/button'
@@ -14,7 +14,8 @@ import { CycleDialog } from './cycle-dialog'
 import { QuestionBank } from './question-bank'
 
 export function StatusPill({ cycle }: { cycle: SurveyCycle }) {
-  const [text, cls] = cycle.isHistorical ? ['Imported', 'bg-slate-100 text-slate-800']
+  const [text, cls] = cycle.testEmails ? [cycle.status === 'closed' ? 'Test (closed)' : 'Test', 'bg-amber-100 text-amber-900']
+    : cycle.isHistorical ? ['Imported', 'bg-slate-100 text-slate-800']
     : cycle.status === 'scheduled' ? ['Scheduled', 'bg-sky-100 text-sky-900']
     : cycle.status === 'open' ? ['Open', 'bg-emerald-100 text-emerald-900']
     : ['Closed', 'bg-slate-200 text-slate-800']
@@ -25,6 +26,7 @@ export function SurveysAdmin() {
   const router = useRouter()
   const { data, error, isLoading, mutate } = useSurveys()
   const [creating, setCreating] = useState(false)
+  const [testing, setTesting] = useState(false)
   if (isLoading) return <p role="status">Loading surveys…</p>
   if (error || data?.role !== 'board') return <p role="alert">Coaching surveys could not be loaded. Board access is required.</p>
   const cycles = data.cycles ?? []
@@ -35,7 +37,10 @@ export function SurveysAdmin() {
       <PageHeader
         title="Coach Surveys"
         description="Schedule the annual coaching survey, follow responses, and build the board report. Board only."
-        actions={<Button className="h-10 px-4" onClick={() => setCreating(true)}><Plus aria-hidden="true" />Schedule a survey</Button>}
+        actions={<>
+          <Button variant="outline" className="h-10 bg-card px-4" onClick={() => setTesting(true)}><FlaskConical aria-hidden="true" />Send test survey</Button>
+          <Button className="h-10 px-4" onClick={() => setCreating(true)}><Plus aria-hidden="true" />Schedule a survey</Button>
+        </>}
       />
       <Tabs defaultValue="surveys" className="gap-6">
         <TabsList className="h-10">
@@ -61,7 +66,7 @@ export function SurveysAdmin() {
                         {c.isHistorical ? `Imported responses from the ${c.seasonLabel} season` : `${c.status === 'scheduled' ? 'Sends' : 'Sent'} ${shortDate(c.sendOn)} · due ${shortDate(c.dueOn)}${c.closeOn ? ` · closes ${shortDate(c.closeOn)}` : ''}`}
                       </p>
                       {c.status === 'scheduled' && !c.isHistorical
-                        ? <p className="text-sm">Goes to {c.audienceTeams.length} team{c.audienceTeams.length === 1 ? '' : 's'}. Reminders every {c.reminderEveryDays || '—'} days.</p>
+                        ? <p className="text-sm">{c.testEmails ? `Test run for ${c.testEmails.join(', ')}.` : `Goes to ${c.audienceTeams.length} team${c.audienceTeams.length === 1 ? '' : 's'}.`} Reminders every {c.reminderEveryDays || '—'} days.</p>
                         : (
                           <div>
                             <p className="mb-1 text-sm font-medium">{counts.submitted} of {counts.total} responded{counts.started ? ` · ${counts.started} in progress` : ''}</p>
@@ -80,6 +85,7 @@ export function SurveysAdmin() {
         </TabsContent>
       </Tabs>
       <CycleDialog open={creating} onOpenChange={setCreating} onSaved={(id) => { void mutate(); if (id) router.push(`/surveys/${id}`) }} />
+      <CycleDialog open={testing} onOpenChange={setTesting} test onSaved={(id) => { void mutate(); if (id) router.push(`/surveys/${id}`) }} />
     </>
   )
 }

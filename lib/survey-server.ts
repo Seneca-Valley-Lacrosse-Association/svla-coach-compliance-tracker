@@ -40,6 +40,7 @@ export async function openCycle(db: SupabaseClient, cycle: SurveyCycle) {
 
 /** Adds every active coach in the round's audience who does not have the survey yet (including coaches added after it opened). */
 export async function syncAssignments(db: SupabaseClient, cycle: SurveyCycle, today: string) {
+  if (cycle.testEmails?.length) return syncTestAssignments(db, cycle, today)
   const coaches = await db.from('coaches').select('id,name,email,team,role,pay,status,archived_at').in('team', cycle.audienceTeams).eq('status', 'approved').is('archived_at', null)
   if (coaches.error) throw coaches.error
   const existing = await db.from('survey_assignments').select('coach_email').eq('cycle_id', cycle.id)
@@ -52,6 +53,30 @@ export async function syncAssignments(db: SupabaseClient, cycle: SurveyCycle, to
     cycle_id: cycle.id, coach_id: c.id, coach_name: c.name, coach_email: c.email.toLowerCase(), team: c.team,
     profile: { role: c.role, pay: c.pay, ...(certs.get(c.id) ?? {}) },
   }))
+  const { error } = await db.from('survey_assignments').upsert(rows, { onConflict: 'cycle_id,coach_email', ignoreDuplicates: true })
+  if (error) throw error
+  return rows.length
+}
+
+/** Test run: one assignment per listed address. Uses the roster record when the address is a coach's. */
+async function syncTestAssignments(db: SupabaseClient, cycle: SurveyCycle, today: string) {
+  const emails = [...new Set(cycle.testEmails!.map(e => e.toLowerCase()))]
+  const existing = await db.from('survey_assignments').select('coach_email').eq('cycle_id', cycle.id)
+  if (existing.error) throw existing.error
+  const have = new Set((existing.data ?? []).map(r => r.coach_email))
+  const fresh = emails.filter(e => !have.has(e))
+  if (!fresh.length) return 0
+  const coaches = await db.from('coaches').select('id,name,email,team,role,pay').in('email', fresh)
+  if (coaches.error) throw coaches.error
+  const byEmail = new Map((coaches.data ?? []).map(c => [c.email.toLowerCase(), c]))
+  const certs = await certificationByCoach(db, (coaches.data ?? []).map(c => c.id), today)
+  const rows = fresh.map(email => {
+    const c = byEmail.get(email)
+    return {
+      cycle_id: cycle.id, coach_id: c?.id ?? null, coach_name: c?.name ?? email.split('@')[0], coach_email: email, team: c?.team ?? '',
+      profile: c ? { role: c.role, pay: c.pay, ...(certs.get(c.id) ?? {}) } : {},
+    }
+  })
   const { error } = await db.from('survey_assignments').upsert(rows, { onConflict: 'cycle_id,coach_email', ignoreDuplicates: true })
   if (error) throw error
   return rows.length
@@ -104,7 +129,7 @@ export async function dispatchSurveys(db: SupabaseClient, options: { cycleId?: s
       if (claimed.error) throw claimed.error
       if (!claimed.data?.length) continue
       budget--
-      const ok = await sendSurveyEmail(kind, a.coachEmail, a.coachName, { title: cycle.title, dueOn: cycle.dueOn, dueLabel: longDate(cycle.dueOn), intro: cycle.intro })
+      const ok = await sendSurveyEmail(kind, a.coachEmail, a.coachName, { title: `${cycle.testEmails ? '[TEST] ' : ''}${cycle.title}`, dueOn: cycle.dueOn, dueLabel: longDate(cycle.dueOn), intro: cycle.intro })
       if (ok) result.sent[kind]++
       else {
         result.failed++

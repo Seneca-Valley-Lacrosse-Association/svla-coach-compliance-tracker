@@ -150,6 +150,9 @@ Replaces the Grasshopper coaching survey. Board only: no other role can see answ
   emails everyone, sends reminders to people who have not submitted, adds coaches who join the roster while it is
   open, and closes it after the "stop accepting" date. Nobody gets more than one survey email a day.
 - **Send now / Send reminder now** do the same thing immediately for one survey.
+- **Send test survey:** sends the survey only to the email addresses you list (up to 10), with "[TEST]" in the
+  subject. Use "Send now" on it, sign in as that address, fill it out, check the dashboard and exports, then use
+  "Delete test" to remove it and every answer. Test runs never email coaches.
 - **Board summary tab:** write "What coaches told us" and "Items for follow-up". `- ` starts a bullet and
   `**text**` is bold. Both sections print in the PDF report.
 - **Exports:** "Board report (PDF)" is the formatted summary for board meetings; "Excel" has every answer.
