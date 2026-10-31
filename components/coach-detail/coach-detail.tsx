@@ -4,7 +4,7 @@ import Link from '@/components/app-link'
 import { ArrowLeft, Mail, Phone } from 'lucide-react'
 import { useApp } from '@/lib/app-store'
 import { PayBadge } from '@/components/status-pill'
-import { RequirementProgress } from '@/components/requirement-progress'
+import { ProgramProgress } from '@/components/program-progress'
 import { PortalAccess } from '@/components/coaches/login-status'
 import { ChecklistRow } from './checklist-row'
 import { ClearedBadge } from './cleared-badge'
@@ -59,7 +59,7 @@ export function CoachDetail({ id }: { id: string }) {
               {coach.email}
             </a>
           </div>
-          <RequirementProgress done={summary.satisfiedCount} total={summary.total} className="max-w-sm" />
+          <ProgramProgress summary={summary} className="max-w-sm" />
         </div>
         <div className="flex flex-col items-start gap-3 lg:items-end">
           <ClearedBadge summary={summary} />

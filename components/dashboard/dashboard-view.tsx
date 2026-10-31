@@ -79,7 +79,7 @@ export function DashboardView() {
         </TabsContent>
 
         <TabsContent value="teams">
-          <TeamsOverview summaries={summaries} />
+          <TeamsOverview summaries={summaries} program={program} />
         </TabsContent>
       </Tabs>
     </>
