@@ -1,7 +1,7 @@
 import { CheckCircle2, MinusCircle, XCircle } from 'lucide-react'
-import type { CoachSummary, ProgramSummary } from '@/lib/compliance'
+import type { CoachSummary, OffSeasonSummary, ProgramSummary } from '@/lib/compliance'
 import { itemStatusMap } from '@/components/status-pill'
-import { PROGRAM_LABELS } from '@/lib/types'
+import { OFF_SEASON_LABEL, PROGRAM_LABELS, SPRING_LABELS } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 /**
@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 function ProgramBox({ summary }: { summary: ProgramSummary }) {
   const { program, assigned, cleared, missing, meetsRequirements } = summary
   const label = PROGRAM_LABELS[program]
+  const title = SPRING_LABELS[program]
   const tone = cleared
     ? { box: 'border-emerald-600 bg-emerald-50', icon: 'text-emerald-700', word: 'text-emerald-800', list: 'text-red-900' }
     : assigned
@@ -25,7 +26,7 @@ function ProgramBox({ summary }: { summary: ProgramSummary }) {
       <div className="flex items-center gap-3">
         <Icon className={cn('size-10 shrink-0', tone.icon)} aria-hidden="true" />
         <div>
-          <p className="text-sm font-medium text-foreground">Cleared to Coach: {label}</p>
+          <p className="text-sm font-medium text-foreground">Cleared to Coach: {title}</p>
           <p className={cn('text-3xl font-bold', tone.word)}>{cleared ? 'YES' : 'NO'}</p>
         </div>
       </div>
@@ -72,12 +73,52 @@ function ProgramBox({ summary }: { summary: ProgramSummary }) {
   )
 }
 
+/** Camps, clinics and off-season tournaments. Every coach is eligible, so it is a plain YES or NO. */
+function OffSeasonBox({ summary }: { summary: OffSeasonSummary }) {
+  const { cleared, missing } = summary
+  const tone = cleared
+    ? { box: 'border-emerald-600 bg-emerald-50', icon: 'text-emerald-700', word: 'text-emerald-800' }
+    : { box: 'border-red-600 bg-red-50', icon: 'text-red-700', word: 'text-red-800' }
+  const Icon = cleared ? CheckCircle2 : XCircle
+  return (
+    <section aria-label={`Cleared for ${OFF_SEASON_LABEL}`} className={cn('flex flex-col gap-3 rounded-xl border-2 p-4', tone.box)}>
+      <div className="flex items-center gap-3">
+        <Icon className={cn('size-10 shrink-0', tone.icon)} aria-hidden="true" />
+        <div>
+          <p className="text-sm font-medium text-foreground">Cleared for: {OFF_SEASON_LABEL}</p>
+          <p className={cn('text-3xl font-bold', tone.word)}>{cleared ? 'YES' : 'NO'}</p>
+        </div>
+      </div>
+      {cleared && summary.hasExpiring && (
+        <p className="text-sm text-amber-900">Cleared, but at least one item expires within 60 days.</p>
+      )}
+      {!cleared && (
+        <div className="text-sm text-red-900">
+          <p className="font-medium">Still needed:</p>
+          {missing.length > 0 ? (
+            <ul className="mt-1 list-disc pl-5">
+              {missing.map((i) => (
+                <li key={i.requirement.id}>
+                  {i.requirement.name} <span className="text-red-800/90">({itemStatusMap[i.status].label.toLowerCase()})</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-1">No off-season requirements are set up yet.</p>
+          )}
+        </div>
+      )}
+    </section>
+  )
+}
+
 export function ClearedBadge({ summary }: { summary: CoachSummary }) {
   return (
-    <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-[36rem]">
+    <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-[54rem] lg:grid-cols-3">
       {summary.programs.map((p) => (
         <ProgramBox key={p.program} summary={p} />
       ))}
+      <OffSeasonBox summary={summary.offSeason} />
     </div>
   )
 }

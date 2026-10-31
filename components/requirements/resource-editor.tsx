@@ -3,8 +3,9 @@
 import { useId, useState, type FormEvent } from 'react'
 import { useApp } from '@/lib/app-store'
 import { Plus, Trash2 } from 'lucide-react'
-import { LEVELS, LEVEL_LABELS, PAY_STATUSES, ROLES, type Level, type PayStatus, type Requirement, type Role, type SourceLink } from '@/lib/types'
+import { LEVELS, LEVEL_LABELS, OFF_SEASON_LABEL, PAY_STATUSES, ROLES, type Level, type PayStatus, type Requirement, type Role, type SourceLink } from '@/lib/types'
 import { reasonFor } from '@/lib/requirement-reasons'
+import { requirementInOffSeason } from '@/lib/compliance'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field'
@@ -27,6 +28,7 @@ export function ResourceEditor({ requirement }: { requirement: Requirement }) {
   const [links, setLinks] = useState<SourceLink[]>(current?.sources.length ? current.sources : [{ label: '', url: '' }])
   const MAX_LINKS = 10
   const setLink = (i: number, patch: Partial<SourceLink>) => setLinks(links.map((l, j) => (j === i ? { ...l, ...patch } : l)))
+  const [offSeason, setOffSeason] = useState(requirementInOffSeason(requirement))
   const [roles, setRoles] = useState<Role[]>(requirement.appliesToRoles)
   const [pay, setPay] = useState<PayStatus[]>(requirement.appliesToPay)
   const [busy, setBusy] = useState(false)
@@ -39,7 +41,7 @@ export function ResourceEditor({ requirement }: { requirement: Requirement }) {
     const sources = links.map((l) => ({ label: l.label.trim(), url: l.url.trim() })).filter((l) => l.url || l.label)
     if (sources.some((l) => !/^https:\/\//.test(l.url))) return setError('Each source link needs an address starting with https://, or remove the empty block.')
     setBusy(true); setError('')
-    try { await updateResource(requirement.id, { name: name.trim(), help, helpUrl, helpLinkLabel, level, why, source, sourceUrl: '', sources, appliesToRoles: roles, appliesToPay: pay }); setOpen(false) }
+    try { await updateResource(requirement.id, { name: name.trim(), help, helpUrl, helpLinkLabel, level, why, source, sourceUrl: '', sources, offSeason, appliesToRoles: roles, appliesToPay: pay }); setOpen(false) }
     catch (error) { setError(error instanceof Error ? error.message : 'Could not save resource.') }
     finally { setBusy(false) }
   }
@@ -73,6 +75,10 @@ export function ResourceEditor({ requirement }: { requirement: Requirement }) {
               </select>
               <FieldDescription>Youth teams and youth volunteers get the youth requirements. High school teams and high school volunteers get the high school ones. Board and coaches assigned to both get both.</FieldDescription>
             </Field>
+            <label className="flex items-start gap-3 text-sm">
+              <input type="checkbox" checked={offSeason} onChange={e => setOffSeason(e.target.checked)} className="mt-0.5 size-4 accent-brand" />
+              <span><span className="font-medium">Also required for {OFF_SEASON_LABEL}</span><span className="block text-muted-foreground">Counts toward the third cleared box, for every coach regardless of program. The legal minimum is the three PA clearances; USA Lacrosse membership is needed for insurance.</span></span>
+            </label>
             <Field><FieldLabel htmlFor={`${id}-why`}>Why we require this</FieldLabel><Textarea id={`${id}-why`} rows={4} value={why} onChange={e => setWhy(e.target.value)} maxLength={1500} /></Field>
             <Field><FieldLabel htmlFor={`${id}-source`}>Where it comes from</FieldLabel><Textarea id={`${id}-source`} value={source} onChange={e => setSource(e.target.value)} maxLength={300} placeholder="For example: PIAA, PA law, SVLA policy" /><FieldDescription>Line breaks are kept when coaches see this.</FieldDescription></Field>
             <fieldset className="flex flex-col gap-3">

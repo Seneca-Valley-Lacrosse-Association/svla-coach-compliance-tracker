@@ -209,3 +209,19 @@ test('badge valid-through is the soonest expiry among cleared programs, and none
   assert.equal(badgeValidThrough(mk(['2027-06-30'], false)), null)
   assert.match(badgeValidThrough(mk([null])), /^\d{4}-06-30$/)
 })
+
+test('off-season box: three PA clearances plus USA Lacrosse membership, for every coach', () => {
+  const { requirementInOffSeason } = require('../lib/compliance.ts')
+  assert.deepEqual(requirements.filter(requirementInOffSeason).map(r => r.id).sort(), ['fbi-fingerprint', 'pa-child-abuse', 'pa-state-police', 'usal-membership'])
+  const coach = { ...coaches[0], id: 'x3', team: 'HS-JV', role: 'Assistant Coach', pay: 'Volunteer', paResident10Years: true }
+  const mk = (requirementId, extra = {}, id = requirementId) => ({ id, coachId: 'x3', requirementId, status: 'approved', uploadedOn: '2026-10-01', completedOn: '2026-10-01', expiresOn: '2031-10-01', ...extra })
+  const base = [mk('pa-child-abuse', { obtainedAs: 'Volunteer' }), mk('pa-state-police', { obtainedAs: 'Volunteer' }), mk('usal-membership', { membershipNumber: 'X' })]
+  // A high school coach with only the school FBI check is not cleared for SVLA camps: the state law for SVLA's own programs needs a DHS check.
+  assert.equal(summarizeCoach(coach, requirements, [...base, mk('fbi-fingerprint', { fbiCheck: 'school-employee' })]).offSeason.cleared, false)
+  const ok = summarizeCoach(coach, requirements, [...base, mk('fbi-fingerprint', { fbiCheck: 'affidavit' })])
+  assert.equal(ok.offSeason.cleared, true)
+  assert.equal(ok.programs.find(p => p.program === 'high-school').cleared, false)
+  // The board can opt a requirement out.
+  const noMembership = requirements.map(r => r.id === 'usal-membership' ? { ...r, offSeason: false } : r)
+  assert.equal(summarizeCoach(coach, noMembership, base.slice(0, 2).concat(mk('fbi-fingerprint', { fbiCheck: 'affidavit' }))).offSeason.cleared, true)
+})

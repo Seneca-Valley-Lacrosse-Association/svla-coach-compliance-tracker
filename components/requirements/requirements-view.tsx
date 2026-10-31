@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useApp } from '@/lib/app-store'
 import { ResourceEditor } from './resource-editor'
-import { validityLabel } from '@/lib/compliance'
+import { requirementInOffSeason, validityLabel } from '@/lib/compliance'
 import { reasonFor } from '@/lib/requirement-reasons'
 import { LEVEL_LABELS, ROLES, type Requirement } from '@/lib/types'
 import { PageHeader } from '@/components/page-header'
@@ -90,6 +90,9 @@ export function RequirementsView() {
                   <ResourceEditor requirement={r} />
                   {r.tracksObtainedAs && !r.allowsVolunteerAffidavit && (
                     <p className="text-sm text-muted-foreground">Tracks volunteer vs. employment</p>
+                  )}
+                  {requirementInOffSeason(r) && (
+                    <p className="text-sm text-muted-foreground">Counts for camps, clinics &amp; off-season</p>
                   )}
                   {r.allowsVolunteerAffidavit && (
                     <p className="text-sm text-muted-foreground">Tracks FBI check type (DHS volunteer, DHS employee, school employee, affidavit)</p>

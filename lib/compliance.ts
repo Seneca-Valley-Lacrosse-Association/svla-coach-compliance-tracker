@@ -1,4 +1,4 @@
-import { PROGRAMS, PROGRAM_LABELS, TEAM_PROGRAMS } from './types'
+import { OFF_SEASON_DEFAULT_IDS, PROGRAMS, PROGRAM_LABELS, TEAM_PROGRAMS } from './types'
 import type {
   Coach,
   ComplianceStatus,
@@ -352,10 +352,31 @@ export interface ProgramSummary {
   hasExpiring: boolean
 }
 
+/**
+ * The third box: cleared for SVLA camps, clinics and off-season tournaments. Applies to every coach (nobody is
+ * "assigned" to it), uses only the requirements marked for it, and judges the FBI check by the state law that
+ * governs SVLA's own programs, the same rule as youth.
+ */
+export interface OffSeasonSummary {
+  items: ChecklistItem[]
+  satisfiedCount: number
+  total: number
+  cleared: boolean
+  missing: ChecklistItem[]
+  hasExpiring: boolean
+}
+
+/** Does this requirement count toward the camps, clinics and off-season box? */
+export function requirementInOffSeason(req: Requirement) {
+  return req.offSeason ?? OFF_SEASON_DEFAULT_IDS.includes(req.id)
+}
+
 export interface CoachSummary {
   coach: Coach
-  /** Youth and high school, always both, in that order. */
+  /** Youth and high school, always both, in that order. These are the spring-season boxes. */
   programs: ProgramSummary[]
+  /** Camps, clinics and off-season tournaments. */
+  offSeason: OffSeasonSummary
   items: ChecklistItem[]
   satisfiedCount: number
   total: number
@@ -402,6 +423,21 @@ export function summarizeCoach(
       hasExpiring: programItems.some((i) => i.satisfied && i.daysUntilExpiry !== null && i.daysUntilExpiry <= EXPIRING_WINDOW_DAYS),
     }
   })
+  const offItems = requirements
+    .filter((r) => r.active && matchesPeople(r, coach) && requirementInOffSeason(r))
+    .sort((a, b) => a.order - b.order)
+    .map((r) => isFbiRequirement(r)
+      ? checklistItem(coach, r, submissions, progress, 'youth')
+      : byId.get(r.id) ?? checklistItem(coach, r, submissions, progress))
+  const offSatisfied = offItems.filter((i) => i.satisfied).length
+  const offSeason: OffSeasonSummary = {
+    items: offItems,
+    satisfiedCount: offSatisfied,
+    total: offItems.length,
+    cleared: offItems.length > 0 && offSatisfied === offItems.length,
+    missing: offItems.filter((i) => !i.satisfied),
+    hasExpiring: offItems.some((i) => i.satisfied && i.daysUntilExpiry !== null && i.daysUntilExpiry <= EXPIRING_WINDOW_DAYS),
+  }
   const satisfiedCount = items.filter((i) => i.satisfied).length
   const cleared = items.length > 0 && satisfiedCount === items.length
   const hasExpired = items.some(
@@ -419,6 +455,7 @@ export function summarizeCoach(
   return {
     coach,
     programs,
+    offSeason,
     items,
     satisfiedCount,
     total: items.length,
@@ -478,7 +515,8 @@ export function badgeRole(coach: Coach) {
  * Returns null when the coach is not cleared in any program (no badge can be printed).
  */
 export function badgeValidThrough(summary: CoachSummary): string | null {
-  const cleared = summary.programs.filter((p) => p.cleared)
+  const cleared: { items: ChecklistItem[] }[] = summary.programs.filter((p) => p.cleared)
+  if (summary.offSeason?.cleared) cleared.push(summary.offSeason)
   if (cleared.length === 0) return null
   const dates = cleared
     .flatMap((p) => p.items)
@@ -486,6 +524,11 @@ export function badgeValidThrough(summary: CoachSummary): string | null {
     .filter((d): d is string => !!d)
     .sort()
   return dates[0] ?? endOfSchoolYear(TODAY)
+}
+
+/** Text for the camps, clinics and off-season cell in exports. Every coach is eligible, so it is Yes or No. */
+export function offSeasonClearedLabel(s: CoachSummary): 'Yes' | 'No' {
+  return s.offSeason.cleared ? 'Yes' : 'No'
 }
 
 /** Text for a per-program "cleared to coach" cell in exports. Never blank: unassigned reads as an explicit NO. */

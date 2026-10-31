@@ -1,5 +1,5 @@
 import ExcelJS from 'exceljs'
-import { appliesTo, programClearedLabel, summarizeCoach, TODAY } from './compliance'
+import { appliesTo, offSeasonClearedLabel, programClearedLabel, summarizeCoach, TODAY } from './compliance'
 import type { Coach, ItemStatus, Requirement, Submission } from './types'
 import { FBI_CHECK_SHORT } from './types'
 
@@ -83,7 +83,8 @@ export async function buildWorkbook({ coaches, requirements, submissions, origin
     { header: 'Phone', key: 'phone', width: 18 }, { header: 'Team', key: 'team', width: 12 },
     { header: 'Role', key: 'role', width: 20 }, { header: 'Paid / Volunteer', key: 'pay', width: 16 },
     { header: 'PA resident 10 years', key: 'pa', width: 20 }, { header: 'Overall status', key: 'status', width: 16 },
-    { header: 'Cleared to coach: Youth', key: 'youth', width: 22 }, { header: 'Cleared to coach: High School', key: 'hs', width: 26 },
+    { header: 'Cleared: Youth spring season', key: 'youth', width: 26 }, { header: 'Cleared: High School spring season', key: 'hs', width: 32 },
+    { header: 'Cleared: Camps, clinics & off-season', key: 'off', width: 34 },
     { header: 'Requirements met', key: 'met', width: 18 }, { header: 'Missing or out of date', key: 'missing', width: 60 }, { header: 'Archived on', key: 'archived', width: 14 },
   ]
   summaries.forEach((s) => {
@@ -91,12 +92,13 @@ export async function buildWorkbook({ coaches, requirements, submissions, origin
     const row = cs.addRow({
       name: s.coach.name, email: s.coach.email, phone: s.coach.phone, team: s.coach.team, role: s.coach.role,
       pay: s.coach.pay, pa: s.coach.paResident10Years ? 'Yes' : 'No', status: label,
-      youth: programClearedLabel(s, 'youth'), hs: programClearedLabel(s, 'high-school'),
+      youth: programClearedLabel(s, 'youth'), hs: programClearedLabel(s, 'high-school'), off: offSeasonClearedLabel(s),
       met: `${s.satisfiedCount} of ${s.total}`, missing: s.missing.map((m) => m.requirement.name).join('; '), archived: s.coach.archivedAt ? s.coach.archivedAt.slice(0, 10) : '',
     })
     tint(row.getCell('status'), label)
     tint(row.getCell('youth'), programClearedLabel(s, 'youth'))
     tint(row.getCell('hs'), programClearedLabel(s, 'high-school'))
+    tint(row.getCell('off'), offSeasonClearedLabel(s))
   })
   styleHeader(cs)
 

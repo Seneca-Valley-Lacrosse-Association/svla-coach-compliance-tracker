@@ -5,6 +5,16 @@ export type Team = (typeof TEAMS)[number]
 export const PROGRAMS = ['youth', 'high-school'] as const
 export type Program = (typeof PROGRAMS)[number]
 export const PROGRAM_LABELS: Record<Program, string> = { youth: 'Youth', 'high-school': 'High School' }
+/** Box titles: the youth and high school boxes cover the spring season. */
+export const SPRING_LABELS: Record<Program, string> = { youth: 'Youth Spring Season', 'high-school': 'High School Spring Season' }
+/** The third box: SVLA-run activities outside the spring season. Not a program a coach is assigned to. */
+export const OFF_SEASON_LABEL = 'SVLA Camps, Clinics & Off-Season'
+export const OFF_SEASON_SHORT = 'Camps & Off-Season'
+/**
+ * Requirements that count for camps, clinics and off-season tournaments when the board has not set it on the
+ * requirement itself: the legal minimum (the three PA clearances) plus USA Lacrosse coach membership for insurance.
+ */
+export const OFF_SEASON_DEFAULT_IDS: readonly string[] = ['pa-child-abuse', 'pa-state-police', 'fbi-fingerprint', 'usal-membership']
 
 /** Which program(s) a team belongs to. The Youth/HS Board and Volunteer teams are in both. */
 export const TEAM_PROGRAMS: Record<Team, readonly Program[]> = {
@@ -73,6 +83,8 @@ export interface Requirement {
   allowsVolunteerAffidavit?: boolean
   /** Accepts either a file upload or just a completion date. */
   dateOnlyAllowed?: boolean
+  /** Counts toward "Cleared: Camps, Clinics & Off-Season". Missing means the built-in default list decides. */
+  offSeason?: boolean
 }
 
 /** One labelled link to a rule, law or policy behind a requirement. */
