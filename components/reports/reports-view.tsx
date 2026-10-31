@@ -5,14 +5,13 @@ import Link from '@/components/app-link'
 import { CheckCircle2, CircleDashed, Clock, Download, Inbox } from 'lucide-react'
 import { useApp } from '@/lib/app-store'
 import { appliesTo, daysBetween, formatDate, programClearedLabel, TODAY, type CoachSummary } from '@/lib/compliance'
-import { PROGRAMS, PROGRAM_LABELS, TEAMS, TEAM_PROGRAMS, type Program } from '@/lib/types'
+import { LEVEL_LABELS, PROGRAMS, PROGRAM_LABELS, TEAMS, TEAM_PROGRAMS, type Program } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/page-header'
 import { ProgramProgress } from '@/components/program-progress'
 import { cn } from '@/lib/utils'
 
 const EXPIRING_SOON_DAYS = 60
-const LEVEL_LABELS = { youth: 'Youth', 'high-school': 'High School', both: 'Youth + HS' } as const
 
 function csvEscape(value: string | number) {
   const raw = String(value)
