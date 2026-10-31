@@ -97,7 +97,7 @@ export function AuthPanel({ onSignedIn }: { onSignedIn: () => Promise<unknown> }
       <section className="flex w-full max-w-md flex-col gap-6 rounded-xl border bg-card p-6 text-card-foreground shadow-sm">
         <header className="flex flex-col gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/svla-logo.jpg" alt="Seneca Valley Raiders Lacrosse" width={900} height={172} className="mb-2 h-auto w-full max-w-xs" />
+          <img src="/svla-compliance-emblem.png" alt="" width={384} height={353} className="mb-1 h-auto w-24" />
           <h1 className="text-balance text-2xl font-semibold">SVLA Compliance</h1>
           <p className="leading-relaxed text-muted-foreground">{forgot ? 'Enter your account email and we will send you a link to choose a new password.' : signUp ? 'Create an account with the email address on your coach or board roster.' : 'Sign in to securely manage your clearances and certifications.'}</p>
         </header>
@@ -131,6 +131,8 @@ export function AuthPanel({ onSignedIn }: { onSignedIn: () => Promise<unknown> }
           <p className="text-sm leading-relaxed text-muted-foreground">Can&apos;t get in? Email <a className="font-medium text-primary underline underline-offset-4" href="mailto:it@svlacrosse.org">it@svlacrosse.org</a>.</p>
           <a href="https://www.svlacrosse.org/privacy-policy-svla-compliance-tracker/" target="_blank" rel="noopener" className="text-sm font-medium text-primary underline underline-offset-4">Privacy policy</a>
         </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/svla-logo.jpg" alt="Seneca Valley Raiders Lacrosse" width={900} height={172} className="mx-auto h-auto w-full max-w-60" />
       </section>
     </main>
   )
