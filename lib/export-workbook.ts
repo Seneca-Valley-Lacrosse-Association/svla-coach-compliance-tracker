@@ -1,5 +1,5 @@
 import ExcelJS from 'exceljs'
-import { appliesTo, summarizeCoach, TODAY } from './compliance'
+import { appliesTo, programClearedLabel, summarizeCoach, TODAY } from './compliance'
 import type { Coach, ItemStatus, Requirement, Submission } from './types'
 
 const ITEM_LABEL: Record<ItemStatus, string> = {
@@ -16,6 +16,7 @@ const FILL: Record<string, string> = {
   Approved: 'FFD1FAE5', 'Expiring soon': 'FFFDE68A', Expired: 'FFFECACA', Rejected: 'FFFECACA',
   'Not valid for role': 'FFFED7AA', 'Pending review': 'FFBAE6FD', 'Not started': 'FFE2E8F0', 'In progress': 'FFDDD6FE',
   Cleared: 'FFD1FAE5', Incomplete: 'FFE2E8F0', Expiring: 'FFFDE68A',
+  Yes: 'FFD1FAE5', No: 'FFFECACA', 'No (not assigned)': 'FFE2E8F0',
 }
 const HEADER_FILL = 'FF0F2A4A'
 
@@ -81,6 +82,7 @@ export async function buildWorkbook({ coaches, requirements, submissions, origin
     { header: 'Phone', key: 'phone', width: 18 }, { header: 'Team', key: 'team', width: 12 },
     { header: 'Role', key: 'role', width: 20 }, { header: 'Paid / Volunteer', key: 'pay', width: 16 },
     { header: 'PA resident 10 years', key: 'pa', width: 20 }, { header: 'Overall status', key: 'status', width: 16 },
+    { header: 'Cleared to coach: Youth', key: 'youth', width: 22 }, { header: 'Cleared to coach: High School', key: 'hs', width: 26 },
     { header: 'Requirements met', key: 'met', width: 18 }, { header: 'Missing or out of date', key: 'missing', width: 60 }, { header: 'Archived on', key: 'archived', width: 14 },
   ]
   summaries.forEach((s) => {
@@ -88,9 +90,12 @@ export async function buildWorkbook({ coaches, requirements, submissions, origin
     const row = cs.addRow({
       name: s.coach.name, email: s.coach.email, phone: s.coach.phone, team: s.coach.team, role: s.coach.role,
       pay: s.coach.pay, pa: s.coach.paResident10Years ? 'Yes' : 'No', status: label,
+      youth: programClearedLabel(s, 'youth'), hs: programClearedLabel(s, 'high-school'),
       met: `${s.satisfiedCount} of ${s.total}`, missing: s.missing.map((m) => m.requirement.name).join('; '), archived: s.coach.archivedAt ? s.coach.archivedAt.slice(0, 10) : '',
     })
     tint(row.getCell('status'), label)
+    tint(row.getCell('youth'), programClearedLabel(s, 'youth'))
+    tint(row.getCell('hs'), programClearedLabel(s, 'high-school'))
   })
   styleHeader(cs)
 

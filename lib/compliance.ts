@@ -375,3 +375,10 @@ export function badgeValidThrough(summary: CoachSummary): string | null {
     .sort()
   return dates[0] ?? endOfSchoolYear(TODAY)
 }
+
+/** Text for a per-program "cleared to coach" cell in exports. Never blank: unassigned reads as an explicit NO. */
+export function programClearedLabel(s: CoachSummary, program: Program): 'Yes' | 'No' | 'No (not assigned)' {
+  const p = s.programs.find((x) => x.program === program)
+  if (!p || !p.assigned) return 'No (not assigned)'
+  return p.cleared ? 'Yes' : 'No'
+}
