@@ -134,3 +134,25 @@ The board sees everything. **Roles & Access** in the left menu lets the board gi
 ## Keeping the free Supabase project awake
 
 `vercel.json` runs `/api/keepalive` every 5 days. It makes a small read against the database using the `CRON_SECRET` environment variable (Vercel > Settings > Environment Variables). If the secret is rotated, Vercel picks up the new value on the next deployment. A paid Supabase plan makes this unnecessary.
+
+## Annual coaching survey (Coach Surveys page)
+
+Replaces the Grasshopper coaching survey. Board only: no other role can see answers.
+
+- **Questions tab:** the question bank. Add, reword, reorder, hide or delete questions; choose the answer type,
+  whether it is required, and whether it only appears after a particular earlier answer. `{season}` and
+  `{next_season}` in a question are filled in from each survey's season labels. Name, email, team, role and
+  USA Lacrosse Bronze status come from the tracker, so coaches are not asked for them.
+- **Schedule a survey:** pick the send date, due date, optional "stop accepting" date, the teams it goes to and the
+  reminder settings. The dialog lists exactly which emails a coach who never responds would receive.
+- **What happens automatically:** a daily job (`/api/cron/surveys`, Vercel cron about 9:20 a.m. Eastern) opens the
+  survey on its send date, copies the current question bank into it (later edits never change a sent survey),
+  emails everyone, sends reminders to people who have not submitted, adds coaches who join the roster while it is
+  open, and closes it after the "stop accepting" date. Nobody gets more than one survey email a day.
+- **Send now / Send reminder now** do the same thing immediately for one survey.
+- **Board summary tab:** write "What coaches told us" and "Items for follow-up". `- ` starts a bullet and
+  `**text**` is bold. Both sections print in the PDF report.
+- **Exports:** "Board report (PDF)" is the formatted summary for board meetings; "Excel" has every answer.
+- Tables: `survey_questions`, `survey_cycles`, `survey_assignments` (migration `20261031000000_coach_surveys.sql`).
+  Coaches only reach their own survey through `my_open_surveys()` and `save_my_survey()`.
+- The PDF fonts in `public/fonts` are Lato and Noto Serif (SIL Open Font License).

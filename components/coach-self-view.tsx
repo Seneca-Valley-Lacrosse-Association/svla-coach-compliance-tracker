@@ -9,6 +9,7 @@ import { ChecklistRow } from '@/components/coach-detail/checklist-row'
 import { ClearedBadge } from '@/components/coach-detail/cleared-badge'
 import { PrintBadgeDialog } from '@/components/badges/print-badge-dialog'
 import { MyRequests } from '@/components/help/my-requests'
+import { SurveyPrompt } from '@/components/surveys/survey-prompt'
 import type { CoachSummary } from '@/lib/compliance'
 
 /** With `previewSummary`, shows another person's checklist exactly as they see it, with no actions. */
@@ -24,6 +25,7 @@ export function CoachSelfView({ previewSummary }: { previewSummary?: CoachSummar
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
+      {!readOnly && <SurveyPrompt />}
       <section className="flex flex-col gap-5 rounded-xl border bg-card p-5 shadow-xs">
         <div>
           <h1 className="text-2xl font-semibold text-navy text-balance lg:text-3xl">Hi {firstName}, here&apos;s your checklist</h1>

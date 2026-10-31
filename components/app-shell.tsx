@@ -5,7 +5,9 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import {
   BarChart3,
+  ClipboardList,
   IdCard,
+  MessageSquareText,
   Eye,
   ClipboardCheck,
   Inbox,
@@ -22,6 +24,7 @@ import {
 import { useApp, type ViewMode } from '@/lib/app-store'
 import { IT_EMAIL } from '@/lib/tickets'
 import { useTickets } from '@/lib/use-tickets'
+import { useSurveys } from '@/lib/use-surveys'
 import { cn } from '@/lib/utils'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { CoachSelfView } from './coach-self-view'
@@ -34,6 +37,7 @@ const boardNav = [
   { href: '/requirements', label: 'Requirements', icon: ListChecks },
   { href: '/coaches', label: 'Coaches & Volunteers', icon: Users },
   { href: '/reports', label: 'Reports', icon: BarChart3 },
+  { href: '/surveys', label: 'Coach Surveys', icon: MessageSquareText },
   { href: '/badges', label: 'Badges', icon: IdCard },
   { href: '/tickets', label: 'Help Requests', icon: LifeBuoy },
   { href: '/board', label: 'Board Access', icon: UserCog },
@@ -41,7 +45,7 @@ const boardNav = [
 ]
 
 function isActive(pathname: string, href: string) {
-  return href === '/' ? pathname === '/' : pathname.startsWith(href)
+  return href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`)
 }
 
 function Brand() {
@@ -64,6 +68,10 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const hasTeamView = preview ? !!(preview.access.views.clearance_status || preview.access.views.staff_roster) : realTeamView
   const { data: tickets } = useTickets()
   const openTickets = tickets?.openCount ?? 0
+  const { data: surveys } = useSurveys()
+  const surveyWaiting = !preview && (surveys?.mine ?? []).some((s) => !s.submittedAt)
+  const hasSurvey = !preview && (surveys?.mine.length ?? 0) > 0
+  const surveyLink = { href: '/survey', label: 'Coaching Survey', icon: ClipboardList }
   const pendingCount = summaries.reduce(
     (n, s) => n + s.items.filter((i) => i.latest?.status === 'pending').length,
     0,
@@ -74,6 +82,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
     const coachNav = [
       ...(!preview || previewSummary ? [{ href: '/', label: 'My Checklist', icon: ClipboardCheck }] : []),
       ...(hasTeamView ? [{ href: '/team', label: 'Team Compliance', icon: UsersRound }] : []),
+      ...(hasSurvey ? [surveyLink] : []),
     ]
     return (
       <nav aria-label="Main" className="flex flex-col gap-1 px-3">
@@ -96,7 +105,8 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
               )}
             >
               <Icon className={cn('size-5', active && 'text-brand-light')} aria-hidden="true" />
-              {label}
+              <span className="flex-1">{label}</span>
+              {href === '/survey' && surveyWaiting && <span className="rounded-full bg-brand-light px-2 text-sm font-semibold text-navy">Due</span>}
             </Link>
           )
         })}
@@ -106,7 +116,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <nav aria-label="Main" className="flex flex-col gap-1 px-3">
-      {[...(!isDemo && currentCoachId ? [{ href: '/my-checklist', label: 'My Checklist', icon: ClipboardCheck }] : []), ...boardNav].filter(({ href }) => !(isDemo && (href === '/badges' || href === '/board' || href === '/tickets' || href === '/access'))).map(({ href, label, icon: Icon }) => {
+      {[...(!isDemo && currentCoachId ? [{ href: '/my-checklist', label: 'My Checklist', icon: ClipboardCheck }] : []), ...(hasSurvey ? [{ ...surveyLink, label: 'My Survey' }] : []), ...boardNav].filter(({ href }) => !(isDemo && (href === '/badges' || href === '/board' || href === '/tickets' || href === '/access' || href === '/surveys'))).map(({ href, label, icon: Icon }) => {
         const active = isActive(pathname.replace(/^\/demo(?=\/|$)/, '') || '/', href)
         return (
           <Link
@@ -127,6 +137,9 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
               <span className="rounded-full bg-brand-light px-2 text-sm font-semibold text-navy">
                 {pendingCount}
               </span>
+            )}
+            {href === '/survey' && surveyWaiting && (
+              <span className="rounded-full bg-brand-light px-2 text-sm font-semibold text-navy">Due</span>
             )}
             {href === '/tickets' && openTickets > 0 && (
               <span className="rounded-full bg-brand-light px-2 text-sm font-semibold text-navy">
@@ -281,7 +294,7 @@ function WorkspaceShell({ children }: { children: React.ReactNode }) {
             ? (previewTeamView && pathname.startsWith('/team')
                 ? children
                 : previewSummary ? <CoachSelfView previewSummary={previewSummary} /> : <PreviewNote preview={preview} />)
-            : viewMode === 'coach' && !(hasTeamView && pathname.startsWith('/team')) ? <CoachSelfView /> : children}
+            : viewMode === 'coach' && !(hasTeamView && pathname.startsWith('/team')) && !(!isDemo && pathname === '/survey') ? <CoachSelfView /> : children}
         </main>
         <footer className="border-t px-4 py-4 text-sm text-muted-foreground lg:px-8">
           Still stuck? Email <a className="font-medium text-primary underline underline-offset-4" href={`mailto:${IT_EMAIL}`}>{IT_EMAIL}</a>
