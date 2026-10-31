@@ -208,6 +208,60 @@ export function canUseAffidavit(coach: Coach) {
   return { allowed: true, reason: null }
 }
 
+/**
+ * The FBI documents a coach is meant to get for one program, based on their profile. This is narrower than what
+ * the tracker accepts (a volunteer's stricter DHS employee check still counts), and drives the upload choices.
+ */
+export function intendedFbiChecks(coach: Coach, program: Program): FbiCheck[] {
+  if (program === 'high-school') return ['school-employee']
+  if (coach.pay === 'Paid') return ['dhs-employee']
+  return coach.paResident10Years ? ['dhs-volunteer', 'affidavit'] : ['dhs-volunteer']
+}
+
+export type FbiCodeState = 'on-file' | 'expiring' | 'pending' | 'needed'
+export interface FbiCodeLine {
+  program: Program
+  /** The service code to give IdentoGO for this program. */
+  code: string
+  /** The code's plain name, e.g. "PA DHS volunteer". */
+  codeName: string
+  /** A no-fingerprint alternative, when the coach qualifies. */
+  alternative: string | null
+  state: FbiCodeState
+  expiresOn: string | null
+}
+
+const FBI_CODE: Record<Exclude<FbiCheck, 'affidavit'>, { code: string; name: string }> = {
+  'dhs-volunteer': { code: '1KG6ZJ', name: 'PA DHS volunteer' },
+  'dhs-employee': { code: '1KG756', name: 'PA DHS employee' },
+  'school-employee': { code: '1KG6XN', name: 'Seneca Valley school employee' },
+}
+
+/**
+ * One line per program the coach is assigned to: the code they need and whether it is on file.
+ * Shown on the FBI checklist row so coaches know which code to register with before they go.
+ */
+export function fbiCodeLines(coach: Coach, req: Requirement, submissions: Submission[], progress: Progress[] = []): FbiCodeLine[] {
+  const subs = submissions.filter((s) => s.coachId === coach.id && s.requirementId === req.id)
+  return fbiPrograms(coach).map((program) => {
+    const intended = intendedFbiChecks(coach, program)
+    const fingerprint = intended.find((c) => c !== 'affidavit') as Exclude<FbiCheck, 'affidavit'>
+    const item = checklistItem(coach, req, submissions, progress, program)
+    const pending = subs.some((s) => s.status === 'pending' && !fbiIssue(coach, program, s))
+    const state: FbiCodeState = item.satisfied
+      ? item.status === 'expiring' ? 'expiring' : 'on-file'
+      : pending ? 'pending' : 'needed'
+    return {
+      program,
+      code: FBI_CODE[fingerprint].code,
+      codeName: FBI_CODE[fingerprint].name,
+      alternative: intended.includes('affidavit') ? 'or the Volunteer Disclosure Statement (no fingerprints)' : null,
+      state,
+      expiresOn: item.satisfied ? item.approved?.expiresOn ?? null : null,
+    }
+  })
+}
+
 /** The FBI documents a fully cleared coach would have on file: one per program, deduplicated. Used for demo data. */
 export function expectedFbiChecks(coach: Coach): FbiCheck[] {
   const picks = fbiPrograms(coach).map((p) => acceptedFbiChecks(coach, p)[0])

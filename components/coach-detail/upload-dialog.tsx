@@ -3,7 +3,7 @@
 import { useId, useState } from 'react'
 import { AlertTriangle, Upload } from 'lucide-react'
 import { useApp } from '@/lib/app-store'
-import { acceptedFbiChecks, canUseAffidavit, coachPrograms, fbiNeeds, isFbiRequirement, TODAY } from '@/lib/compliance'
+import { canUseAffidavit, coachPrograms, fbiCodeLines, fbiNeeds, intendedFbiChecks, isFbiRequirement, TODAY } from '@/lib/compliance'
 import { FBI_CHECK_AUDIENCE, FBI_CHECK_LABELS, FBI_CHECKS, PROGRAM_LABELS, type Coach, type FbiCheck, type ObtainedAs, type Requirement } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import {
@@ -113,20 +113,24 @@ function UploadDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const { submitUpload } = useApp()
+  const { submitUpload, submissions, progress: progressRows } = useApp()
   const id = useId()
   const affidavit = canUseAffidavit(coach)
   const isFbi = isFbiRequirement(req)
   const programs = coachPrograms(coach)
   const needs = isFbi ? fbiNeeds(coach) : []
-  /** Programs where an FBI document type counts for this coach. Empty means it would not count anywhere. */
-  const countsFor = (check: FbiCheck) => programs.filter((p) => acceptedFbiChecks(coach, p).includes(check))
+  /** Programs where this document is the one the coach is meant to get. Empty means it is not for their profile. */
+  const countsFor = (check: FbiCheck) => programs.filter((p) => intendedFbiChecks(coach, p).includes(check))
 
   const [file, setFile] = useState<File | undefined>()
   const [busy, setBusy] = useState(false)
   const [completedOn, setCompletedOn] = useState(req.type === 'Signature' ? TODAY : '')
   const [obtainedAs, setObtainedAs] = useState<ObtainedAs>(coach.pay === 'Paid' ? 'Employment' : 'Volunteer')
-  const firstNeeded = isFbi ? acceptedFbiChecks(coach, programs[0] ?? 'youth').find((c) => c !== 'affidavit') ?? 'dhs-volunteer' : 'dhs-volunteer'
+  // Pre-select the code that is still missing (for a coach in both programs uploading their second check).
+  const missingProgram = isFbi ? fbiCodeLines(coach, req, submissions, progressRows).find((l) => l.state === 'needed')?.program : undefined
+  const firstNeeded: FbiCheck = isFbi
+    ? intendedFbiChecks(coach, missingProgram ?? programs[0] ?? 'youth').find((c) => c !== 'affidavit') ?? 'dhs-volunteer'
+    : 'dhs-volunteer'
   const [fbiCheck, setFbiCheck] = useState<FbiCheck>(firstNeeded)
   const [membershipNumber, setMembershipNumber] = useState('')
   const [membershipExpiry, setMembershipExpiry] = useState('')
@@ -207,7 +211,7 @@ function UploadDialog({
                 const hint = check === 'affidavit' && !affidavit.allowed
                   ? affidavit.reason
                   : where.length === 0
-                    ? 'Does not count for your role.'
+                    ? 'Not the code for your coaching profile.'
                     : `Counts for: ${where.map((p) => PROGRAM_LABELS[p]).join(' and ')}`
                 return (
                   <RadioOption

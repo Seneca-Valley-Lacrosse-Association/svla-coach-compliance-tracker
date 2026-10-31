@@ -1,8 +1,9 @@
 'use client'
 
-import { AlertTriangle, ExternalLink, FileText, Hourglass, LifeBuoy, MessageSquareWarning } from 'lucide-react'
-import { daysBetween, daysInProgress, eligibilityIssue, followUpOverdue, formatDate, TODAY, type ChecklistItem } from '@/lib/compliance'
-import { FBI_CHECK_SHORT, LEVEL_LABELS, type Coach, type Submission } from '@/lib/types'
+import { AlertTriangle, CheckCircle2, Circle, Clock, ExternalLink, FileText, Hourglass, LifeBuoy, MessageSquareWarning } from 'lucide-react'
+import { daysBetween, daysInProgress, eligibilityIssue, fbiCodeLines, followUpOverdue, formatDate, isFbiRequirement, TODAY, type ChecklistItem, type FbiCodeLine } from '@/lib/compliance'
+import { useApp } from '@/lib/app-store'
+import { FBI_CHECK_SHORT, LEVEL_LABELS, PROGRAM_LABELS, type Coach, type Submission } from '@/lib/types'
 import { reasonFor } from '@/lib/requirement-reasons'
 import { ItemStatusPill } from '@/components/status-pill'
 import { UploadButton } from './upload-dialog'
@@ -30,6 +31,44 @@ function SubmissionMeta({ sub }: { sub: Submission }) {
   return <p className="text-sm text-muted-foreground">{parts.join(' · ')}</p>
 }
 
+const CODE_STATE = {
+  'on-file': { icon: CheckCircle2, tone: 'text-emerald-800', iconTone: 'text-emerald-600', text: 'on file' },
+  expiring: { icon: Clock, tone: 'text-amber-900', iconTone: 'text-amber-600', text: 'on file, expiring soon' },
+  pending: { icon: Hourglass, tone: 'text-sky-900', iconTone: 'text-brand', text: 'uploaded, waiting for board review' },
+  needed: { icon: Circle, tone: 'text-red-900', iconTone: 'text-red-600', text: 'still needed' },
+} as const
+
+/** The FBI service code(s) this coach needs, one line per program, with what is already on file. */
+function FbiCodes({ lines }: { lines: FbiCodeLine[] }) {
+  if (lines.length === 0) return null
+  return (
+    <div className="mt-1 rounded-lg border border-brand/30 bg-sky-50/70 p-3 text-sm" aria-label="Your FBI service codes">
+      <p className="font-semibold text-navy">
+        {lines.length > 1 ? 'Your codes (you coach both programs, so you need one for each)' : 'Your code'}
+      </p>
+      <ul className="mt-2 flex flex-col gap-2">
+        {lines.map((l) => {
+          const st = CODE_STATE[l.state]
+          const Icon = st.icon
+          return (
+            <li key={l.program} className="flex items-start gap-2">
+              <Icon className={`mt-0.5 size-4 shrink-0 ${st.iconTone}`} aria-hidden="true" />
+              <span className={st.tone}>
+                <span className="font-medium text-foreground">{PROGRAM_LABELS[l.program]}:</span>{' '}
+                <span className="rounded bg-white px-1.5 py-0.5 font-mono font-semibold text-navy ring-1 ring-brand/30">{l.code}</span>{' '}
+                <span className="text-muted-foreground">({l.codeName})</span>
+                {l.alternative && l.state === 'needed' && <span className="text-muted-foreground"> {l.alternative}</span>}
+                {' · '}{st.text}{l.expiresOn ? `, expires ${formatDate(l.expiresOn)}` : ''}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+      <p className="mt-2 text-muted-foreground">Give IdentoGO this code when you register. Details are under How to get this.</p>
+    </div>
+  )
+}
+
 export function ChecklistRow({
   item,
   coach,
@@ -45,6 +84,8 @@ export function ChecklistRow({
   readOnly?: boolean
 }) {
   const { requirement: req, status, latest, approved } = item
+  const { submissions, progress: progressRows } = useApp()
+  const codeLines = isFbiRequirement(req) ? fbiCodeLines(coach, req, submissions, progressRows) : []
   const shown = latest?.status === 'pending' ? latest : approved ?? latest
   const pendingIssue = latest?.status === 'pending' ? eligibilityIssue(coach, req, latest) : null
   const helpOpenByDefault = mode === 'coach' && !item.satisfied
@@ -74,6 +115,7 @@ export function ChecklistRow({
               <span className="font-medium text-foreground">Required by:</span> {reason.source}
             </p>
           )}
+          {codeLines.length > 0 && <FbiCodes lines={codeLines} />}
           {shown && <SubmissionMeta sub={shown} />}
           <dl className="mt-1 grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:flex sm:flex-wrap">
             <div>
