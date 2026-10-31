@@ -49,17 +49,60 @@ test('level tags hide requirements that do not apply to a coach\'s program', () 
   assert.deepEqual(ids(youthCoach).sort(), ['both-level', 'handbook', 'youth-only'])
   assert.deepEqual(ids(hsCoach).sort(), ['both-level', 'handbook', 'hs-only'])
 })
-test('high school coaches need employment clearances and cannot use the volunteer affidavit', () => {
+test('FBI: the affidavit is youth-only for 10-year resident volunteers', () => {
   const { eligibilityIssue } = require('../lib/compliance.ts')
   const hsVolunteer = { ...coaches[0], team: 'HS-JV', role: 'Assistant Coach', pay: 'Volunteer', paResident10Years: true }
   const youthVolunteer = { ...hsVolunteer, team: '12U' }
   const req = requirements.find(r => r.id === 'fbi-fingerprint')
   assert.equal(canUseAffidavit(hsVolunteer).allowed, false)
   assert.equal(canUseAffidavit(youthVolunteer).allowed, true)
-  assert.equal(eligibilityIssue(hsVolunteer, req, { obtainedAs: 'Volunteer', fbiMethod: 'fingerprint' }), null)
-  assert.ok(eligibilityIssue({ ...hsVolunteer, pay: 'Paid' }, req, { obtainedAs: 'Volunteer', fbiMethod: 'fingerprint' }))
+  assert.equal(canUseAffidavit({ ...youthVolunteer, paResident10Years: false }).allowed, false)
+  assert.equal(canUseAffidavit({ ...youthVolunteer, pay: 'Paid' }).allowed, false)
+  assert.equal(eligibilityIssue(youthVolunteer, req, { fbiCheck: 'affidavit' }), null)
+  assert.ok(eligibilityIssue(hsVolunteer, req, { fbiCheck: 'affidavit' }))
+  // High school accepts only the district check, paid or volunteer.
+  assert.equal(eligibilityIssue(hsVolunteer, req, { fbiCheck: 'school-employee' }), null)
+  assert.ok(eligibilityIssue(hsVolunteer, req, { fbiCheck: 'dhs-volunteer' }))
+  // Older uploads without a check type: a volunteer fingerprint is read as the DHS volunteer check.
   assert.equal(eligibilityIssue(youthVolunteer, req, { obtainedAs: 'Volunteer', fbiMethod: 'fingerprint' }), null)
-  assert.equal(eligibilityIssue(hsVolunteer, req, { obtainedAs: 'Employment', fbiMethod: 'fingerprint' }), null)
+})
+test('FBI: which check counts for each pay status and program', () => {
+  const { acceptedFbiChecks } = require('../lib/compliance.ts')
+  const v = { ...coaches[0], pay: 'Volunteer', paResident10Years: false }
+  const p = { ...v, pay: 'Paid' }
+  assert.deepEqual(acceptedFbiChecks(v, 'youth'), ['dhs-volunteer', 'dhs-employee'])
+  assert.deepEqual(acceptedFbiChecks({ ...v, paResident10Years: true }, 'youth'), ['dhs-volunteer', 'dhs-employee', 'affidavit'])
+  assert.deepEqual(acceptedFbiChecks(v, 'high-school'), ['school-employee'])
+  assert.deepEqual(acceptedFbiChecks(p, 'youth'), ['dhs-employee'])
+  assert.deepEqual(acceptedFbiChecks(p, 'high-school'), ['school-employee'])
+})
+test('FBI: a volunteer in both programs needs the school check plus a youth DHS check or the affidavit', () => {
+  const req = requirements.filter(r => r.id === 'fbi-fingerprint')
+  const coach = { ...coaches[0], id: 'x1', team: 'Volunteer-Youth/HS', role: 'Volunteer Assistant', pay: 'Volunteer', paResident10Years: true }
+  const mk = (fbiCheck, id = 'f1') => ({ id, coachId: 'x1', requirementId: 'fbi-fingerprint', status: 'approved', uploadedOn: '2026-10-01', completedOn: '2026-10-01', expiresOn: '2031-10-01', fbiCheck })
+  assert.deepEqual(summarizeCoach(coach, req, [mk('dhs-volunteer')]).programs.map(p => p.cleared), [true, false])
+  const school = summarizeCoach(coach, req, [mk('school-employee')])
+  assert.deepEqual(school.programs.map(p => p.cleared), [false, true])
+  assert.match(school.items[0].issue, /^Youth: /)
+  const both = summarizeCoach(coach, req, [mk('affidavit', 'a'), mk('school-employee', 'b')])
+  assert.deepEqual(both.programs.map(p => p.cleared), [true, true])
+  assert.equal(both.cleared, true)
+})
+test('FBI: a paid coach in both programs needs both the DHS employee and the school employee checks', () => {
+  const req = requirements.filter(r => r.id === 'fbi-fingerprint')
+  const coach = { ...coaches[0], id: 'x2', team: 'Board-Youth/HS', role: 'Coordinator', pay: 'Paid', paResident10Years: true }
+  const mk = (fbiCheck, id) => ({ id, coachId: 'x2', requirementId: 'fbi-fingerprint', status: 'approved', uploadedOn: '2026-10-01', completedOn: '2026-10-01', expiresOn: '2031-10-01', fbiCheck })
+  const youthOnly = summarizeCoach(coach, req, [mk('dhs-employee', 'a')])
+  assert.deepEqual(youthOnly.programs.map(p => p.cleared), [true, false])
+  assert.equal(youthOnly.items[0].status, 'invalid')
+  const schoolOnly = summarizeCoach(coach, req, [mk('school-employee', 'b')])
+  assert.deepEqual(schoolOnly.programs.map(p => p.cleared), [false, true])
+  assert.match(schoolOnly.items[0].issue, /^Youth: /)
+  const both = summarizeCoach(coach, req, [mk('dhs-employee', 'a'), mk('school-employee', 'b')])
+  assert.deepEqual(both.programs.map(p => p.cleared), [true, true])
+  assert.equal(both.items[0].satisfied, true)
+  // A DHS volunteer check never counts for a paid coach.
+  assert.deepEqual(summarizeCoach(coach, req, [mk('dhs-volunteer', 'c')]).programs.map(p => p.cleared), [false, false])
 })
 test('teams roll up to youth, high school or both', () => {
   const { coachPrograms } = require('../lib/compliance.ts')
@@ -145,18 +188,13 @@ test('in-progress mutations validate ids, dates and note length', () => {
   assert.equal(mutationSchema.safeParse({ action: 'clearInProgress', coachId: id, requirementId: 'pa-child-abuse' }).success, true)
 })
 
-test('employment clearances apply to paid coaches and the HS teams, and anyone in the HS program, including Board and combined volunteers', () => {
+test('employment clearances follow SVLA-wide pay only: Seneca Valley treats high school volunteers as volunteers', () => {
   const { needsEmploymentClearances } = require('../lib/compliance.ts')
   const on = team => ({ ...coaches[0], team, pay: 'Volunteer' })
-  assert.equal(needsEmploymentClearances(on('HS-JV')), true)
-  assert.equal(needsEmploymentClearances(on('HS-Varsity')), true)
-  assert.equal(needsEmploymentClearances(on('Volunteer-HS')), true)
-  assert.equal(needsEmploymentClearances(on('Board-HS')), true)
-  assert.equal(needsEmploymentClearances(on('Board-Youth/HS')), true)
-  assert.equal(needsEmploymentClearances(on('Board-Youth')), false)
-  assert.equal(needsEmploymentClearances(on('Volunteer-Youth/HS')), true)
-  assert.equal(needsEmploymentClearances(on('Volunteer-Youth')), false)
+  for (const team of ['HS-JV', 'HS-Varsity', 'Volunteer-HS', 'Board-HS', 'Board-Youth/HS', 'Volunteer-Youth/HS', 'Volunteer-Youth', '10U'])
+    assert.equal(needsEmploymentClearances(on(team)), false)
   assert.equal(needsEmploymentClearances({ ...on('10U'), pay: 'Paid' }), true)
+  assert.equal(needsEmploymentClearances({ ...on('HS-JV'), pay: 'Paid' }), true)
 })
 
 test('badge role shows only Head Coach or Coach', () => {
@@ -170,4 +208,38 @@ test('badge valid-through is the soonest expiry among cleared programs, and none
   assert.equal(badgeValidThrough(mk(['2028-05-01', '2027-06-30', null])), '2027-06-30')
   assert.equal(badgeValidThrough(mk(['2027-06-30'], false)), null)
   assert.match(badgeValidThrough(mk([null])), /^\d{4}-06-30$/)
+})
+
+test('off-season box: three PA clearances plus USA Lacrosse membership, for every coach', () => {
+  const { requirementInOffSeason } = require('../lib/compliance.ts')
+  assert.deepEqual(requirements.filter(requirementInOffSeason).map(r => r.id).sort(), ['fbi-fingerprint', 'pa-child-abuse', 'pa-state-police', 'usal-membership'])
+  const coach = { ...coaches[0], id: 'x3', team: 'HS-JV', role: 'Assistant Coach', pay: 'Volunteer', paResident10Years: true }
+  const mk = (requirementId, extra = {}, id = requirementId) => ({ id, coachId: 'x3', requirementId, status: 'approved', uploadedOn: '2026-10-01', completedOn: '2026-10-01', expiresOn: '2031-10-01', ...extra })
+  const base = [mk('pa-child-abuse', { obtainedAs: 'Volunteer' }), mk('pa-state-police', { obtainedAs: 'Volunteer' }), mk('usal-membership', { membershipNumber: 'X' })]
+  // A high school coach with only the school FBI check is not cleared for SVLA camps: the state law for SVLA's own programs needs a DHS check.
+  assert.equal(summarizeCoach(coach, requirements, [...base, mk('fbi-fingerprint', { fbiCheck: 'school-employee' })]).offSeason.cleared, false)
+  const ok = summarizeCoach(coach, requirements, [...base, mk('fbi-fingerprint', { fbiCheck: 'affidavit' })])
+  assert.equal(ok.offSeason.cleared, true)
+  assert.equal(ok.programs.find(p => p.program === 'high-school').cleared, false)
+  // The board can opt a requirement out.
+  const noMembership = requirements.map(r => r.id === 'usal-membership' ? { ...r, offSeason: false } : r)
+  assert.equal(summarizeCoach(coach, noMembership, base.slice(0, 2).concat(mk('fbi-fingerprint', { fbiCheck: 'affidavit' }))).offSeason.cleared, true)
+})
+
+test('FBI code lines: one per program with the right code and what is on file', () => {
+  const { fbiCodeLines, intendedFbiChecks } = require('../lib/compliance.ts')
+  const req = requirements.find(r => r.id === 'fbi-fingerprint')
+  const paid = { ...coaches[0], id: 'x4', team: 'Board-Youth/HS', role: 'Coordinator', pay: 'Paid', paResident10Years: true }
+  const mk = (fbiCheck, status = 'approved', id = fbiCheck) => ({ id, coachId: 'x4', requirementId: 'fbi-fingerprint', status, uploadedOn: '2026-10-01', completedOn: '2026-10-01', expiresOn: '2031-10-01', fbiCheck })
+  const none = fbiCodeLines(paid, req, [])
+  assert.deepEqual(none.map(l => [l.program, l.code, l.state]), [['youth', '1KG756', 'needed'], ['high-school', '1KG6XN', 'needed']])
+  const oneOnFile = fbiCodeLines(paid, req, [mk('dhs-employee'), mk('school-employee', 'pending')])
+  assert.deepEqual(oneOnFile.map(l => l.state), ['on-file', 'pending'])
+  assert.equal(oneOnFile[0].expiresOn, '2031-10-01')
+  const vol = { ...paid, id: 'x5', pay: 'Volunteer', team: '12U' }
+  const [youth] = fbiCodeLines(vol, req, [])
+  assert.equal(youth.code, '1KG6ZJ')
+  assert.match(youth.alternative, /Disclosure Statement/)
+  // A volunteer is not offered the paid DHS employee code, even though it would be accepted.
+  assert.deepEqual(intendedFbiChecks(vol, 'youth'), ['dhs-volunteer', 'affidavit'])
 })

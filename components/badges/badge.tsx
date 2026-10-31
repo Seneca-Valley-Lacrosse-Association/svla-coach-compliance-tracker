@@ -4,6 +4,9 @@ import { QRCodeSVG } from 'qrcode.react'
 import { badgeRole, badgeValidThrough, type CoachSummary, type ProgramSummary } from '@/lib/compliance'
 import { PROGRAM_LABELS } from '@/lib/types'
 
+const YES_STYLE = { borderColor: '#0b7a43', background: '#e3f4ea', color: '#0b7a43' }
+const NO_STYLE = { borderColor: '#9aa6b2', background: '#f3f5f8', color: '#5b6875' }
+
 // Printed badge. Portrait card size, white background, fixed colors: it is paper, so it ignores the app theme.
 const US_DATE = (iso: string) => { const [y, m, d] = iso.split('-').map(Number); return `${m}/${d}/${y}` }
 
@@ -38,7 +41,13 @@ export function Badge({ summary, origin }: { summary: CoachSummary; origin: stri
         <p className="text-[29px] font-bold uppercase leading-[1.02]">{first}<br />{rest.join(' ')}</p>
         <p className="mt-1 text-[13px] font-semibold" style={{ color: '#4b5a69' }}>{badgeRole(coach)} · {programsLine(summary)}</p>
       </div>
-      <div className="grid grid-cols-2 gap-2 px-4 pt-2.5">{summary.programs.map((p) => <Box key={p.program} p={p} />)}</div>
+      <div className="grid grid-cols-3 gap-1.5 px-4 pt-2.5">
+        {summary.programs.map((p) => <Box key={p.program} p={p} />)}
+        <div className="rounded-md border-2 px-1 py-1 text-center" style={summary.offSeason.cleared ? YES_STYLE : NO_STYLE}>
+          <b className="block text-[26px] leading-none" style={{ fontFamily: 'var(--font-sans)' }}>{summary.offSeason.cleared ? 'YES' : 'NO'}</b>
+          <span className="block text-[10px] font-semibold uppercase tracking-wider">Camps &amp; off-season</span>
+        </div>
+      </div>
       <div className="mt-auto flex items-center gap-3 px-4 pb-1.5">
         <QRCodeSVG value={url} size={80} level="M" marginSize={0} fgColor="#12202e" bgColor="#ffffff" aria-label="QR code to verify this badge" />
         <p className="text-[10.5px] leading-tight" style={{ color: '#4b5a69' }}><b className="block text-[12.5px]" style={{ color: '#12202e' }}>Scan to verify</b>Live status and USA Lacrosse details</p>

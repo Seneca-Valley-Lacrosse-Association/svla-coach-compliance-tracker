@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { badgeRole, formatDate, summarizeCoach, type ProgramSummary } from '@/lib/compliance'
-import { PROGRAM_LABELS, type Coach, type Requirement, type Submission } from '@/lib/types'
+import { OFF_SEASON_SHORT, PROGRAM_LABELS, type Coach, type Requirement, type Submission } from '@/lib/types'
 
 // Public page behind a badge QR code. No sign-in. It shows clearance status and dates only: no contact details,
 // documents, pay status, or reasons an item is not current.
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 interface Payload {
   coach: Omit<Coach, 'id' | 'email' | 'phone'>
   requirements: Requirement[]
-  submissions: (Omit<Submission, 'id' | 'coachId' | 'uploadedOn'> & { uploadedOn?: string; obtainedAs?: 'Volunteer' | 'Employment' | null; fbiMethod?: 'fingerprint' | 'affidavit' | null; membershipNumber?: string | null })[]
+  submissions: (Omit<Submission, 'id' | 'coachId' | 'uploadedOn'> & { uploadedOn?: string; obtainedAs?: 'Volunteer' | 'Employment' | null; fbiMethod?: 'fingerprint' | 'affidavit' | null; fbiCheck?: Submission['fbiCheck'] | null; membershipNumber?: string | null })[]
 }
 
 const checkedAt = () => new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/New_York' }).format(new Date())
@@ -88,6 +88,10 @@ export default async function VerifyPage({ params }: { params: Promise<{ token: 
       </div>
       <div className="flex flex-col gap-4 px-5 py-5">
         <div className="grid grid-cols-2 gap-3">{summary.programs.map((p) => <ProgramBox key={p.program} p={p} />)}</div>
+        <div className={`rounded-xl border-2 px-3 py-2 ${summary.offSeason.cleared ? 'border-emerald-700 bg-emerald-50 text-emerald-800' : 'border-red-700 bg-red-50 text-red-800'}`}>
+          <p className="text-xs font-semibold uppercase tracking-wider">{OFF_SEASON_SHORT} (camps, clinics, off-season tournaments)</p>
+          <p className="text-3xl font-bold">{summary.offSeason.cleared ? 'YES' : 'NO'}</p>
+        </div>
         {memberNumber && (
           <div className="rounded-lg border px-3 py-2">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">USA Lacrosse member no.</p>

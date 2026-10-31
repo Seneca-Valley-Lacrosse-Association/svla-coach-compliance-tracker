@@ -5,6 +5,18 @@ export type Team = (typeof TEAMS)[number]
 export const PROGRAMS = ['youth', 'high-school'] as const
 export type Program = (typeof PROGRAMS)[number]
 export const PROGRAM_LABELS: Record<Program, string> = { youth: 'Youth', 'high-school': 'High School' }
+/** Box titles: the youth and high school boxes cover the spring season. */
+export const SPRING_LABELS: Record<Program, string> = { youth: 'Youth Spring Season', 'high-school': 'High School Spring Season' }
+/** The third box: SVLA-run activities outside the spring season. Not a program a coach is assigned to. */
+export const OFF_SEASON_LABEL = 'SVLA Camps, Clinics & Off-Season'
+export const OFF_SEASON_SHORT = 'Camps & Off-Season'
+/** Dashboard and report views: one program, the camps and off-season box, or everything. */
+export type ViewScope = Program | 'off-season' | 'all'
+/**
+ * Requirements that count for camps, clinics and off-season tournaments when the board has not set it on the
+ * requirement itself: the legal minimum (the three PA clearances) plus USA Lacrosse coach membership for insurance.
+ */
+export const OFF_SEASON_DEFAULT_IDS: readonly string[] = ['pa-child-abuse', 'pa-state-police', 'fbi-fingerprint', 'usal-membership']
 
 /** Which program(s) a team belongs to. The Youth/HS Board and Volunteer teams are in both. */
 export const TEAM_PROGRAMS: Record<Team, readonly Program[]> = {
@@ -63,15 +75,22 @@ export interface Requirement {
   why?: string
   /** Where the requirement comes from, for example "PA law" or "PIAA". */
   source?: string
-  /** Optional link to the rule or policy behind the requirement. */
+  /** Optional link to the rule or policy behind the requirement. Kept for older records; new links go in `sources`. */
   sourceUrl?: string
+  /** Extra source links. The board adds as many as it needs with the + button. */
+  sources?: SourceLink[]
   /** PA clearances record whether they were obtained for volunteer or employment purposes. */
   tracksObtainedAs?: boolean
   /** FBI check: eligible volunteers may submit a Volunteer Disclosure Statement instead. */
   allowsVolunteerAffidavit?: boolean
   /** Accepts either a file upload or just a completion date. */
   dateOnlyAllowed?: boolean
+  /** Counts toward "Cleared: Camps, Clinics & Off-Season". Missing means the built-in default list decides. */
+  offSeason?: boolean
 }
+
+/** One labelled link to a rule, law or policy behind a requirement. */
+export interface SourceLink { label: string; url: string }
 
 export type CoachStatus = 'pending' | 'approved' | 'declined'
 
@@ -107,6 +126,34 @@ export type SubmissionStatus = 'pending' | 'approved' | 'rejected'
 export type ObtainedAs = 'Volunteer' | 'Employment'
 export type FbiMethod = 'fingerprint' | 'affidavit'
 
+/**
+ * Which FBI document a coach uploaded. The agency that ran the check decides where it counts:
+ * PA DHS will not accept an FBI check run for another department, so a school-district check does not
+ * count for youth, and the DHS disclosure statement does not count for high school.
+ */
+export const FBI_CHECKS = ['dhs-volunteer', 'dhs-employee', 'school-employee', 'affidavit'] as const
+export type FbiCheck = (typeof FBI_CHECKS)[number]
+export const FBI_CHECK_LABELS: Record<FbiCheck, string> = {
+  'dhs-volunteer': 'FBI fingerprint check, PA DHS volunteer (code 1KG6ZJ)',
+  'dhs-employee': 'FBI fingerprint check, PA DHS employee (code 1KG756)',
+  'school-employee': 'FBI fingerprint check, Seneca Valley school employee (code 1KG6XN)',
+  affidavit: 'Volunteer Disclosure Statement (PA DHS affidavit)',
+}
+/** Who each FBI check is for, in SVLA terms, shown under each choice in the upload dialog. */
+export const FBI_CHECK_AUDIENCE: Record<FbiCheck, string> = {
+  'dhs-volunteer': 'SVLA youth volunteer coaches',
+  'dhs-employee': 'SVLA paid youth coaches',
+  'school-employee': 'All high school coaches, SVLA paid and volunteer',
+  affidavit: 'SVLA youth volunteers who have lived in PA for the past 10 years',
+}
+
+export const FBI_CHECK_SHORT: Record<FbiCheck, string> = {
+  'dhs-volunteer': 'DHS volunteer fingerprint (1KG6ZJ)',
+  'dhs-employee': 'DHS employee fingerprint (1KG756)',
+  'school-employee': 'School employee fingerprint (1KG6XN)',
+  affidavit: 'DHS Volunteer Disclosure Statement',
+}
+
 export interface Submission {
   id: string
   coachId: string
@@ -119,6 +166,8 @@ export interface Submission {
   filePath?: string
   obtainedAs?: ObtainedAs
   fbiMethod?: FbiMethod
+  /** FBI requirement only: which check this document is. Older uploads may not have it. */
+  fbiCheck?: FbiCheck
   membershipNumber?: string
   signedName?: string
   reviewComment?: string

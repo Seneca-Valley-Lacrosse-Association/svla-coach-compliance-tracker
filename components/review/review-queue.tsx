@@ -4,6 +4,7 @@ import Link from '@/components/app-link'
 import { AlertTriangle, FileText, Inbox } from 'lucide-react'
 import { useApp } from '@/lib/app-store'
 import { eligibilityIssue, formatDate } from '@/lib/compliance'
+import { FBI_CHECK_SHORT } from '@/lib/types'
 import { PageHeader } from '@/components/page-header'
 import { ItemStatusPill, PayBadge } from '@/components/status-pill'
 import { ReviewActions } from './review-actions'
@@ -78,11 +79,11 @@ export function ReviewQueue() {
                       <dd className="font-medium">{s.obtainedAs}</dd>
                     </div>
                   )}
-                  {s.fbiMethod && (
+                  {(s.fbiCheck || s.fbiMethod) && (
                     <div>
-                      <dt className="text-muted-foreground">Method</dt>
+                      <dt className="text-muted-foreground">FBI check</dt>
                       <dd className="font-medium">
-                        {s.fbiMethod === 'affidavit' ? 'Volunteer affidavit' : 'Fingerprint'}
+                        {s.fbiCheck ? FBI_CHECK_SHORT[s.fbiCheck] : s.fbiMethod === 'affidavit' ? 'Volunteer affidavit' : 'Fingerprint'}
                       </dd>
                     </div>
                   )}

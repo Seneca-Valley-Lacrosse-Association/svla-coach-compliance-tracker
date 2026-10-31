@@ -1,8 +1,9 @@
 'use client'
 
-import { AlertTriangle, ExternalLink, FileText, Hourglass, LifeBuoy, MessageSquareWarning } from 'lucide-react'
-import { daysBetween, daysInProgress, eligibilityIssue, followUpOverdue, formatDate, TODAY, type ChecklistItem } from '@/lib/compliance'
-import { LEVEL_LABELS, type Coach, type Submission } from '@/lib/types'
+import { AlertTriangle, CheckCircle2, Circle, Clock, ExternalLink, FileText, Hourglass, LifeBuoy, MessageSquareWarning } from 'lucide-react'
+import { daysBetween, daysInProgress, eligibilityIssue, fbiCodeLines, followUpOverdue, formatDate, isFbiRequirement, TODAY, type ChecklistItem, type FbiCodeLine } from '@/lib/compliance'
+import { useApp } from '@/lib/app-store'
+import { FBI_CHECK_SHORT, LEVEL_LABELS, PROGRAM_LABELS, type Coach, type Submission } from '@/lib/types'
 import { reasonFor } from '@/lib/requirement-reasons'
 import { ItemStatusPill } from '@/components/status-pill'
 import { UploadButton } from './upload-dialog'
@@ -21,12 +22,51 @@ function relative(date: string) {
 
 function SubmissionMeta({ sub }: { sub: Submission }) {
   const parts: string[] = []
-  if (sub.fbiMethod) parts.push(sub.fbiMethod === 'affidavit' ? 'Volunteer Disclosure Statement' : 'FBI fingerprint results')
-  if (sub.obtainedAs) parts.push(`Obtained as: ${sub.obtainedAs}`)
+  if (sub.fbiCheck) parts.push(FBI_CHECK_SHORT[sub.fbiCheck])
+  else if (sub.fbiMethod) parts.push(sub.fbiMethod === 'affidavit' ? 'Volunteer Disclosure Statement' : 'FBI fingerprint results')
+  if (sub.obtainedAs && !sub.fbiCheck) parts.push(`Obtained as: ${sub.obtainedAs}`)
   if (sub.membershipNumber) parts.push(`Member #${sub.membershipNumber}`)
   if (sub.signedName) parts.push(`Signed by ${sub.signedName}`)
   if (parts.length === 0) return null
   return <p className="text-sm text-muted-foreground">{parts.join(' · ')}</p>
+}
+
+const CODE_STATE = {
+  'on-file': { icon: CheckCircle2, tone: 'text-emerald-800', iconTone: 'text-emerald-600', text: 'on file' },
+  expiring: { icon: Clock, tone: 'text-amber-900', iconTone: 'text-amber-600', text: 'on file, expiring soon' },
+  pending: { icon: Hourglass, tone: 'text-sky-900', iconTone: 'text-brand', text: 'uploaded, waiting for board review' },
+  needed: { icon: Circle, tone: 'text-red-900', iconTone: 'text-red-600', text: 'still needed' },
+} as const
+
+/** The FBI service code(s) this coach needs, one line per program, with what is already on file. */
+function FbiCodes({ lines }: { lines: FbiCodeLine[] }) {
+  if (lines.length === 0) return null
+  return (
+    <div className="mt-1 rounded-lg border border-brand/30 bg-sky-50/70 p-3 text-sm" aria-label="Your FBI service codes">
+      <p className="font-semibold text-navy">
+        {lines.length > 1 ? 'Your codes (you coach both programs, so you need one for each)' : 'Your code'}
+      </p>
+      <ul className="mt-2 flex flex-col gap-2">
+        {lines.map((l) => {
+          const st = CODE_STATE[l.state]
+          const Icon = st.icon
+          return (
+            <li key={l.program} className="flex items-start gap-2">
+              <Icon className={`mt-0.5 size-4 shrink-0 ${st.iconTone}`} aria-hidden="true" />
+              <span className={st.tone}>
+                <span className="font-medium text-foreground">{PROGRAM_LABELS[l.program]}:</span>{' '}
+                <span className="rounded bg-white px-1.5 py-0.5 font-mono font-semibold text-navy ring-1 ring-brand/30">{l.code}</span>{' '}
+                <span className="text-muted-foreground">({l.codeName})</span>
+                {l.alternative && l.state === 'needed' && <span className="text-muted-foreground"> {l.alternative}</span>}
+                {' · '}{st.text}{l.expiresOn ? `, expires ${formatDate(l.expiresOn)}` : ''}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+      <p className="mt-2 text-muted-foreground">Give IdentoGO this code when you register. Details are under How to get this.</p>
+    </div>
+  )
 }
 
 export function ChecklistRow({
@@ -44,6 +84,8 @@ export function ChecklistRow({
   readOnly?: boolean
 }) {
   const { requirement: req, status, latest, approved } = item
+  const { submissions, progress: progressRows } = useApp()
+  const codeLines = isFbiRequirement(req) ? fbiCodeLines(coach, req, submissions, progressRows) : []
   const shown = latest?.status === 'pending' ? latest : approved ?? latest
   const pendingIssue = latest?.status === 'pending' ? eligibilityIssue(coach, req, latest) : null
   const helpOpenByDefault = mode === 'coach' && !item.satisfied
@@ -73,6 +115,7 @@ export function ChecklistRow({
               <span className="font-medium text-foreground">Required by:</span> {reason.source}
             </p>
           )}
+          {codeLines.length > 0 && <FbiCodes lines={codeLines} />}
           {shown && <SubmissionMeta sub={shown} />}
           <dl className="mt-1 grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:flex sm:flex-wrap">
             <div>
@@ -181,7 +224,7 @@ export function ChecklistRow({
 
       <details className="group rounded-lg bg-secondary/60 px-3 py-2 text-sm" open={helpOpenByDefault}>
         <summary className="cursor-pointer font-medium text-brand">How to get this</summary>
-        <p className="mt-2 leading-relaxed text-foreground">{req.help}</p>
+        <p className="mt-2 whitespace-pre-line leading-relaxed text-foreground">{req.help}</p>
         {req.helpUrl && <a
           href={req.helpUrl}
           target="_blank"
@@ -198,23 +241,29 @@ export function ChecklistRow({
         <details className="group rounded-lg bg-secondary/60 px-3 py-2 text-sm">
           <summary className="cursor-pointer font-medium text-brand">Why we require this</summary>
           <p className="mt-2 font-medium text-navy">{LEVEL_LABELS[reason.level]}</p>
-          <p className="mt-1 leading-relaxed text-foreground">{reason.why}</p>
+          <p className="mt-1 whitespace-pre-line leading-relaxed text-foreground">{reason.why}</p>
           {reason.source && (
             <p className="mt-2 leading-relaxed text-muted-foreground">
-              <span className="font-medium text-foreground">Where it comes from:</span> {reason.source}
+              <span className="font-medium text-foreground">Where it comes from:</span> <span className="whitespace-pre-line">{reason.source}</span>
             </p>
           )}
-          {reason.sourceUrl && (
-            <a
-              href={reason.sourceUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-2 inline-flex items-center gap-1 font-medium text-brand underline underline-offset-4"
-            >
-              Read the source
-              <ExternalLink className="size-3.5" aria-hidden="true" />
-              <span className="sr-only">(opens in a new tab)</span>
-            </a>
+          {reason.sources.length > 0 && (
+            <ul className="mt-2 flex flex-col gap-1">
+              {reason.sources.map((link) => (
+                <li key={link.url}>
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 font-medium text-brand underline underline-offset-4"
+                  >
+                    {link.label || 'Read the source'}
+                    <ExternalLink className="size-3.5" aria-hidden="true" />
+                    <span className="sr-only">(opens in a new tab)</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
           )}
         </details>
       )}

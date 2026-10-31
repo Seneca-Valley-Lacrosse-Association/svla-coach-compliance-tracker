@@ -1,4 +1,4 @@
-import type { Level, Requirement } from './types'
+import type { Level, Requirement, SourceLink } from './types'
 
 /**
  * Starting "why we require this" content for the built-in requirements.
@@ -26,8 +26,8 @@ export const DEFAULT_REASONS: Record<string, Reason> = {
   },
   'fbi-fingerprint': {
     level: 'both',
-    why: 'The federal check covers records from outside Pennsylvania. Volunteers who have lived in PA for 10 years may sign a disclosure statement instead. Paid coaches must be fingerprinted.',
-    source: 'PA Child Protective Services Law (23 Pa.C.S. § 6344). PIAA also requires it for high school coaches.',
+    why: 'The FBI check covers criminal records from outside Pennsylvania, which the state police check does not. PA DHS does not accept an FBI check run for another department, so coaches in both programs need a youth (DHS) check and the high school (school district) check.',
+    source: 'Youth: PA Child Protective Services Law (23 Pa.C.S. §§ 6344, 6344.2). High school: PA School Code, Section 111 (Act 114), and Seneca Valley School District Policy 916.',
   },
   'usal-membership': {
     level: 'both',
@@ -75,6 +75,8 @@ export const DEFAULT_REASONS: Record<string, Reason> = {
 }
 
 export interface ResolvedReason extends Reason {
+  /** Every source link to show: the original single link first (if any), then the board's added links. */
+  sources: SourceLink[]
   /** True when the board has not written a reason and the built-in draft is shown. */
   isDefault: boolean
 }
@@ -83,11 +85,17 @@ export function reasonFor(req: Requirement): ResolvedReason | null {
   const fallback = DEFAULT_REASONS[req.id]
   const why = req.why?.trim() || fallback?.why
   if (!why) return null
+  const sourceUrl = req.sourceUrl?.trim() || fallback?.sourceUrl
+  // Once the board saves a list of links, that list is the whole answer and the old single link is ignored.
+  const sources: SourceLink[] = req.sources
+    ? req.sources.filter((l) => l.url?.trim())
+    : sourceUrl ? [{ label: 'Read the source', url: sourceUrl }] : []
   return {
     level: req.level ?? fallback?.level ?? 'both',
     why,
     source: req.source?.trim() || fallback?.source || '',
-    sourceUrl: req.sourceUrl?.trim() || fallback?.sourceUrl,
+    sourceUrl,
+    sources,
     isDefault: !req.why?.trim(),
   }
 }
