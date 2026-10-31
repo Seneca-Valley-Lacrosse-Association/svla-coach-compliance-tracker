@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import {
   BarChart3,
+  IdCard,
   Eye,
   ClipboardCheck,
   Inbox,
@@ -33,6 +34,7 @@ const boardNav = [
   { href: '/requirements', label: 'Requirements', icon: ListChecks },
   { href: '/coaches', label: 'Coaches & Volunteers', icon: Users },
   { href: '/reports', label: 'Reports', icon: BarChart3 },
+  { href: '/badges', label: 'Badges', icon: IdCard },
   { href: '/tickets', label: 'Help Requests', icon: LifeBuoy },
   { href: '/board', label: 'Board Access', icon: UserCog },
   { href: '/access', label: 'Roles & Access', icon: SlidersHorizontal },
@@ -104,7 +106,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <nav aria-label="Main" className="flex flex-col gap-1 px-3">
-      {[...(!isDemo && currentCoachId ? [{ href: '/my-checklist', label: 'My Checklist', icon: ClipboardCheck }] : []), ...boardNav].filter(({ href }) => !(isDemo && (href === '/board' || href === '/tickets' || href === '/access'))).map(({ href, label, icon: Icon }) => {
+      {[...(!isDemo && currentCoachId ? [{ href: '/my-checklist', label: 'My Checklist', icon: ClipboardCheck }] : []), ...boardNav].filter(({ href }) => !(isDemo && (href === '/badges' || href === '/board' || href === '/tickets' || href === '/access'))).map(({ href, label, icon: Icon }) => {
         const active = isActive(pathname.replace(/^\/demo(?=\/|$)/, '') || '/', href)
         return (
           <Link
@@ -195,6 +197,13 @@ function PreviewNote({ preview }: { preview: NonNullable<ReturnType<typeof useAp
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  // Public badge verification: no sidebar, no sign-in, no workspace.
+  if (pathname.startsWith('/verify/')) return <>{children}</>
+  return <WorkspaceShell>{children}</WorkspaceShell>
+}
+
+function WorkspaceShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const { viewMode, getSummary, currentCoachId, isDemo, email, signOut, hasTeamView, access, preview, previewSummary, previewError, stopPreview } = useApp()
   const router = useRouter()

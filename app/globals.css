@@ -86,3 +86,12 @@
     @apply bg-background text-foreground text-base;
   }
 }
+
+/* Badge printing: hide the whole app and show only the badge sheet. */
+.badge-print { display: none; }
+@media print {
+  @page { size: letter; margin: 0.5in; }
+  body > *:not(.badge-print) { display: none !important; }
+  .badge-print { display: block; background: #fff; }
+  .badge-print * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+}

@@ -87,6 +87,8 @@ export interface Coach {
   paResident10Years: boolean
   /** High school coach who is also assigned to the youth program, so the youth requirements apply to them too. */
   alsoCoachesYouth?: boolean
+  /** Private random code in the badge QR link. Only the board and the coach themselves can read it. */
+  verifyToken?: string
   /** Board approval state. Missing means approved (demo data). */
   status?: CoachStatus
   /** Set when the board archived the record. Archived coaches keep all history but are inactive. */

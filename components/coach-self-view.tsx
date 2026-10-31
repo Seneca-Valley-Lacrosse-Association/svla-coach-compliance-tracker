@@ -7,6 +7,7 @@ import { RequirementProgress } from '@/components/requirement-progress'
 import { PayBadge } from '@/components/status-pill'
 import { ChecklistRow } from '@/components/coach-detail/checklist-row'
 import { ClearedBadge } from '@/components/coach-detail/cleared-badge'
+import { PrintBadgeDialog } from '@/components/badges/print-badge-dialog'
 import { MyRequests } from '@/components/help/my-requests'
 import type { CoachSummary } from '@/lib/compliance'
 
@@ -42,6 +43,7 @@ export function CoachSelfView({ previewSummary }: { previewSummary?: CoachSummar
           <RequirementProgress done={satisfiedCount} total={total} showLabel={false} />
         </div>
         <ClearedBadge summary={summary} />
+        {!readOnly && <div><PrintBadgeDialog summary={summary} label="Print my badge" /></div>}
       </section>
 
       <section aria-labelledby="steps-heading" className="flex flex-col gap-3">
