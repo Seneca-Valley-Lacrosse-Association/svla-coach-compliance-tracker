@@ -15,7 +15,6 @@ import {
   LifeBuoy,
   ListChecks,
   Menu,
-  ShieldCheck,
   SlidersHorizontal,
   UserCog,
   Users,
@@ -52,8 +51,9 @@ function isActive(pathname: string, href: string) {
 function Brand() {
   return (
     <div className="flex items-center gap-3 px-4 py-5">
-      <span className="flex size-9 items-center justify-center rounded-lg bg-brand-light text-navy">
-        <ShieldCheck className="size-5" aria-hidden="true" />
+      {/* White tile so the emblem's black outline stays visible on the navy sidebar. */}
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-white p-1">
+        <img src="/svla-compliance-emblem.png" alt="" width={384} height={353} className="h-auto w-full" />
       </span>
       <div className="leading-tight">
         <p className="font-semibold text-white">SVLA</p>
