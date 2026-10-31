@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react'
 import Link from '@/components/app-link'
-import { CheckCircle2, CircleDashed, Clock, Download, Inbox } from 'lucide-react'
+import { CheckCircle2, CircleDashed, Clock, Download, Inbox, XCircle } from 'lucide-react'
 import { useApp } from '@/lib/app-store'
 import { appliesTo, daysBetween, formatDate, programClearedLabel, TODAY, type CoachSummary } from '@/lib/compliance'
 import { PROGRAMS, PROGRAM_LABELS, TEAMS, TEAM_PROGRAMS, type Program } from '@/lib/types'
@@ -78,6 +78,10 @@ export function ReportsView() {
     const cleared = assigned.filter((s) => programOf(s, program)?.cleared).length
     return { program, assigned: assigned.length, cleared, incomplete: assigned.length - cleared }
   })
+
+  const dualAssigned = summaries
+    .filter((s) => PROGRAMS.every((p) => programOf(s, p)?.assigned))
+    .sort((a, b) => a.coach.name.localeCompare(b.coach.name))
 
   const upcoming = summaries
     .flatMap((s) =>
@@ -178,36 +182,51 @@ export function ReportsView() {
         </div>
 
         <div className="grid gap-6 xl:grid-cols-2">
-          {/* Cleared by team, split by program */}
+          {/* Cleared by team: one row per team, Youth and High School side by side */}
           <section aria-labelledby="by-team" className="rounded-xl border bg-card p-5 shadow-xs">
             <h2 id="by-team" className="text-lg font-semibold text-navy">Cleared to coach by team</h2>
-            <p className="mb-4 text-sm text-muted-foreground">Youth/HS teams appear under both programs.</p>
-            <div className="flex flex-col gap-6">
-              {PROGRAMS.map((program) => {
-                const teams = TEAMS.filter((t) => TEAM_PROGRAMS[t].includes(program))
-                return (
-                  <div key={program}>
-                    <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                      {PROGRAM_LABELS[program]}
-                    </h3>
-                    <ul className="flex flex-col gap-3">
-                      {teams.map((t) => {
-                        const staff = summaries.filter((s) => s.coach.team === t)
-                        const cleared = staff.filter((s) => programOf(s, program)?.cleared).length
-                        return (
-                          <li key={t} className="grid grid-cols-[minmax(6rem,9rem)_1fr_3.5rem] items-center gap-3">
-                            <span className={cn('truncate font-medium', staff.length === 0 && 'text-muted-foreground')}>{t}</span>
-                            <Bar done={cleared} total={staff.length} label={`${t}: ${cleared} of ${staff.length} cleared for ${PROGRAM_LABELS[program]}`} />
-                            <span className="text-right text-sm tabular-nums text-muted-foreground">
-                              {staff.length === 0 ? '—' : `${cleared}/${staff.length}`}
-                            </span>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  </div>
-                )
-              })}
+            <p className="mb-4 text-sm text-muted-foreground">
+              Counted separately for each program. A dash means the team is not part of that program.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[22rem] text-sm">
+                <thead>
+                  <tr className="border-b text-left text-muted-foreground">
+                    <th scope="col" className="py-2 pr-3 font-medium">Team</th>
+                    {PROGRAMS.map((program) => (
+                      <th key={program} scope="col" className="w-[38%] px-2 py-2 font-medium">
+                        Cleared: {PROGRAM_LABELS[program]}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {TEAMS.map((t) => {
+                    const staff = summaries.filter((s) => s.coach.team === t)
+                    return (
+                      <tr key={t}>
+                        <th scope="row" className={cn('py-2.5 pr-3 text-left font-medium', staff.length === 0 && 'text-muted-foreground')}>{t}</th>
+                        {PROGRAMS.map((program) => {
+                          if (!TEAM_PROGRAMS[t].includes(program)) {
+                            return <td key={program} className="px-2 py-2.5 text-muted-foreground">—</td>
+                          }
+                          const cleared = staff.filter((s) => programOf(s, program)?.cleared).length
+                          return (
+                            <td key={program} className="px-2 py-2.5">
+                              <div className="flex items-center gap-2">
+                                <Bar done={cleared} total={staff.length} label={`${t}: ${cleared} of ${staff.length} cleared for ${PROGRAM_LABELS[program]}`} />
+                                <span className="w-10 shrink-0 text-right tabular-nums text-muted-foreground">
+                                  {staff.length === 0 ? '0/0' : `${cleared}/${staff.length}`}
+                                </span>
+                              </div>
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
           </section>
 
@@ -235,6 +254,40 @@ export function ReportsView() {
             </ul>
           </section>
 
+          {/* People assigned to both programs: which side each one is cleared for */}
+          {dualAssigned.length > 0 && (
+            <section aria-labelledby="dual" className="rounded-xl border bg-card p-5 shadow-xs xl:col-span-2">
+              <h2 id="dual" className="text-lg font-semibold text-navy">
+                Assigned to both Youth and High School <span className="font-normal text-muted-foreground">({dualAssigned.length})</span>
+              </h2>
+              <p className="mb-4 text-sm text-muted-foreground">Board members and volunteers who float between programs need every clearance on both sides.</p>
+              <ul className="divide-y">
+                {dualAssigned.map((s) => (
+                  <li key={s.coach.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
+                    <Link href={`/coaches/${s.coach.id}`} className="font-medium text-brand hover:underline">{s.coach.name}</Link>
+                    <span className="text-sm text-muted-foreground">{s.coach.team}</span>
+                    <span className="ml-auto flex flex-wrap gap-2">
+                      {PROGRAMS.map((program) => {
+                        const ok = programOf(s, program)?.cleared
+                        return (
+                          <span
+                            key={program}
+                            className={cn(
+                              'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold',
+                              ok ? 'border-emerald-600 bg-emerald-50 text-emerald-800' : 'border-red-600 bg-red-50 text-red-800',
+                            )}
+                          >
+                            {ok ? <CheckCircle2 className="size-3.5" aria-hidden="true" /> : <XCircle className="size-3.5" aria-hidden="true" />}
+                            {PROGRAM_LABELS[program]}: {ok ? 'YES' : 'NO'}
+                          </span>
+                        )
+                      })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           {/* Expiring soon */}
           <section aria-labelledby="upcoming" className="rounded-xl border bg-card p-5 shadow-xs xl:col-span-2">
             <h2 id="upcoming" className="mb-4 text-lg font-semibold text-navy">
