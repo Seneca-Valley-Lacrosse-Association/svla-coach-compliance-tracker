@@ -13,6 +13,7 @@ import {
   Inbox,
   LayoutDashboard,
   LifeBuoy,
+  LogOut,
   ListChecks,
   Menu,
   SlidersHorizontal,
@@ -281,14 +282,14 @@ function WorkspaceShell({ children }: { children: React.ReactNode }) {
           >
             <Menu className="size-5" aria-hidden="true" />
           </button>
-          <p className="truncate font-semibold lg:hidden">SVLA Compliance</p>
+          <p className="min-w-0 truncate font-semibold lg:hidden">SVLA Compliance</p>
           {viewMode === 'coach' && me && (
             <p className="hidden truncate text-sm text-white/80 lg:block">
               {isDemo ? 'Demo checklist:' : 'Signed in as'} <span className="font-medium text-white">{me.coach.name}</span>
             </p>
           )}
-          <div className="ml-auto flex min-w-0 items-center gap-3">
-            {isDemo ? <><ViewToggle /><a href="/" className="text-sm underline underline-offset-4">Exit demo</a></> : <><span className="hidden truncate text-sm sm:inline">{email} · {viewMode === 'board' ? 'Board' : access.roleLabel ?? 'Coach'}</span><HelpButton /><ChangePasswordDialog /><button type="button" className="shrink-0 text-sm underline underline-offset-4" onClick={async () => { try { await signOut() } catch { setSignOutError('Unable to sign out. Please try again.') } }}>Sign out</button></>}
+          <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
+            {isDemo ? <><ViewToggle /><a href="/" className="text-sm underline underline-offset-4">Exit demo</a></> : <><span className="hidden truncate text-sm sm:inline">{email} · {viewMode === 'board' ? 'Board' : access.roleLabel ?? 'Coach'}</span><HelpButton /><ChangePasswordDialog /><button type="button" className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-white/60 px-2.5 py-1 text-sm font-medium hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white" onClick={async () => { try { await signOut() } catch { setSignOutError('Unable to sign out. Please try again.') } }}><LogOut className="size-4" aria-hidden="true" />Sign out</button></>}
           </div>
         </header>
         {isDemo && <p className="border-b bg-secondary px-4 py-3 text-sm leading-relaxed text-secondary-foreground lg:px-8"><strong>Read-only board demo.</strong> Five fictional coaches show cleared, incomplete, expiring, expired, and awaiting-review stages. No live records or real certificates.</p>}

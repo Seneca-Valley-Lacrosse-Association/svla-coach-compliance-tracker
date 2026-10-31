@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useApp } from '@/lib/app-store'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageHeader } from '@/components/page-header'
-import { SummaryTiles, tileFilters, type TileFilter } from './summary-tiles'
+import { SummaryTiles, tileFilters, tileLabels, type TileFilter } from './summary-tiles'
 import { CoachesTable } from './coaches-table'
 import { TeamsOverview } from './teams-overview'
 import { InProgressList } from './in-progress-list'
@@ -12,15 +12,7 @@ import { formatDate, readyToFloat, scopeSummary, TODAY } from '@/lib/compliance'
 import { PROGRAMS, PROGRAM_LABELS, type Program } from '@/lib/types'
 import Link from '@/components/app-link'
 
-const filterLabels: Record<TileFilter, string> = {
-  all: 'All coaches',
-  cleared: 'Cleared to Coach',
-  incomplete: 'Incomplete',
-  expiring: 'Expiring in 60 Days',
-  expired: 'Expired',
-  pending: 'Awaiting Review',
-  'in-progress': 'In Progress',
-}
+const filterLabels: Record<TileFilter, string> = { all: 'All coaches', ...tileLabels }
 
 export function DashboardView() {
   const { summaries: allSummaries, awaitingCoaches, viewMode } = useApp()
@@ -55,7 +47,7 @@ export function DashboardView() {
             ))}
             <span className="text-sm text-muted-foreground">Coaches only count in the program(s) they are assigned to.</span>
           </div>
-          <SummaryTiles summaries={summaries} active={filter} onChange={setFilter} />
+          <SummaryTiles summaries={summaries} active={filter} onChange={setFilter} program={program} />
           {(filter === 'all' || filter === 'in-progress') && <InProgressList summaries={summaries} />}
           {floaters.length > 0 && (
             <section className="rounded-xl border bg-card p-4" aria-label="Ready to float">
