@@ -21,9 +21,20 @@ export interface MySurvey {
   submittedAt: string | null
   updatedAt: string
 }
+export interface PastSurvey {
+  assignmentId: string
+  title: string
+  seasonLabel: string
+  nextSeasonLabel: string
+  questions: SurveyQuestion[]
+  answers: Answers
+  team: string
+  submittedAt: string
+}
 export interface SurveysSnapshot {
   role: 'board' | 'coach'
   mine: MySurvey[]
+  past?: PastSurvey[]
   today?: string
   questions?: SurveyQuestion[]
   cycles?: SurveyCycle[]

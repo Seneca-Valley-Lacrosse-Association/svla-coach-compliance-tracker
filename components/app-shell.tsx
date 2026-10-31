@@ -70,7 +70,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const openTickets = tickets?.openCount ?? 0
   const { data: surveys } = useSurveys()
   const surveyWaiting = !preview && (surveys?.mine ?? []).some((s) => !s.submittedAt)
-  const hasSurvey = !preview && (surveys?.mine.length ?? 0) > 0
+  const hasSurvey = !preview && ((surveys?.mine.length ?? 0) > 0 || (surveys?.past?.length ?? 0) > 0)
   const surveyLink = { href: '/survey', label: 'Coaching Survey', icon: ClipboardList }
   const pendingCount = summaries.reduce(
     (n, s) => n + s.items.filter((i) => i.latest?.status === 'pending').length,

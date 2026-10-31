@@ -83,7 +83,13 @@ export async function GET() {
       intro: r.intro, dueOn: r.due_on, closeOn: r.close_on, questions: r.questions, answers: r.answers, profile: r.profile,
       team: r.team, coachName: r.coach_name, submittedAt: r.submitted_at, updatedAt: r.updated_at,
     }))
-    if (!s.isBoard) return respond({ role: 'coach', mine: open })
+    // Read-only past answers. Nice-to-have: if the lookup fails, the open survey still loads.
+    const pastRows = await s.db.rpc('my_past_surveys')
+    const past = pastRows.error ? [] : (pastRows.data ?? []).map((r: Record<string, unknown>) => ({
+      assignmentId: r.assignment_id, title: r.title, seasonLabel: r.season_label, nextSeasonLabel: r.next_season_label,
+      questions: r.questions, answers: r.answers, team: r.team, submittedAt: r.submitted_at,
+    }))
+    if (!s.isBoard) return respond({ role: 'coach', mine: open, past })
     const [questions, cycles, assignments] = await Promise.all([
       s.db.from('survey_questions').select('*').order('sort_order'),
       s.db.from('survey_cycles').select('*').order('send_on', { ascending: false }),
@@ -91,7 +97,7 @@ export async function GET() {
     ])
     for (const r of [questions, cycles, assignments]) if (r.error) throw r.error
     return respond({
-      role: 'board', mine: open, today: todayET(),
+      role: 'board', mine: open, past, today: todayET(),
       questions: (questions.data ?? []).map(questionFromRow),
       cycles: (cycles.data ?? []).map(cycleFromRow),
       assignments: (assignments.data ?? []).map(assignmentFromRow),
