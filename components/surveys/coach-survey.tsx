@@ -4,15 +4,18 @@ import { useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, ClipboardList, History } from 'lucide-react'
 import { useApp } from '@/lib/app-store'
 import { IT_EMAIL } from '@/lib/tickets'
-import { useSurveys, surveyCommand, SurveyError, type MySurvey, type PastSurvey } from '@/lib/use-surveys'
+import { useSurveyPreview, useSurveys, surveyCommand, SurveyError, type MySurvey, type PastSurvey } from '@/lib/use-surveys'
 import { answerText, fillLabel, initialAnswers, isVisible, longDate, teamLabel, todayET, type Answer, type Answers } from '@/lib/surveys'
 import { Button } from '@/components/ui/button'
 import { QuestionInput } from './question-input'
 
 /** The signed-in coach's open coaching survey(s). */
-export function CoachSurvey() {
+export function CoachSurvey({ previewEmail }: { previewEmail?: string } = {}) {
   const { isDemo } = useApp()
-  const { data, error, isLoading, mutate } = useSurveys()
+  const own = useSurveys()
+  const previewed = useSurveyPreview(previewEmail ?? null)
+  const { data, error, isLoading, mutate } = previewEmail ? previewed : own
+  const readOnly = !!previewEmail
   if (isDemo) return <Notice title="Coaching survey">The board demo does not include surveys.</Notice>
   if (isLoading) return <p role="status" className="mx-auto max-w-3xl">Loading your survey…</p>
   if (error) return <Notice title="Coaching survey">Your survey could not be loaded. Please refresh the page, or email <a className="font-medium text-primary underline" href={`mailto:${IT_EMAIL}`}>{IT_EMAIL}</a>.</Notice>
@@ -21,7 +24,7 @@ export function CoachSurvey() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-10">
       {surveys.length
-        ? surveys.map((s) => <SurveyForm key={s.assignmentId} survey={s} onSaved={() => mutate()} />)
+        ? surveys.map((s) => <SurveyForm key={s.assignmentId} survey={s} onSaved={() => mutate()} readOnly={readOnly} previewEmail={previewEmail} />)
         : <Notice title="No open survey">There is no coaching survey waiting for you right now. When the board sends one, you will get an email with a link to this page.</Notice>}
       {past.length > 0 && <PastSurveys past={past} />}
     </div>
@@ -63,7 +66,7 @@ function Notice({ title, children }: { title: string; children: React.ReactNode 
   )
 }
 
-function SurveyForm({ survey, onSaved }: { survey: MySurvey; onSaved: () => void }) {
+function SurveyForm({ survey, onSaved, readOnly = false, previewEmail }: { survey: MySurvey; onSaved: () => void; readOnly?: boolean; previewEmail?: string }) {
   const { getSummary, currentCoachId, email } = useApp()
   const me = getSummary(currentCoachId)?.coach
   const questions = survey.questions
@@ -74,7 +77,7 @@ function SurveyForm({ survey, onSaved }: { survey: MySurvey; onSaved: () => void
   const [failure, setFailure] = useState('')
   const [dirty, setDirty] = useState(false)
   const submitted = !!survey.submittedAt
-  const [editing, setEditing] = useState(!submitted)
+  const [editing, setEditing] = useState(!submitted || readOnly)
   const visible = useMemo(() => questions.filter((q) => isVisible(q, answers)), [questions, answers])
   const overdue = todayET() > survey.dueOn
 
@@ -155,7 +158,7 @@ function SurveyForm({ survey, onSaved }: { survey: MySurvey; onSaved: () => void
         <p className="mb-3 text-sm text-muted-foreground">{survey.profile.testDummy ? 'Test run: this address is not on the coach roster, so placeholder details (Jane Doe) are shown.' : <>These come from your profile and checklist, so you don&apos;t need to enter them.</>}</p>
         <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
           <Detail label="Name" value={survey.coachName} />
-          <Detail label="Email" value={me?.email ?? email ?? '—'} />
+          <Detail label="Email" value={previewEmail ?? me?.email ?? email ?? '—'} />
           <Detail label="Team" value={teamLabel(survey.team) || '—'} />
           <Detail label="Role" value={survey.profile.role ?? me?.role ?? '—'} />
           <Detail label="USA Lacrosse certification" value={survey.profile.certification ? `${survey.profile.certification}${survey.profile.certificationVerified ? ' (verified)' : ''}` : '—'} />
@@ -173,20 +176,21 @@ function SurveyForm({ survey, onSaved }: { survey: MySurvey; onSaved: () => void
               label={fillLabel(q.label, survey)}
               value={answers[q.key]}
               error={errors[q.key]}
+              disabled={readOnly}
               onChange={(value) => update(q.key, value)}
             />
           </li>
         ))}
       </ol>
 
-      <div className="sticky bottom-0 z-10 -mx-4 flex flex-col gap-3 border-t bg-background/95 px-4 py-4 backdrop-blur sm:mx-0 sm:rounded-xl sm:border">
+      {readOnly ? <p className="rounded-xl border-2 border-amber-400 bg-amber-50 p-4 text-amber-950">Preview: this is the survey as {survey.coachName} sees it{submitted ? ', with the answers they submitted' : ''}. Read-only; nothing can be changed from here.</p> : <div className="sticky bottom-0 z-10 -mx-4 flex flex-col gap-3 border-t bg-background/95 px-4 py-4 backdrop-blur sm:mx-0 sm:rounded-xl sm:border">
         {failure && <p role="alert" className="font-medium text-destructive">{failure}</p>}
         {message && <p role="status" className="text-emerald-800">{message}</p>}
         <div className="flex flex-wrap gap-2">
           <Button type="submit" className="h-11 px-6 text-base" disabled={!!busy}>{busy === 'submit' ? 'Submitting…' : submitted ? 'Save changes' : 'Submit survey'}</Button>
           {!submitted && <Button type="button" variant="outline" className="h-11 px-5 text-base" disabled={!!busy} onClick={() => void save(false)}>{busy === 'save' ? 'Saving…' : 'Save and finish later'}</Button>}
         </div>
-      </div>
+      </div>}
     </form>
   )
 }

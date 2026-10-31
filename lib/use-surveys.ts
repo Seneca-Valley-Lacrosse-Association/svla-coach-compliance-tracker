@@ -54,6 +54,11 @@ export function useSurveys() {
   return useSWR<SurveysSnapshot>(isDemo ? null : '/api/surveys', load, { refreshInterval: 120000, shouldRetryOnError: false })
 }
 
+/** Board only: the surveys the previewed person would see. Null key when no preview is running. */
+export function useSurveyPreview(email: string | null) {
+  return useSWR<SurveysSnapshot>(email ? `/api/surveys/preview?email=${encodeURIComponent(email)}` : null, load, { shouldRetryOnError: false })
+}
+
 export class SurveyError extends Error {
   constructor(message: string, public fieldErrors: Record<string, string> = {}) { super(message) }
 }

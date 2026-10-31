@@ -24,10 +24,11 @@ import {
 import { useApp, type ViewMode } from '@/lib/app-store'
 import { IT_EMAIL } from '@/lib/tickets'
 import { useTickets } from '@/lib/use-tickets'
-import { useSurveys } from '@/lib/use-surveys'
+import { useSurveyPreview, useSurveys } from '@/lib/use-surveys'
 import { cn } from '@/lib/utils'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { CoachSelfView } from './coach-self-view'
+import { CoachSurvey } from './surveys/coach-survey'
 import { ChangePasswordDialog } from './change-password-dialog'
 import { HelpButton, HelpProvider } from './help/help-provider'
 
@@ -69,8 +70,11 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const { data: tickets } = useTickets()
   const openTickets = tickets?.openCount ?? 0
   const { data: surveys } = useSurveys()
-  const surveyWaiting = !preview && (surveys?.mine ?? []).some((s) => !s.submittedAt)
-  const hasSurvey = !preview && ((surveys?.mine.length ?? 0) > 0 || (surveys?.past?.length ?? 0) > 0)
+  // While previewing, the survey link reflects the previewed person's surveys, not the board member's.
+  const { data: previewSurveys } = useSurveyPreview(preview ? preview.email : null)
+  const shown = preview ? previewSurveys : surveys
+  const surveyWaiting = (shown?.mine ?? []).some((s) => !s.submittedAt)
+  const hasSurvey = (shown?.mine.length ?? 0) > 0 || (shown?.past?.length ?? 0) > 0
   const surveyLink = { href: '/survey', label: 'Coaching Survey', icon: ClipboardList }
   const pendingCount = summaries.reduce(
     (n, s) => n + s.items.filter((i) => i.latest?.status === 'pending').length,
@@ -227,7 +231,7 @@ function WorkspaceShell({ children }: { children: React.ReactNode }) {
   const previewTeamView = !!preview && !!(preview.access.views.clearance_status || preview.access.views.staff_roster)
   // A previewed person with team access but no checklist of their own lands on Team Compliance, as they would.
   useEffect(() => {
-    if (preview && !previewSummary && previewTeamView && !pathname.startsWith('/team')) router.replace('/team')
+    if (preview && !previewSummary && previewTeamView && !pathname.startsWith('/team') && pathname !== '/survey') router.replace('/team')
   }, [preview, previewSummary, previewTeamView, pathname, router])
 
   return (
@@ -291,7 +295,9 @@ function WorkspaceShell({ children }: { children: React.ReactNode }) {
         {signOutError && <p role="alert" className="px-4 py-3 text-destructive">{signOutError}</p>}
         <main className="flex-1 px-4 py-6 lg:px-8 lg:py-8">
           {preview
-            ? (previewTeamView && pathname.startsWith('/team')
+            ? (pathname === '/survey'
+                ? <CoachSurvey previewEmail={preview.email} />
+                : previewTeamView && pathname.startsWith('/team')
                 ? children
                 : previewSummary ? <CoachSelfView previewSummary={previewSummary} /> : <PreviewNote preview={preview} />)
             : viewMode === 'coach' && !(hasTeamView && pathname.startsWith('/team')) && !(!isDemo && pathname === '/survey') ? <CoachSelfView /> : children}
