@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { CheckCircle2, ClipboardList } from 'lucide-react'
+import { CheckCircle2, ClipboardList, History } from 'lucide-react'
 import { useApp } from '@/lib/app-store'
 import { IT_EMAIL } from '@/lib/tickets'
-import { useSurveys, surveyCommand, SurveyError, type MySurvey } from '@/lib/use-surveys'
-import { fillLabel, initialAnswers, isVisible, longDate, teamLabel, todayET, type Answer, type Answers } from '@/lib/surveys'
+import { useSurveys, surveyCommand, SurveyError, type MySurvey, type PastSurvey } from '@/lib/use-surveys'
+import { answerText, fillLabel, initialAnswers, isVisible, longDate, teamLabel, todayET, type Answer, type Answers } from '@/lib/surveys'
 import { Button } from '@/components/ui/button'
 import { QuestionInput } from './question-input'
 
@@ -17,11 +17,40 @@ export function CoachSurvey() {
   if (isLoading) return <p role="status" className="mx-auto max-w-3xl">Loading your survey…</p>
   if (error) return <Notice title="Coaching survey">Your survey could not be loaded. Please refresh the page, or email <a className="font-medium text-primary underline" href={`mailto:${IT_EMAIL}`}>{IT_EMAIL}</a>.</Notice>
   const surveys = data?.mine ?? []
-  if (!surveys.length) return <Notice title="No open survey">There is no coaching survey waiting for you right now. When the board sends one, you will get an email with a link to this page.</Notice>
+  const past = data?.past ?? []
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-10">
-      {surveys.map((s) => <SurveyForm key={s.assignmentId} survey={s} onSaved={() => mutate()} />)}
+      {surveys.length
+        ? surveys.map((s) => <SurveyForm key={s.assignmentId} survey={s} onSaved={() => mutate()} />)
+        : <Notice title="No open survey">There is no coaching survey waiting for you right now. When the board sends one, you will get an email with a link to this page.</Notice>}
+      {past.length > 0 && <PastSurveys past={past} />}
     </div>
+  )
+}
+
+/** Read-only answers the coach submitted to earlier surveys. */
+function PastSurveys({ past }: { past: PastSurvey[] }) {
+  return (
+    <section aria-labelledby="past-heading" className="flex flex-col gap-3">
+      <h2 id="past-heading" className="flex items-center gap-2 text-lg font-semibold text-navy"><History className="size-5" aria-hidden="true" />Your past surveys</h2>
+      <p className="text-sm text-muted-foreground">What you wrote in earlier coaching surveys. These are read-only.</p>
+      {past.map((p) => (
+        <details key={p.assignmentId} className="group rounded-xl border bg-card shadow-xs">
+          <summary className="flex cursor-pointer list-none flex-col gap-0.5 p-4 marker:hidden">
+            <span className="font-semibold text-navy">{p.title}</span>
+            <span className="text-sm text-muted-foreground">Submitted {longDate(p.submittedAt.slice(0, 10))} · <span className="group-open:hidden">Show my answers</span><span className="hidden group-open:inline">Hide my answers</span></span>
+          </summary>
+          <dl className="divide-y border-t">
+            {p.questions.filter((q) => isVisible(q, p.answers)).map((q) => (
+              <div key={q.key} className="flex flex-col gap-1 p-4">
+                <dt className="text-sm font-medium">{fillLabel(q.label, p)}</dt>
+                <dd className="whitespace-pre-wrap">{answerText(p.answers[q.key]) || <span className="text-muted-foreground">No answer</span>}</dd>
+              </div>
+            ))}
+          </dl>
+        </details>
+      ))}
+    </section>
   )
 }
 
