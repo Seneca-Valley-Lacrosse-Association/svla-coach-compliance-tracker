@@ -158,3 +158,16 @@ test('employment clearances apply to paid coaches and the HS teams, and anyone i
   assert.equal(needsEmploymentClearances(on('Volunteer-Youth')), false)
   assert.equal(needsEmploymentClearances({ ...on('10U'), pay: 'Paid' }), true)
 })
+
+test('badge role shows only Head Coach or Coach', () => {
+  const { badgeRole } = require('../lib/compliance.ts')
+  assert.equal(badgeRole({ ...coaches[0], role: 'Head Coach' }), 'Head Coach')
+  for (const role of ['Coordinator', 'Assistant Coach', 'Volunteer Assistant']) assert.equal(badgeRole({ ...coaches[0], role }), 'Coach')
+})
+test('badge valid-through is the soonest expiry among cleared programs, and none when not cleared', () => {
+  const { badgeValidThrough } = require('../lib/compliance.ts')
+  const mk = (expiries, cleared = true) => ({ programs: [{ cleared, items: expiries.map(d => ({ approved: d ? { expiresOn: d } : null })) }, { cleared: false, items: [{ approved: { expiresOn: '2020-01-01' } }] }] })
+  assert.equal(badgeValidThrough(mk(['2028-05-01', '2027-06-30', null])), '2027-06-30')
+  assert.equal(badgeValidThrough(mk(['2027-06-30'], false)), null)
+  assert.match(badgeValidThrough(mk([null])), /^\d{4}-06-30$/)
+})

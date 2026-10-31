@@ -354,3 +354,24 @@ export function readyToFloat(summaries: CoachSummary[]): CoachSummary[] {
     return !!youth && !youth.assigned && youth.meetsRequirements && isAssignedTo(s.coach, 'high-school')
   })
 }
+
+/** "Head Coach" or "Coach". Pay status and the finer roles never appear on a badge. */
+export function badgeRole(coach: Coach) {
+  return coach.role === 'Head Coach' ? 'Head Coach' : 'Coach'
+}
+
+/**
+ * The date a printed badge is good through: the soonest expiry among the items behind every program the
+ * coach is cleared for. Items that never expire are ignored. If nothing expires, the end of the school year.
+ * Returns null when the coach is not cleared in any program (no badge can be printed).
+ */
+export function badgeValidThrough(summary: CoachSummary): string | null {
+  const cleared = summary.programs.filter((p) => p.cleared)
+  if (cleared.length === 0) return null
+  const dates = cleared
+    .flatMap((p) => p.items)
+    .map((i) => i.approved?.expiresOn)
+    .filter((d): d is string => !!d)
+    .sort()
+  return dates[0] ?? endOfSchoolYear(TODAY)
+}

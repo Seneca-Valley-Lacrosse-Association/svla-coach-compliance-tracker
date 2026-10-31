@@ -35,6 +35,7 @@ interface AppState {
   removeSubmission: (id: string) => Promise<void>
   archiveCoach: (id: string) => Promise<void>
   restoreCoach: (id: string) => Promise<void>
+  reissueBadge: (id: string) => Promise<void>
   editSubmissionDates: (id: string, completedOn: string, note?: string, membershipExpiry?: string) => Promise<void>
   /** Approval state of the signed-in coach's own record. */
   myStatus: 'none' | 'pending' | 'approved' | 'declined' | 'archived'
@@ -100,8 +101,10 @@ async function loadSnapshot(url: string): Promise<Snapshot> {
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const isDemo = pathname === '/demo' || pathname.startsWith('/demo/')
+  // The public badge verification page needs no sign-in and loads none of the workspace.
+  const isVerify = pathname.startsWith('/verify/')
   const [demoView, setDemoView] = useState<ViewMode>('board')
-  const { data, error, isLoading, mutate } = useSWR<Snapshot>(isDemo ? null : '/api/app', loadSnapshot, { refreshInterval: 60000, shouldRetryOnError: false })
+  const { data, error, isLoading, mutate } = useSWR<Snapshot>(isDemo || isVerify ? null : '/api/app', loadSnapshot, { refreshInterval: 60000, shouldRetryOnError: false })
   const snapshot = isDemo ? demoSnapshot : data ?? empty
   // Preview-as: remembered for this tab only, and only honoured for board members (the server refuses everyone else).
   const [previewEmail, setPreviewEmail] = useState('')
@@ -143,6 +146,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     removeSubmission: id => save({ action: 'removeSubmission', id }),
     archiveCoach: id => save({ action: 'archiveCoach', id }),
     restoreCoach: id => save({ action: 'restoreCoach', id }),
+    reissueBadge: id => save({ action: 'reissueBadge', id }),
     editSubmissionDates: (id, completedOn, note, membershipExpiry) => save({ action: 'editSubmissionDates', id, completedOn, note, membershipExpiry }), requirements, submissions, summaries,
     reviewCoach: (id, decision, pay) => save({ action: 'reviewCoach', id, decision, pay }),
     getSummary: id => summaries.find(s => s.coach.id === id) ?? archivedSummaries.find(s => s.coach.id === id),
@@ -206,6 +210,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     },
   }
+  if (isVerify) return <>{children}</>
   if (pathname === '/auth/confirm') return <ConfirmLinkPanel />
   if (pathname === '/auth/reset') return isLoading ? <main className="flex min-h-dvh items-center justify-center"><p role="status">Loading…</p></main> : <ResetPasswordPanel signedIn={!!user} />
   if (!isDemo && isLoading) return <main className="flex min-h-dvh items-center justify-center"><p role="status">Loading your secure workspace…</p></main>

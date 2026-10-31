@@ -50,6 +50,7 @@ export const mutationSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('removeSubmission'), id: z.uuid() }),
   z.object({ action: z.literal('archiveCoach'), id: z.uuid() }),
   z.object({ action: z.literal('restoreCoach'), id: z.uuid() }),
+  z.object({ action: z.literal('reissueBadge'), id: z.uuid() }),
   z.object({ action: z.literal('editSubmissionDates'), id: z.uuid(), completedOn: z.iso.date(), membershipExpiry: z.iso.date().optional(), note: z.string().trim().max(500).optional() }),
   z.object({ action: z.literal('inviteCoach'), id: z.uuid(), deliver: z.enum(['email', 'link']) }),
   z.object({ action: z.literal('inviteBoardMember'), email: z.string().trim().toLowerCase().email().max(254), deliver: z.enum(['email', 'link']) }),

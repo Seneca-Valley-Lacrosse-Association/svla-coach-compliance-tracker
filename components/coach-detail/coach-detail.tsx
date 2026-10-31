@@ -10,6 +10,7 @@ import { ChecklistRow } from './checklist-row'
 import { ClearedBadge } from './cleared-badge'
 import { EditCoachDialog } from './edit-coach-dialog'
 import { RemoveCoachDialog } from './delete-coach-dialog'
+import { PrintBadgeDialog } from '@/components/badges/print-badge-dialog'
 
 export function CoachDetail({ id }: { id: string }) {
   const { getSummary, viewMode } = useApp()
@@ -65,6 +66,7 @@ export function CoachDetail({ id }: { id: string }) {
           {viewMode === 'board' && (
             <>
               <EditCoachDialog key={`${coach.id}-${coach.team}-${coach.role}-${coach.pay}-${coach.name}`} coach={coach} />
+              {!coach.archivedAt && <PrintBadgeDialog summary={summary} />}
               <RemoveCoachDialog coach={coach} />
             </>
           )}
