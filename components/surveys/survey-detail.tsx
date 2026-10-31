@@ -156,8 +156,8 @@ function RosterTable({ report }: { report: ReturnType<typeof buildReport> }) {
               <tr>{['Coach', `${report.cycle.seasonLabel} team(s)`, report.cycle.nextSeasonLabel, 'Fall Ball', 'Years', 'USA Lacrosse', 'Email', 'Notes'].map((h) => <th key={h} scope="col" className="px-3 py-2 font-semibold">{h}</th>)}</tr>
             </thead>
             <tbody className="divide-y">
-              {report.roster.map((r) => (
-                <tr key={r.email} className="align-top even:bg-secondary/30">
+              {report.roster.map((r, i) => (
+                <tr key={`${r.name}-${i}`} className="align-top even:bg-secondary/30">
                   <th scope="row" className="px-3 py-2 font-semibold">{r.name}</th>
                   <td className="px-3 py-2">{r.team}</td>
                   <td className={`px-3 py-2 ${r.returning === 'Not interested' ? 'font-semibold text-amber-800' : ''}`}>{r.returning}</td>

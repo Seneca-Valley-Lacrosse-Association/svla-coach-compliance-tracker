@@ -1,12 +1,16 @@
 // Builds the board report for one survey round. The same data feeds the dashboard, the Excel export and the PDF.
 import {
-  answerText, describeTally, fillLabel, headline, isVisible, programOf, rosterOrder, tally, teamLabel,
+  answerText, describeTally, displayEmail, fillLabel, headline, isVisible, programOf, rosterOrder, tally, teamLabel,
   type Glance, type SurveyAssignment, type SurveyCycle, type SurveyQuestion,
 } from './surveys'
 
 /** Short names for well-known questions in tables and coach cards. Board-added questions fall back to their label. */
 const TOPIC_LABELS: Record<string, string> = {
   teams_coached: 'Team(s) coached',
+  team_record: 'Team record',
+  fall_ball_notes: 'Off-season preferences',
+  suggestions: 'Suggestions for SVLA',
+  recommendations: 'Recommended coaches',
   years_experience: 'Years coaching',
   cert_above_bronze: 'Certification above Bronze',
   cert_level: 'Certification (as reported)',
@@ -121,7 +125,7 @@ export function buildReport(cycle: SurveyCycle, assignments: SurveyAssignment[])
       fallBall: h.fallBall,
       years: h.years,
       certification: certificationOf(a),
-      email: a.coachEmail,
+      email: displayEmail(a.coachEmail),
       notes,
     }
   })

@@ -225,6 +225,8 @@ export function emailDueToday(
 // ---------------------------------------------------------------- reporting
 export const TEAM_LABELS: Partial<Record<string, string>> = { 'HS-JV': 'HS JV', 'HS-Varsity': 'HS Varsity' }
 export function teamLabel(team: string) { return TEAM_LABELS[team] ?? team }
+/** Imported paper surveys without an email get a placeholder address; show it as blank. */
+export function displayEmail(email: string) { return email.endsWith('@import.invalid') ? '' : email }
 
 export function programOf(team: string): Program | 'other' {
   const programs = (TEAMS as readonly string[]).includes(team) ? TEAM_PROGRAMS[team as Team] : null

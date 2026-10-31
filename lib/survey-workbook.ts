@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs'
 import { buildReport, topicLabel } from './survey-report'
-import { answerText, fillLabel, isVisible, QUESTION_KIND_LABELS, teamLabel, todayET, type SurveyAssignment, type SurveyCycle } from './surveys'
+import { answerText, displayEmail, fillLabel, isVisible, QUESTION_KIND_LABELS, teamLabel, todayET, type SurveyAssignment, type SurveyCycle } from './surveys'
 
 const HEADER_FILL = 'FF0F2A4A'
 // Spreadsheet apps treat a leading = + - @ as a formula. Neutralise it in anything a coach typed.
@@ -48,7 +48,7 @@ export async function buildSurveyWorkbook(cycle: SurveyCycle, assignments: Surve
   const everyone = [...report.responded, ...report.outstanding]
   for (const a of everyone) {
     responses.addRow([
-      a.coachName, a.coachEmail, teamLabel(a.team), a.profile.role ?? '', a.profile.certification ?? '',
+      a.coachName, displayEmail(a.coachEmail), teamLabel(a.team), a.profile.role ?? '', a.profile.certification ?? '',
       a.submittedAt ? 'Submitted' : a.startedAt ? 'Started' : 'Not started', a.submittedAt ? a.submittedAt.slice(0, 10) : '',
       ...qs.map((q) => a.submittedAt || a.startedAt ? (isVisible(q, a.answers) ? safe(answerText(a.answers[q.key])) : 'n/a') : ''),
     ])
