@@ -1,5 +1,5 @@
 import type { CoachSummary, ProgramSummary } from '@/lib/compliance'
-import { PROGRAM_LABELS, type Program } from '@/lib/types'
+import { OFF_SEASON_SHORT, PROGRAM_LABELS, type Program } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 /**
@@ -10,6 +10,8 @@ export function ProgramProgress({
   summary,
   programs,
   showVerdict = false,
+  includeOffSeason = false,
+  offSeasonOnly = false,
   className,
 }: {
   summary: CoachSummary
@@ -17,26 +19,38 @@ export function ProgramProgress({
   programs?: readonly Program[]
   /** Add a YES / NO cleared tag after each bar. */
   showVerdict?: boolean
+  /** Add a Camps & Off-Season row after the program rows. */
+  includeOffSeason?: boolean
+  /** Show only the Camps & Off-Season row. */
+  offSeasonOnly?: boolean
   className?: string
 }) {
-  const rows = summary.programs.filter((p) => p.assigned && (!programs || programs.includes(p.program)))
+  const rows: Row[] = offSeasonOnly ? [] : summary.programs
+    .filter((p) => p.assigned && (!programs || programs.includes(p.program)))
+    .map((p: ProgramSummary) => ({ key: p.program, label: PROGRAM_LABELS[p.program], satisfiedCount: p.satisfiedCount, total: p.total, cleared: p.cleared }))
+  if ((includeOffSeason || offSeasonOnly) && summary.offSeason) {
+    const o = summary.offSeason
+    rows.push({ key: 'off-season', label: OFF_SEASON_SHORT, satisfiedCount: o.satisfiedCount, total: o.total, cleared: o.cleared })
+  }
   if (rows.length === 0) {
     return <p className={cn('text-sm text-muted-foreground', className)}>Not assigned to a program</p>
   }
   return (
     <div className={cn('flex min-w-44 flex-col gap-1.5', className)}>
       {rows.map((p) => (
-        <ProgramRow key={p.program} p={p} showVerdict={showVerdict} />
+        <ProgramRow key={p.key} p={p} showVerdict={showVerdict} />
       ))}
     </div>
   )
 }
 
-function ProgramRow({ p, showVerdict }: { p: ProgramSummary; showVerdict: boolean }) {
-  const label = PROGRAM_LABELS[p.program]
+type Row = { key: string; label: string; satisfiedCount: number; total: number; cleared: boolean }
+
+function ProgramRow({ p, showVerdict }: { p: Row; showVerdict: boolean }) {
+  const label = p.label
   const pct = p.total === 0 ? 0 : Math.round((p.satisfiedCount / p.total) * 100)
   return (
-    <div className="grid grid-cols-[5.5rem_1fr_auto] items-center gap-2 text-sm">
+    <div className="grid grid-cols-[7.5rem_1fr_auto] items-center gap-2 text-sm">
       <span className="truncate text-muted-foreground">{label}</span>
       <div
         role="progressbar"

@@ -59,7 +59,7 @@ export function CoachDetail({ id }: { id: string }) {
               {coach.email}
             </a>
           </div>
-          <ProgramProgress summary={summary} className="max-w-sm" />
+          <ProgramProgress summary={summary} includeOffSeason className="max-w-sm" />
         </div>
         <div className="flex flex-col items-start gap-3 lg:items-end">
           <ClearedBadge summary={summary} />

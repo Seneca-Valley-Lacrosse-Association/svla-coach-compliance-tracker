@@ -42,7 +42,7 @@ export function CoachSelfView({ previewSummary }: { previewSummary?: CoachSummar
               ? "You're all set. Thank you!"
               : `${satisfiedCount} of ${total} done. ${remaining} ${remaining === 1 ? 'step' : 'steps'} left.`}
           </p>
-          <ProgramProgress summary={summary} />
+          <ProgramProgress summary={summary} includeOffSeason />
         </div>
         <ClearedBadge summary={summary} />
         {!readOnly && <div><PrintBadgeDialog summary={summary} label="Print my badge" /></div>}

@@ -4,8 +4,8 @@ import type { ReactNode } from 'react'
 import Link from '@/components/app-link'
 import { CheckCircle2, CircleDashed, Clock, Download, Inbox } from 'lucide-react'
 import { useApp } from '@/lib/app-store'
-import { appliesTo, daysBetween, formatDate, programClearedLabel, TODAY, type CoachSummary } from '@/lib/compliance'
-import { LEVEL_LABELS, PROGRAMS, PROGRAM_LABELS, TEAMS, TEAM_PROGRAMS, type Program } from '@/lib/types'
+import { appliesTo, daysBetween, formatDate, offSeasonClearedLabel, programClearedLabel, requirementInOffSeason, TODAY, type CoachSummary } from '@/lib/compliance'
+import { LEVEL_LABELS, OFF_SEASON_SHORT, PROGRAMS, PROGRAM_LABELS, SPRING_LABELS, TEAMS, TEAM_PROGRAMS, type Program } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/page-header'
 import { ProgramProgress } from '@/components/program-progress'
@@ -79,6 +79,9 @@ export function ReportsView() {
     return { program, assigned: assigned.length, cleared, incomplete: assigned.length - cleared }
   })
 
+  // Camps, clinics and off-season: every active coach counts.
+  const offCleared = summaries.filter((s) => s.offSeason.cleared).length
+
   const dualAssigned = summaries
     .filter((s) => PROGRAMS.every((p) => programOf(s, p)?.assigned))
     .sort((a, b) => a.coach.name.localeCompare(b.coach.name))
@@ -107,7 +110,7 @@ export function ReportsView() {
   function exportCsv() {
     const header = [
       'Name', 'Team', 'Role', 'Pay Status', 'Compliance',
-      'Cleared to Coach: Youth', 'Cleared to Coach: High School',
+      'Cleared: Youth Spring Season', 'Cleared: High School Spring Season', 'Cleared: Camps, Clinics & Off-Season',
       'Completed', 'Required', 'Missing',
     ]
     const rows = summaries.map((s) => [
@@ -118,6 +121,7 @@ export function ReportsView() {
       s.status,
       programClearedLabel(s, 'youth'),
       programClearedLabel(s, 'high-school'),
+      offSeasonClearedLabel(s),
       s.satisfiedCount,
       s.total,
       s.missing.map((m) => m.requirement.name).join('; '),
@@ -135,7 +139,7 @@ export function ReportsView() {
     <>
       <PageHeader
         title="Reports"
-        description={`Season-wide compliance as of ${formatDate(TODAY)}. Coaches only count in the program(s) they are assigned to.`}
+        description={`Compliance as of ${formatDate(TODAY)}. Coaches count in the spring program(s) they are assigned to; every coach counts for camps and off-season.`}
         actions={
           <div className="flex flex-wrap gap-2">
             {!isDemo && (
@@ -154,17 +158,24 @@ export function ReportsView() {
 
       <div className="flex flex-col gap-6">
         {/* Headline numbers */}
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
           {programStats.map(({ program, assigned, cleared, incomplete }) => (
             <Kpi
               key={program}
               icon={assigned > 0 && cleared === assigned ? CheckCircle2 : CircleDashed}
               accent={assigned > 0 && cleared === assigned ? 'text-emerald-700 bg-emerald-50' : 'text-slate-700 bg-slate-100'}
               value={`${cleared}/${assigned}`}
-              label={`Cleared to Coach: ${PROGRAM_LABELS[program]}`}
+              label={`Cleared to Coach: ${SPRING_LABELS[program]}`}
               detail={assigned === 0 ? 'No one assigned yet' : `${Math.round((cleared / assigned) * 100)}% cleared · ${incomplete} incomplete`}
             />
           ))}
+          <Kpi
+            icon={summaries.length > 0 && offCleared === summaries.length ? CheckCircle2 : CircleDashed}
+            accent={summaries.length > 0 && offCleared === summaries.length ? 'text-emerald-700 bg-emerald-50' : 'text-slate-700 bg-slate-100'}
+            value={`${offCleared}/${summaries.length}`}
+            label={`Cleared: ${OFF_SEASON_SHORT}`}
+            detail={summaries.length === 0 ? 'No coaches yet' : `${Math.round((offCleared / summaries.length) * 100)}% cleared · every coach counts`}
+          />
           <Kpi
             icon={Clock}
             accent="text-amber-800 bg-amber-50"
@@ -186,18 +197,19 @@ export function ReportsView() {
           <section aria-labelledby="by-team" className="rounded-xl border bg-card p-5 shadow-xs">
             <h2 id="by-team" className="text-lg font-semibold text-navy">Cleared to coach by team</h2>
             <p className="mb-4 text-sm text-muted-foreground">
-              Counted separately for each program. A dash means the team is not part of that program.
+              Counted separately for each spring program and for camps and off-season. A dash means the team is not part of that program.
             </p>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[22rem] text-sm">
+              <table className="w-full min-w-[30rem] text-sm">
                 <thead>
                   <tr className="border-b text-left text-muted-foreground">
                     <th scope="col" className="py-2 pr-3 font-medium">Team</th>
                     {PROGRAMS.map((program) => (
-                      <th key={program} scope="col" className="w-[38%] px-2 py-2 font-medium">
-                        Cleared: {PROGRAM_LABELS[program]}
+                      <th key={program} scope="col" className="w-[27%] px-2 py-2 font-medium">
+                        {PROGRAM_LABELS[program]} Spring
                       </th>
                     ))}
+                    <th scope="col" className="w-[27%] px-2 py-2 font-medium">{OFF_SEASON_SHORT}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -222,6 +234,19 @@ export function ReportsView() {
                             </td>
                           )
                         })}
+                        {(() => {
+                          const cleared = staff.filter((s) => s.offSeason.cleared).length
+                          return (
+                            <td className="px-2 py-2.5">
+                              <div className="flex items-center gap-2">
+                                <Bar done={cleared} total={staff.length} label={`${t}: ${cleared} of ${staff.length} cleared for ${OFF_SEASON_SHORT}`} />
+                                <span className="w-10 shrink-0 text-right tabular-nums text-muted-foreground">
+                                  {staff.length === 0 ? '0/0' : `${cleared}/${staff.length}`}
+                                </span>
+                              </div>
+                            </td>
+                          )
+                        })()}
                       </tr>
                     )
                   })}
@@ -243,6 +268,11 @@ export function ReportsView() {
                       <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
                         {LEVEL_LABELS[req.level ?? 'both']}
                       </span>
+                      {requirementInOffSeason(req) && (
+                        <span className="rounded-full border border-emerald-600/40 bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800">
+                          + {OFF_SEASON_SHORT}
+                        </span>
+                      )}
                     </span>
                     <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
                       {done}/{total}
@@ -266,7 +296,7 @@ export function ReportsView() {
                   <li key={s.coach.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
                     <Link href={`/coaches/${s.coach.id}`} className="font-medium text-brand hover:underline">{s.coach.name}</Link>
                     <span className="text-sm text-muted-foreground">{s.coach.team}</span>
-                    <ProgramProgress summary={s} showVerdict className="ml-auto w-full sm:w-80" />
+                    <ProgramProgress summary={s} showVerdict includeOffSeason className="ml-auto w-full sm:w-80" />
                   </li>
                 ))}
               </ul>

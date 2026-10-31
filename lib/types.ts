@@ -10,6 +10,8 @@ export const SPRING_LABELS: Record<Program, string> = { youth: 'Youth Spring Sea
 /** The third box: SVLA-run activities outside the spring season. Not a program a coach is assigned to. */
 export const OFF_SEASON_LABEL = 'SVLA Camps, Clinics & Off-Season'
 export const OFF_SEASON_SHORT = 'Camps & Off-Season'
+/** Dashboard and report views: one program, the camps and off-season box, or everything. */
+export type ViewScope = Program | 'off-season' | 'all'
 /**
  * Requirements that count for camps, clinics and off-season tournaments when the board has not set it on the
  * requirement itself: the legal minimum (the three PA clearances) plus USA Lacrosse coach membership for insurance.

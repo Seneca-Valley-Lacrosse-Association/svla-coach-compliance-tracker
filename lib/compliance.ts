@@ -496,6 +496,28 @@ export function scopeSummary(s: CoachSummary, program: Program): CoachSummary | 
   }
 }
 
+/** View of a summary limited to the camps, clinics and off-season box. Every coach is included. */
+export function scopeOffSeason(s: CoachSummary): CoachSummary {
+  const o = s.offSeason
+  const hasExpired = o.items.some((i) => !i.satisfied && i.approved && i.approved.expiresOn && daysBetween(TODAY, i.approved.expiresOn) < 0)
+  const inProgress = o.items.filter((i) => i.progress && !i.satisfied && i.latest?.status !== 'pending')
+  const status: ComplianceStatus = hasExpired ? 'expired' : !o.cleared ? 'incomplete' : o.hasExpiring ? 'expiring' : 'cleared'
+  return {
+    ...s,
+    items: o.items,
+    satisfiedCount: o.satisfiedCount,
+    total: o.total,
+    cleared: o.cleared,
+    status,
+    hasExpiring: o.hasExpiring,
+    hasExpired,
+    hasPending: o.items.some((i) => i.latest?.status === 'pending'),
+    inProgress,
+    hasInProgress: inProgress.length > 0,
+    missing: o.missing,
+  }
+}
+
 /** High school coaches who are not assigned to youth but already meet every youth requirement. */
 export function readyToFloat(summaries: CoachSummary[]): CoachSummary[] {
   return summaries.filter((s) => {
