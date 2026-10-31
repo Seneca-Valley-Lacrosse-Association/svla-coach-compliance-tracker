@@ -1,6 +1,7 @@
 'use client'
 
 import { useId, useState, type FormEvent } from 'react'
+import { KeyRound } from 'lucide-react'
 import { useApp } from '@/lib/app-store'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -46,7 +47,7 @@ export function ChangePasswordDialog() {
 
   return (
     <Dialog open={open} onOpenChange={changeOpen}>
-      <DialogTrigger render={<button type="button" className="shrink-0 text-sm underline underline-offset-4" />}>Change password</DialogTrigger>
+      <DialogTrigger render={<button type="button" aria-label="Change password" title="Change password" className="inline-flex shrink-0 items-center gap-1.5 text-sm underline underline-offset-4" />}><KeyRound className="size-4 sm:hidden" aria-hidden="true" /><span className="hidden sm:inline">Change password</span></DialogTrigger>
       <DialogContent className="sm:max-w-md">
         {done ? (
           <>
