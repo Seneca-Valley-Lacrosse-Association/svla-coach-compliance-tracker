@@ -3,7 +3,7 @@
 import { Check } from 'lucide-react'
 import { useApp } from '@/lib/app-store'
 import { cn } from '@/lib/utils'
-import { RequirementProgress } from '@/components/requirement-progress'
+import { ProgramProgress } from '@/components/program-progress'
 import { PayBadge } from '@/components/status-pill'
 import { ChecklistRow } from '@/components/coach-detail/checklist-row'
 import { ClearedBadge } from '@/components/coach-detail/cleared-badge'
@@ -42,7 +42,7 @@ export function CoachSelfView({ previewSummary }: { previewSummary?: CoachSummar
               ? "You're all set. Thank you!"
               : `${satisfiedCount} of ${total} done. ${remaining} ${remaining === 1 ? 'step' : 'steps'} left.`}
           </p>
-          <RequirementProgress done={satisfiedCount} total={total} showLabel={false} />
+          <ProgramProgress summary={summary} />
         </div>
         <ClearedBadge summary={summary} />
         {!readOnly && <div><PrintBadgeDialog summary={summary} label="Print my badge" /></div>}

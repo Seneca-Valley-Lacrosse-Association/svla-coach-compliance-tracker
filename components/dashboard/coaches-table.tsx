@@ -8,7 +8,7 @@ import type { CoachSummary } from '@/lib/compliance'
 import { useApp } from '@/lib/app-store'
 import { loginStateOf, PROGRAM_LABELS, TEAMS } from '@/lib/types'
 import { ComplianceStatusPill, PayBadge } from '@/components/status-pill'
-import { RequirementProgress } from '@/components/requirement-progress'
+import { ProgramProgress } from '@/components/program-progress'
 import { LoginCell } from '@/components/coaches/login-status'
 
 type SortKey = 'name' | 'team' | 'role' | 'pay' | 'login' | 'status' | 'progress'
@@ -127,7 +127,7 @@ export function CoachesTable({ summaries, showLogin = false }: { summaries: Coac
                 <div className="mt-1.5"><ProgramChips s={s} /></div>
               </td>
               <td className="px-4 py-3">
-                <RequirementProgress done={s.satisfiedCount} total={s.total} />
+                <ProgramProgress summary={s} />
               </td>
             </tr>
           ))}
@@ -151,7 +151,7 @@ export function CoachesTable({ summaries, showLogin = false }: { summaries: Coac
                   {s.coach.team} · {s.coach.role} · {s.coach.pay}
                 </p>
                 <ProgramChips s={s} />
-                <RequirementProgress done={s.satisfiedCount} total={s.total} />
+                <ProgramProgress summary={s} />
               </div>
               <ChevronRight className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
             </Link>

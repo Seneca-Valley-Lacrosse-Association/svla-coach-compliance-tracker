@@ -2,12 +2,13 @@
 
 import type { ReactNode } from 'react'
 import Link from '@/components/app-link'
-import { CheckCircle2, CircleDashed, Clock, Download, Inbox, XCircle } from 'lucide-react'
+import { CheckCircle2, CircleDashed, Clock, Download, Inbox } from 'lucide-react'
 import { useApp } from '@/lib/app-store'
 import { appliesTo, daysBetween, formatDate, programClearedLabel, TODAY, type CoachSummary } from '@/lib/compliance'
 import { PROGRAMS, PROGRAM_LABELS, TEAMS, TEAM_PROGRAMS, type Program } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/page-header'
+import { ProgramProgress } from '@/components/program-progress'
 import { cn } from '@/lib/utils'
 
 const EXPIRING_SOON_DAYS = 60
@@ -266,23 +267,7 @@ export function ReportsView() {
                   <li key={s.coach.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
                     <Link href={`/coaches/${s.coach.id}`} className="font-medium text-brand hover:underline">{s.coach.name}</Link>
                     <span className="text-sm text-muted-foreground">{s.coach.team}</span>
-                    <span className="ml-auto flex flex-wrap gap-2">
-                      {PROGRAMS.map((program) => {
-                        const ok = programOf(s, program)?.cleared
-                        return (
-                          <span
-                            key={program}
-                            className={cn(
-                              'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold',
-                              ok ? 'border-emerald-600 bg-emerald-50 text-emerald-800' : 'border-red-600 bg-red-50 text-red-800',
-                            )}
-                          >
-                            {ok ? <CheckCircle2 className="size-3.5" aria-hidden="true" /> : <XCircle className="size-3.5" aria-hidden="true" />}
-                            {PROGRAM_LABELS[program]}: {ok ? 'YES' : 'NO'}
-                          </span>
-                        )
-                      })}
-                    </span>
+                    <ProgramProgress summary={s} showVerdict className="ml-auto w-full sm:w-80" />
                   </li>
                 ))}
               </ul>
