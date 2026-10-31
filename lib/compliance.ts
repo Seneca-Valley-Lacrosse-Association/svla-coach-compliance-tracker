@@ -225,7 +225,7 @@ export function fbiNeeds(coach: Coach): { program: Program; text: string }[] {
           ? 'PA DHS volunteer fingerprint check (code 1KG6ZJ), or the Volunteer Disclosure Statement.'
           : 'PA DHS volunteer fingerprint check (code 1KG6ZJ).'
     } else {
-      text = 'Seneca Valley school employee fingerprint check (code 1KG6XN), paid or volunteer. No affidavit.'
+      text = 'Seneca Valley school employee fingerprint check (code 1KG6XN). Every high school coach uses this code, SVLA paid or volunteer. No affidavit.'
     }
     return { program, text }
   })

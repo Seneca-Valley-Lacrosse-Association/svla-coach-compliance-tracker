@@ -4,7 +4,7 @@ import { useId, useState } from 'react'
 import { AlertTriangle, Upload } from 'lucide-react'
 import { useApp } from '@/lib/app-store'
 import { acceptedFbiChecks, canUseAffidavit, coachPrograms, fbiNeeds, isFbiRequirement, TODAY } from '@/lib/compliance'
-import { FBI_CHECK_LABELS, FBI_CHECKS, PROGRAM_LABELS, type Coach, type FbiCheck, type ObtainedAs, type Requirement } from '@/lib/types'
+import { FBI_CHECK_AUDIENCE, FBI_CHECK_LABELS, FBI_CHECKS, PROGRAM_LABELS, type Coach, type FbiCheck, type ObtainedAs, type Requirement } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -31,6 +31,8 @@ function RadioOption({
   onChange,
   label,
   hint,
+  audience,
+  highlight = false,
 }: {
   name: string
   value: string
@@ -39,6 +41,10 @@ function RadioOption({
   onChange: (v: string) => void
   label: string
   hint?: string | null
+  /** Who this choice is for, in plain SVLA terms. */
+  audience?: string
+  /** Emphasize the audience line (used for the one code every high school coach shares). */
+  highlight?: boolean
 }) {
   return (
     <label
@@ -57,7 +63,16 @@ function RadioOption({
       />
       <span className="flex flex-col">
         <span className="font-medium">{label}</span>
-        {hint && <span className="text-sm text-muted-foreground">{hint}</span>}
+        {audience && (
+          <span
+            className={`mt-1 self-start rounded-md px-2 py-0.5 text-sm font-medium ${
+              highlight ? 'bg-amber-100 text-amber-900 ring-1 ring-amber-300' : 'bg-sky-100 text-navy'
+            }`}
+          >
+            For: {audience}
+          </span>
+        )}
+        {hint && <span className="mt-1 text-sm text-muted-foreground">{hint}</span>}
       </span>
     </label>
   )
@@ -203,6 +218,8 @@ function UploadDialog({
                     disabled={disabled}
                     onChange={(v) => setFbiCheck(v as FbiCheck)}
                     label={FBI_CHECK_LABELS[check]}
+                    audience={FBI_CHECK_AUDIENCE[check]}
+                    highlight={check === 'school-employee'}
                     hint={hint}
                   />
                 )

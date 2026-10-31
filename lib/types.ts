@@ -139,6 +139,14 @@ export const FBI_CHECK_LABELS: Record<FbiCheck, string> = {
   'school-employee': 'FBI fingerprint check, Seneca Valley school employee (code 1KG6XN)',
   affidavit: 'Volunteer Disclosure Statement (PA DHS affidavit)',
 }
+/** Who each FBI check is for, in SVLA terms, shown under each choice in the upload dialog. */
+export const FBI_CHECK_AUDIENCE: Record<FbiCheck, string> = {
+  'dhs-volunteer': 'SVLA youth volunteer coaches',
+  'dhs-employee': 'SVLA paid youth coaches',
+  'school-employee': 'All high school coaches, SVLA paid and volunteer',
+  affidavit: 'SVLA youth volunteers who have lived in PA for the past 10 years',
+}
+
 export const FBI_CHECK_SHORT: Record<FbiCheck, string> = {
   'dhs-volunteer': 'DHS volunteer fingerprint (1KG6ZJ)',
   'dhs-employee': 'DHS employee fingerprint (1KG756)',
