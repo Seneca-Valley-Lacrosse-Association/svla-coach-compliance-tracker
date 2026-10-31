@@ -18,7 +18,7 @@ export function PrintSheet({ summaries, onDone }: { summaries: CoachSummary[]; o
   if (!origin || typeof document === 'undefined') return null
   return createPortal(
     <div className="badge-print">
-      <div className="flex flex-wrap gap-x-6 gap-y-[0.3in]">
+      <div className="flex flex-wrap gap-x-[0.5in] gap-y-[0.3in]">
         {summaries.map((s) => <FoldBadge key={s.coach.id} summary={s} origin={origin} />)}
       </div>
     </div>,
